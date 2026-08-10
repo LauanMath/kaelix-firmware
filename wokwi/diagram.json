@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "author": "Kaelix — TCC ICEV",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-s3-devkitc-1",
+      "id": "esp32",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-mpu6050",
+      "id": "mpu6050",
+      "top": -40,
+      "left": 200,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [ "esp32:3V3", "mpu6050:VCC", "red", [] ],
+    [ "esp32:GND.1", "mpu6050:GND", "black", [] ],
+    [ "esp32:IO8", "mpu6050:SDA", "green", [] ],
+    [ "esp32:IO9", "mpu6050:SCL", "blue", [] ]
+  ],
+  "dependencies": {}
+}

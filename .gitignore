@@ -1,0 +1,17 @@
+.pio/
+.vscode/
+compile_commands.json
+
+# Python (training/)
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# datasets (grandes, não versionar — ver data/README.md)
+data/*.csv
+data/*.mat
+data/mafaulda/
+data/cwru/
