@@ -422,11 +422,12 @@ Pico a pico      & \num{3,28} & \num{1,07} & \num{3,16} \\
 \end{table}
 
 O comportamento de pico e pico a pico contraria a expectativa inicial. Fidali e
-colaboradores identificam
-esses dois parâmetros como os mais sensíveis a falhas de fadiga em rolamento, acima da
-velocidade eficaz \cite{fidali2024}. Esperava-se, portanto, maior resistência à limitação de banda. Os
-dois colapsam junto com os demais, o que indica que a escolha do descritor não compensa
-uma aquisição insuficiente.
+colaboradores identificam esses dois parâmetros como os mais sensíveis às falhas típicas
+de fadiga em rolamento, acima da aceleração eficaz, da curtose e do fator de crista
+\cite{fidali2024}. Esperava-se, portanto, alguma resistência à limitação de banda. Os dois
+colapsam junto com os demais. Os próprios autores já apontam a causa: a sensibilidade de
+detecção depende do limite superior da banda do sensor, e cresce à medida que esse limite
+sobe. A escolha do descritor não compensa uma aquisição insuficiente.
 
 A cadeia sem antialiasing produz um artefato de interpretação. Os descritores voltam a
 separar as classes, aparentando funcionamento correto, mas a energia real de
@@ -740,18 +741,20 @@ carregadores de conjuntos de dados públicos.
 \bibitem{abburi2023}
 H.~Abburi \emph{et al.},
 \newblock A closer look at bearing fault classification approaches,
-\newblock \emph{Annual Conference of the PHM Society}, v.~15, 2023.
-\newblock Preprint: arXiv:2309.17001.
+\newblock \emph{Annual Conference of the PHM Society}, v.~15, n.~1, 2023.
+\newblock DOI: 10.36001/phmconf.2023.v15i1.3473. Preprint: arXiv:2309.17001.
 
 \bibitem{brandt2014}
 A.~Brandt e R.~Brincker,
 \newblock Integrating time signals in frequency domain: comparison with time domain integration,
 \newblock \emph{Measurement}, v.~58, p.~511--519, 2014.
+\newblock DOI: 10.1016/j.measurement.2014.09.004.
 
 \bibitem{fidali2024}
-M.~Fidali, D.~Augustyn, M.~Ochmann e W.~Uchman,
-\newblock Evaluation of the diagnostic sensitivity of digital vibration sensors based on capacitive MEMS,
+M.~Fidali, D.~Augustyn, J.~Ochmann e W.~Uchman,
+\newblock Evaluation of the diagnostic sensitivity of digital vibration sensors based on capacitive MEMS accelerometers,
 \newblock \emph{Sensors}, v.~24, n.~14, art.~4463, 2024.
+\newblock DOI: 10.3390/s24144463.
 
 \bibitem{han2022}
 S.~Han, X.~Hu, H.~Huang, M.~Jiang e Y.~Zhao,
@@ -760,13 +763,15 @@ S.~Han, X.~Hu, H.~Huang, M.~Jiang e Y.~Zhao,
 
 \bibitem{iso10816}
 ISO,
-\newblock \emph{ISO 10816-3: Mechanical vibration: evaluation of machine vibration by measurements on non-rotating parts},
-\newblock International Organization for Standardization, 2009.
+\newblock \emph{ISO 10816-3: Mechanical vibration --- Evaluation of machine vibration by measurements on non-rotating parts --- Part 3: Industrial machines with nominal power above 15~kW and nominal speeds between 120~r/min and 15\,000~r/min when measured in situ},
+\newblock International Organization for Standardization, 2009. Amd~1:2017.
+\newblock Norma retirada, substituída pela ISO 20816-3:2022; mantida como referência por ser a que a prática industrial e a literatura ainda adotam.
 
 \bibitem{iso20816}
 ISO,
-\newblock \emph{ISO 20816-3: Mechanical vibration: measurement and evaluation of machine vibration},
+\newblock \emph{ISO 20816-3: Mechanical vibration --- Measurement and evaluation of machine vibration --- Part 3: Industrial machinery with a power rating above 15~kW and operating speeds between 120~r/min and 30\,000~r/min},
 \newblock International Organization for Standardization, 2022.
+\newblock Substitui a ISO 10816-3:2009 e a ISO 7919-3:2009.
 
 \bibitem{koizumi2020}
 Y.~Koizumi \emph{et al.},
@@ -775,14 +780,16 @@ Y.~Koizumi \emph{et al.},
 \newblock Preprint: arXiv:2006.05822.
 
 \bibitem{kolok2025}
-M.~Kolok, M.~Hodoň, P.~Ševčík, M.~Hotz e P.~Remy,
+P.~Kolok, M.~Hodoň, P.~Ševčík, L.~Hotz e N.~Remy,
 \newblock Low-cost IoT-based predictive maintenance using vibration,
 \newblock \emph{Sensors}, v.~25, n.~21, art.~6610, 2025.
+\newblock DOI: 10.3390/s25216610.
 
 \bibitem{nabavi2025}
 S.~Nabavi, S.~Hajforoosh e S.~Nabavi,
-\newblock Battery selection for energy-efficient IoT devices: a comparative study of longevity across environments,
+\newblock Battery selection for energy-efficient IoT devices: a comparative study of longevity across environmental conditions,
 \newblock \emph{International Journal of Electrochemistry}, v.~2025, art.~7783200, 2025.
+\newblock DOI: 10.1155/ijel/7783200.
 
 \bibitem{randall2011}
 R.~B.~Randall e J.~Antoni,
@@ -795,8 +802,8 @@ W.~A.~Smith e R.~B.~Randall,
 \newblock \emph{Mechanical Systems and Signal Processing}, v.~64--65, p.~100--131, 2015.
 
 \bibitem{varejao2025}
-F.~M.~Varejão \emph{et al.},
-\newblock The similarity bias problem: what it is and how it impacts vibration-based intelligent fault diagnosis,
+I.~M.~S.~Varejão \emph{et al.},
+\newblock The similarity bias problem: what it is and how it impacts vibration based intelligent fault diagnosis,
 \newblock \emph{Mechanical Systems and Signal Processing}, v.~235, art.~112822, 2025.
 
 \bibitem{vieira2026}
