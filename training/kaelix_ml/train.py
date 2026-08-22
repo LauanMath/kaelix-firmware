@@ -1,14 +1,14 @@
 """Orquestra o treino do Isolation Forest.
 
-Três decisões de método, todas vindas de docs/questionamentos-tecnicos.md:
+Três decisões de método. O porquê de cada uma está no README, seção
+"Protocolo de treino e calibração":
 
-**Split por grupo (item 6).** A validação usa `GroupKFold` com o arquivo
+**Split por grupo.** A validação usa `GroupKFold` com o arquivo
 de origem como grupo. Janelas do mesmo ensaio nunca ficam dos dois lados
-do split — é o vazamento que o item 6 mediu inflando a acurácia em ~36
-pontos. Antes não havia split algum: o código dava `fit(X_normal)` e
+do split — é o vazamento que inflaria a acurácia em dezenas de pontos. Antes não havia split algum: o código dava `fit(X_normal)` e
 logo `predict(X)` sobre o mesmo conjunto.
 
-**Limiar por taxa de falso alarme alvo (item 7).** O limiar não é 0,5 nem
+**Limiar por taxa de falso alarme alvo.** O limiar não é 0,5 nem
 vem do `contamination`: é o quantile `1 - FALSE_ALARM_TARGET` dos scores
 de um conjunto de calibração formado por grupos que o modelo não viu. O
 default `contamination="auto"` marcaria 42% da operação normal como
@@ -46,7 +46,8 @@ FALSE_ALARM_TARGET = 0.01
 
 # pAUC restrita a FPR <= 0,10, protocolo do DCASE2020 Task 2. Mesma
 # chamada de figures/scripts/export_source_data.py, para que os números
-# sejam comparáveis com a Fig. 2e. (Crítica A1 de criticas-da-literatura.md.)
+# sejam comparáveis com a Fig. 2e: a AUC global não caracteriza o ponto
+# de operação, que é o que importa num detector de anomalia.
 PAUC_MAX_FPR = 0.10
 
 N_ESTIMATORS = 100
@@ -113,7 +114,7 @@ def _fit_isolation_forest(X_normal):
         max_samples=subsample,
         # Não usamos clf.predict() — a decisão é score > limiar calibrado.
         # Fixamos contamination no alvo para que offset_ fique coerente,
-        # em vez do "auto" que o item 7 mediu em 42% de falso alarme.
+        # em vez do "auto", que marcaria ~42% da operação normal como anomalia.
         contamination=FALSE_ALARM_TARGET,
         random_state=RANDOM_STATE,
     )
@@ -174,9 +175,9 @@ def _fold_metrics(clf, threshold, X_val, y_val):
 
 
 def cross_validate(X, y, groups, n_splits=5):
-    """GroupKFold pelo arquivo de origem (item 6). Reporta média e desvio
+    """GroupKFold pelo arquivo de origem. Reporta média e desvio
     entre folds — desvio alto significa que faltam ensaios, e esconder
-    isso atrás de um número único é o que o item 6 critica."""
+    isso atrás de um número único é o que produz acurácia inflada."""
     n_groups = len(np.unique(groups))
     n_splits = min(n_splits, n_groups)
     if n_splits < 2:

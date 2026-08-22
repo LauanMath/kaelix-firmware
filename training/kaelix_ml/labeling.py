@@ -14,14 +14,14 @@ dois passos, e o segundo estava faltando:
 
 1. Integrar aceleração -> velocidade **no domínio da frequência**
    (V(f) = A(f)/(j·2πf)). Integrar no tempo acumula deriva de offset: o
-   item 2 mediu +716% de erro com um bias de 0,02 m/s², dentro da
+   medimos +716% de erro com um bias de 0,02 m/s², dentro da
    especificação de qualquer MPU6050.
 2. **Recortar a banda de 10–1000 Hz**, como a norma exige. Antes só o
    bin DC era zerado, o que deixava passar energia fora da banda
    normativa e divergia do método validado no notebook.
 
 A implementação abaixo é a mesma de `figures/scripts/export_source_data.py`
-(`vel_freq`), que o item 2 verificou contra valor analítico com erro de
+(`vel_freq`), verificada contra valor analítico com erro de
 0,0% — janela de Hann, recorte de banda, compensação da perda de
 potência da janela.
 
