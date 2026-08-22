@@ -184,24 +184,77 @@ reais).
 
 O Isolation Forest é treinado de forma **não supervisionada**, sobre o
 subconjunto de dados rotulado como "normal" — prática padrão para esse
-tipo de modelo. Os rótulos ISO servem só para **avaliar** o modelo treinado
-(precisão/recall) e, futuramente, calibrar o limiar de decisão.
+tipo de modelo.
 
 A norma define zonas de severidade (A/B = normal, C/D = anômalo) em termos
-de **velocidade** de vibração RMS (mm/s) — não aceleração, que é o que o
-MPU6050 mede. Por isso, antes de aplicar os limiares, a aceleração é
-integrada para velocidade no domínio da frequência:
-`V(f) = A(f) / (j·2π·f)`, com o bin DC zerado (aceleração constante não
-representa oscilação). Essa integração acontece **só no lado Python**, para
-gerar rótulos de avaliação — o firmware não precisa fazer esse cálculo em
-tempo real, porque quem decide normal/anômalo em campo é o modelo treinado,
-não os limiares ISO diretamente.
+de **velocidade** de vibração RMS (mm/s) medida na banda de **10 Hz a
+1000 Hz** — não aceleração, que é o que o MPU6050 mede. A conversão tem
+dois passos:
+
+1. Integrar aceleração para velocidade **no domínio da frequência**
+   (`V(f) = A(f)/(j·2π·f)`). Integrar no tempo acumula deriva de offset:
+   um bias de 0,02 m/s², dentro da especificação de qualquer MPU6050, leva
+   o resultado a +716% de erro.
+2. **Recortar a banda de 10–1000 Hz**, como a norma exige, com janela de
+   Hann e compensação da potência que a janela remove.
+
+A implementação é a mesma de `figures/scripts/export_source_data.py`
+(`vel_freq`), verificada contra valor analítico com erro de 0,0013%, e
+coberta por `tests/test_labeling.py`. Essa integração acontece **só no lado
+Python** — o firmware não precisa fazer esse cálculo em tempo real, porque
+quem decide normal/anômalo em campo é o modelo treinado, não os limiares
+ISO diretamente.
+
+**O rótulo ISO não é a verdade de referência.** Quando o dataset codifica a
+classe de falha no caminho do arquivo — como o MAFAULDA faz — é esse o
+rótulo usado para avaliar. O rótulo ISO é calculado em paralelo e serve
+como **diagnóstico**: `train.py` imprime a matriz de concordância entre os
+dois. Divergência grande indica que os limiares de zona, a classe de máquina
+assumida ou a banda de medição precisam de revisão.
+
+**Consequência da banda.** Com a taxa de 1 kHz do dispositivo, o Nyquist é
+500 Hz: o Kaelix cobre metade da banda de 10–1000 Hz que a norma exige.
+Conformidade plena com a ISO 10816-3 não é possível com o MPU6050 — ver
+item 2 de `docs/questionamentos-tecnicos.md`.
 
 **Os valores de fronteira de zona usados (`ISO_10816_3_ZONE_BOUNDARIES_MM_S`)
 são os comumente citados na literatura de engenharia para a ISO
 10816-3:2009 — ainda não conferidos contra o texto oficial da norma nem
 contra a classe real do motor de bancada.** Confirmar antes de usar para
 calibração final.
+
+### Protocolo de treino e calibração (`training/kaelix_ml/train.py`)
+
+Três decisões de método, todas vindas de `docs/questionamentos-tecnicos.md`:
+
+**Domínio alinhado com o firmware.** Os datasets vêm a 50 kHz (MAFAULDA) ou
+12/48 kHz (CWRU), em registros de segundos; o dispositivo lê uma janela de
+512 amostras a 1 kHz. Extrair features do arquivo inteiro produziria um
+modelo inaplicável — `dominant_freq_hz` chegaria a 25 kHz no treino e nunca
+passaria de 500 Hz em campo. `dataset.to_device_windows` decima (FIR em
+estágios, `zero_phase`) e fatia todo sinal antes de virar feature.
+
+**Split por grupo (item 6).** `GroupKFold` com o arquivo de origem como
+grupo — janelas do mesmo ensaio nunca ficam dos dois lados do split. O
+relatório traz média ± desvio entre folds; desvio alto é informação sobre
+falta de ensaios, não ruído a esconder atrás de um número único.
+
+**Limiar por taxa de falso alarme alvo (item 7).** O limiar não é 0,5 nem
+vem do `contamination`: é o quantil `1 - FALSE_ALARM_TARGET` dos scores de
+um conjunto de calibração formado por grupos que o modelo não viu no fit.
+O default `contamination="auto"` marcaria 42% da operação normal como
+anomalia.
+
+**Mesma regra de decisão dos dois lados.** Calibração, avaliação e
+exportação usam `device_score()` = `-clf.score_samples(X)`, a convenção
+(0,1] idêntica à de `lib/isolation_forest/`. Antes a avaliação usava
+`clf.predict()`, que decide pelo `offset_`, então o relatório impresso no
+treino não descrevia o comportamento embarcado.
+
+AUC e pAUC (`max_fpr=0.10`, protocolo DCASE2020 Task 2) entram no relatório
+com a mesma chamada de `figures/scripts/export_source_data.py`, para que os
+números sejam comparáveis com a Fig. 2e — crítica A1 de
+`docs/criticas-da-literatura.md`.
 
 ### Placeholder atual (`src/ml/isolation_forest_data.h`)
 
@@ -218,7 +271,8 @@ automaticamente quando `python -m kaelix_ml.train` roda com sucesso.
 | `test_thermistor` | `test/` | conversão ADC→resistência→°C — ponto de ancoragem exato + monotonicidade + limites |
 | `test_isolation_forest` | `test/` | `c(n)` contra valores de referência, caminhos de árvore construída à mão, score |
 | `test_features` | `training/tests/` (pytest) | espelha `test_signal_processing`, garante paridade Python↔C++ |
-| `test_labeling` | `training/tests/` | conversão g→m/s², integração para velocidade, limites de zona ISO |
+| `test_labeling` | `training/tests/` | conversão g→m/s², integração na frequência contra valor analítico, máscara de banda 10–1000 Hz, imunidade a bias, limites de zona ISO |
+| `test_dataset` | `training/tests/` | recursão da busca, decimação, janelamento, unidade, rótulo por caminho |
 | `test_export_cpp` | `training/tests/` | round-trip real: treina → exporta → compila → compara score C++ vs scikit-learn |
 
 Todas as suítes rodam limpas com `-Wall -Wextra -Wpedantic` (C++) e
