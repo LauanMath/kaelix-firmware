@@ -5,6 +5,151 @@ Registro das mudanças do projeto Kaelix. Formato baseado em
 
 ## [Não publicado]
 
+## Conformidade com práticas de software industrial/aeroespacial
+
+Rodada de reorganização do firmware segundo MISRA C++, JSF++ e os princípios de
+determinismo do DO-178C. 19 arquivos alterados, +2027/−254 linhas, 4 módulos novos.
+O objetivo não é certificar, é adotar as práticas de organização, determinismo e
+rastreabilidade que projetos críticos usam — e poder justificá-las numa defesa.
+
+### Corrigido
+
+- **Alocação dinâmica eliminada.** `dominant_frequency` alocava dois `std::vector` de
+  512 floats por chamada — ~4 KB de heap por ciclo, ~35 mil pares malloc/free por ano de
+  campo, com falha de alocação não tratada. Substituídos por buffer estático
+  `FFT_MAX_N`, com a não reentrância documentada. Proibição de heap após inicialização é
+  JSF++ AV-206 e MISRA C++ 18-4-1.
+
+- **Laço sem cota superior.** `isolation_tree_path_length` percorria a árvore com
+  `while (tree.feature[node] != -1)`: um array corrompido travava o dispositivo, e não
+  havia watchdog para tirá-lo de lá. Virou `for` com cota derivada da profundidade real
+  da árvore. O defeito estrutural, porém, era a `struct`: ela não carregava o
+  comprimento dos arrays, então nenhuma função conseguia validar índice. Ganhou
+  `n_nodes` e `max_depth`.
+
+- **Modelo de erro.** As sete funções que devolviam `bool` passam a devolver
+  `kaelix::Status` — 41 valores organizados por faixa de subsistema, para que o gateway
+  faça triagem sem tabela completa. Os quatro `false` idênticos de `lora_init()` viraram
+  `RadioAbsent`, `RadioBusSilent`, `RadioConfigRejected` e `RadioTxFailed`.
+
+- **Validação de parâmetro** em 9 módulos, via `KAELIX_REQUIRE`/`CHECK`/`ENSURE`. A
+  asserção tem dois comportamentos por build: em desenvolvimento aborta com
+  arquivo:linha; em produção devolve o status sem travar. A justificativa está no
+  header — abortar num dispositivo com 8 meses de bateria numa máquina remota troca um
+  bug por um aparelho morto e mudo.
+
+- **Watchdog de dois estágios** (`src/power/watchdog.*`): task WDT na fase ativa, RTC WDT
+  como rede de segurança, com rearme distinto para o deep sleep. A alimentação acontece
+  entre etapas do ciclo e nunca dentro de laço, para que o watchdog meça progresso e não
+  atividade de CPU.
+
+### Adicionado
+
+- `lib/kaelix_status/` — modelo de erro compartilhado, header-only, sem `Arduino.h`.
+- `src/machine_state.h` — máquina de estados que materializa o estado seguro.
+- `docs/ARQUITETURA-SOFTWARE.md` — camadas, convenções, políticas de memória e erro,
+  estado seguro, registro de desvios. Recomenda **não** construir uma camada HAL, e
+  argumenta dos dois lados.
+- `docs/ANALISE-DE-FALHAS.md` — FMEA com 36 modos de falha, classes de severidade e
+  detectabilidade, matriz de criticidade (em vez de RPN com números inventados),
+  política de watchdog e telemetria.
+- `docs/NORMA-DE-CODIFICACAO.md` — regras selecionadas de MISRA/JSF++ com exemplo certo
+  e errado tirados do próprio código, mais uma seção de desvios assumidos.
+- `docs/RASTREABILIDADE.md` — matriz requisito → código → teste, com a coluna de não
+  verificados explícita.
+- `.clang-tidy`, `.clang-format`, `tools/run-native-tests.sh`, `tools/run-static-analysis.sh`.
+  O runner roda cada suíte nos **dois modos de build**, porque a asserção se comporta
+  diferente em cada um: 146 casos.
+
+### Achados da análise de falhas que não estavam na lista original
+
+1. **Dado fabricado transmitido como medição.** `main.cpp` registrava a falha de
+   `vibration_init()` e chamava `vibration_read_features()` mesmo assim; o buffer de
+   zeros produz RMS=0 e curtose=0, que o modelo lê como `Normal`. Sensor morto virava
+   "máquina saudável", com CRC válido.
+2. **Falha para o lado inseguro na decisão.** `score > threshold ? Anomalous : Normal` —
+   toda comparação com NaN é falsa em IEEE 754, então feature corrompida resultava
+   sistematicamente em "sadia".
+3. **O clamp do termistor convertia falha de hardware em número plausível**: NTC aberto
+   lia −26 °C a −77 °C; em curto, +349 °C. Floats finitos, indistinguíveis de leitura real.
+4. **`new Module(...)` é evitável** — a API do RadioLib aceita ponteiro para instância
+   existente. O desvio que eu havia classificado como inevitável não era.
+
+### Regressões introduzidas pelo refactor e corrigidas
+
+Três quebras de integração, todas em fronteiras entre áreas de posse diferente:
+
+- Três testes chamavam a FFT com `n = 1024` e um com `n = 4096`, acima do novo
+  `FFT_MAX_N = 512`. Reparametrizados mantendo bin de 1 Hz.
+- `isolation_forest.h` passou a incluir `kaelix_status.h`, e `test_export_cpp.py`
+  compila fora do PlatformIO — faltava o `-I`.
+- **A raiz:** a `struct IsolationTree` ganhou dois campos, mas
+  `training/kaelix_ml/export_cpp.py` continuava emitindo o inicializador de seis. Com
+  `n_nodes = 0`, toda inferência era rejeitada como `ModelMalformed`. O gerador Python é
+  parte do mesmo contrato da struct; o acoplamento está agora documentado no cabeçalho
+  dele, com guarda que falha alto se a árvore não couber em `int16_t`.
+
+### Verificação
+
+70 testes C++ (eram 26) e 35 Python. Paridade numérica C++↔Python reverificada em janelas
+reais do MAFAULDA: divergência máxima **4,2e-06**.
+
+**O firmware não foi compilado.** A camada `src/` passou de 269 para ~700 linhas usando
+APIs do ESP-IDF (`esp_task_wdt_reconfigure`, `rtc_wdt_set_stage`, `esp_task_wdt_delete`)
+que nunca passaram por compilador, e há código condicional a versão de SDK
+(`#if __has_include(<soc/rtc_wdt.h>)`). `pio run -e esp32-s3` é o que fecha esta rodada.
+
+Os três achados de severidade máxima acima ainda **não foram confirmados como
+corrigidos**: a fase de reauditoria do workflow terminou por limite de sessão.
+
+---
+
+## Revisão de literatura e auditoria de citações
+
+### Adicionado
+
+- `docs/relatorio/revisao-literatura.tex` — 1472 linhas, 38 referências, todas conferidas
+  em fonte primária. Escopo e método com nota de procedência, revisão por eixo, síntese
+  (o que a literatura sustenta, o que contesta, o que se conclui) e lacunas.
+  **Falta a seção do Eixo 2** (vazamento de dados): o agente redator caiu duas vezes,
+  por conexão e por limite de sessão. As 12 referências desse eixo já estão verificadas.
+
+### Corrigido — auditoria de citações
+
+Duas rodadas de auditoria em fonte primária, com placares parecidos: **6 defeitos em 13**
+referências do relatório, **18 em 38** da revisão. O levantamento automático original era,
+na prática, uma lista de pistas — não uma bibliografia.
+
+No relatório (`relatorio-kaelix.tex`):
+
+- `varejao2025` — **primeiro autor errado**: I. M. S. Varejão, não F. M. Varejão (que é o
+  sexto autor). Duas pessoas do mesmo grupo.
+- `kolok2025` — três de cinco iniciais erradas.
+- `fidali2024` — terceiro autor é J. Ochmann, não M.; título truncado.
+- `iso10816` — **norma retirada**, substituída pela ISO 20816-3:2022, e o relatório a
+  tratava como vigente em sete lugares. Registrado o status; a prática industrial ainda
+  a usa, e é isso que justifica mantê-la. Descoberta também a Amd 1:2017.
+- Títulos completos e DOIs acrescentados em cinco entradas.
+
+**Erro factual corrigido no corpo do relatório:** o texto afirmava que Fidali identifica
+pico e pico a pico como mais sensíveis *"acima da velocidade eficaz"*. Velocidade eficaz
+nunca foi avaliada no estudo — a palavra "velocity" aparece duas vezes no artigo inteiro,
+ambas fora do experimento. A comparação real é com aceleração eficaz, curtose e fator de
+crista. A distorção tinha consequência: o parágrafo seguinte trata da velocidade eficaz
+normativa da ISO, e o texto criava a impressão de que Fidali mediu o descritor da norma e
+o achou inferior — argumento contra a norma que a própria monografia adota. Corrigido, e
+a citação passou de contraste a apoio: os autores preveem exatamente o colapso por
+limitação de banda que o projeto mediu.
+
+Achados que atingem material já removido do repositório, registrados porque podem ter
+circulado: o protocolo de limiar por distribuição gama no percentil 90 **não é** de
+Koizumi et al. 2020 (aparece no baseline do DCASE2022); a redução de 90,25% em falsos
+alarmes de Hermansa et al. é do **HDBSCAN**, não do Isolation Forest, que ficou atrás
+dele no ranking; e Ma et al. não sustenta que o default do `contamination` equivalha a
+sorteio — o artigo diz que o iForest com hiperparâmetros default é baseline difícil de
+bater, e `contamination` nem está entre os hiperparâmetros estudados.
+
+
 ## Firmware — bloco de energia e integridade do pacote
 
 ### Corrigido — o SX1278 nunca entrava em sleep
@@ -114,7 +259,7 @@ medição** — tudo era simulado — e o pipeline tinha defeitos que fariam o
 download dos datasets virar retrabalho.
 
 As correções também fecham a lacuna entre o que
-[`docs/questionamentos-tecnicos.md`](docs/questionamentos-tecnicos.md) concluiu
+`docs/questionamentos-tecnicos.md` (removido depois) concluiu
 e o que o código fazia: os itens 2, 6 e 7 prescreviam correções que a
 implementação ainda não tinha incorporado.
 
@@ -186,7 +331,7 @@ implementação ainda não tinha incorporado.
 - **AUC e pAUC no relatório de treino**, com `max_fpr=0.10` — mesma chamada
   usada em `figures/scripts/export_source_data.py`, para que os números sejam
   comparáveis com a Fig. 2e. Atende à crítica A1 de
-  [`docs/criticas-da-literatura.md`](docs/criticas-da-literatura.md).
+  `docs/criticas-da-literatura.md` (removido depois).
 
 - **`training/tests/test_dataset.py`** — cobre recursão do `rglob`, taxa e
   formato da decimação, janelamento, conversão de unidade e leitura de rótulo
