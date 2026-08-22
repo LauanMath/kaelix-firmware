@@ -5,6 +5,14 @@ Cada árvore do ensemble vira 5 arrays C (feature, threshold, left,
 right, leaf_correction); folhas usam feature=-1 (convenção do C++,
 diferente do -2 do sklearn) e leaf_correction = c(n_amostras_na_folha)
 via a mesma fórmula usada internamente pelo sklearn.
+
+ACOPLAMENTO: a ordem e a quantidade de campos emitidos aqui precisam
+casar exatamente com `struct IsolationTree` em
+lib/isolation_forest/isolation_forest.h. Os campos n_nodes e max_depth
+não são decorativos — sem eles o C++ não consegue validar índice de nó
+nem cotar a profundidade da travessia, e a inferência rejeita o modelo
+com ModelMalformed. Mudar a struct exige mudar este gerador na mesma
+alteração.
 """
 
 import math
@@ -83,8 +91,16 @@ def export_isolation_forest(
     for i, estimator in enumerate(clf.estimators_):
         decl, names = _export_tree(estimator, i)
         tree_decls.append(decl)
+        n_nodes = int(estimator.tree_.node_count)
+        max_depth = int(estimator.tree_.max_depth)
+        if n_nodes > 32767 or max_depth > 32767:
+            raise ValueError(
+                f"árvore {i} não cabe em int16_t (n_nodes={n_nodes}, max_depth={max_depth}) — "
+                "aumente a largura dos campos em lib/isolation_forest/isolation_forest.h"
+            )
         tree_struct_entries.append(
-            f"    {{{names['feature']}, {names['threshold']}, {names['left']}, {names['right']}, {names['leaf_correction']}, 0}},"
+            f"    {{{names['feature']}, {names['threshold']}, {names['left']}, "
+            f"{names['right']}, {names['leaf_correction']}, 0, {n_nodes}, {max_depth}}},"
         )
 
     header = f"""#pragma once
