@@ -12,6 +12,10 @@ float ntc_resistance_from_adc(uint16_t adc_raw, uint16_t adc_max, float r_fixed_
     return r_fixed_ohm * ratio / (1.0f - ratio);
 }
 
+float ntc_resistance_from_millivolts(uint16_t mv, uint16_t vcc_mv, float r_fixed_ohm) {
+    return ntc_resistance_from_adc(mv, vcc_mv, r_fixed_ohm);
+}
+
 float ntc_resistance_to_celsius(float resistance_ohm, float r_nominal_ohm, float beta, float t_nominal_c) {
     constexpr float KELVIN_OFFSET = 273.15f;
     float t_nominal_k = t_nominal_c + KELVIN_OFFSET;

@@ -14,6 +14,12 @@ namespace kaelix::sensors {
 // TODO: confirmar topologia do divisor contra o esquemático final (Fase 3).
 float ntc_resistance_from_adc(uint16_t adc_raw, uint16_t adc_max, float r_fixed_ohm);
 
+// Mesma matemática, entrada em milivolts. É esta a forma correta no
+// ESP32-S3: o ADC bruto é sensivelmente não-linear, e `analogReadMilliVolts`
+// aplica a curva de calibração gravada no eFuse de fábrica. Usar a
+// contagem crua assume uma linearidade que o hardware não tem.
+float ntc_resistance_from_millivolts(uint16_t mv, uint16_t vcc_mv, float r_fixed_ohm);
+
 // Equação B (Steinhart-Hart simplificada): converte a resistência do NTC
 // para temperatura em °C, dados a resistência nominal, o beta e a
 // temperatura nominal (datasheet: NTC 10K, beta 3950, nominal a 25°C).

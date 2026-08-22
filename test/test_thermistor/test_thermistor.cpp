@@ -53,6 +53,19 @@ void test_resistance_from_adc_edges_stay_finite(void) {
     TEST_ASSERT_TRUE(std::isfinite(r_high) && r_high > 0.0f);
 }
 
+void test_resistance_from_millivolts_matches_divider(void) {
+    // Metade da alimentação -> NTC com a mesma resistência do fixo.
+    float r = ntc_resistance_from_millivolts(1650, 3300, 10000.0f);
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, 10000.0f, r);
+}
+
+void test_resistance_from_millivolts_edges_stay_finite(void) {
+    float r_low = ntc_resistance_from_millivolts(0, 3300, 10000.0f);
+    float r_high = ntc_resistance_from_millivolts(3300, 3300, 10000.0f);
+    TEST_ASSERT_TRUE(std::isfinite(r_low) && r_low > 0.0f);
+    TEST_ASSERT_TRUE(std::isfinite(r_high) && r_high > 0.0f);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_celsius_at_nominal_resistance);
@@ -61,5 +74,7 @@ int main(void) {
     RUN_TEST(test_resistance_from_adc_midscale);
     RUN_TEST(test_resistance_from_adc_quarter_scale);
     RUN_TEST(test_resistance_from_adc_edges_stay_finite);
+    RUN_TEST(test_resistance_from_millivolts_matches_divider);
+    RUN_TEST(test_resistance_from_millivolts_edges_stay_finite);
     return UNITY_END();
 }
