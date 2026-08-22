@@ -1,16 +1,33 @@
+# PlatformIO / IDE
 .pio/
 .vscode/
 compile_commands.json
 
-# Python (training/)
+# macOS
+.DS_Store
+
+# Python
 __pycache__/
-*.pyc
+*.py[oc]
 .pytest_cache/
 *.egg-info/
+build/
+dist/
+wheels/
 .venv/
 venv/
 
-# datasets (grandes, não versionar — ver data/README.md)
+# Jupyter
+.ipynb_checkpoints/
+
+# R
+.Rhistory
+.RData
+
+# Datasets brutos (grandes, ver data/README.md) — o cache derivado em
+# data/cache/ é pequeno (~32MB) e fica versionado de propósito, para que
+# o treino seja reproduzível sem rebaixar 12GB.
+data/*.tgz
 data/*.csv
 data/*.mat
 data/mafaulda/

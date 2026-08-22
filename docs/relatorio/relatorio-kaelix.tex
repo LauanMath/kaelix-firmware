@@ -1,0 +1,810 @@
+% Kaelix — análise por simulação computacional
+% Compilar:  latexmk -pdf relatorio-kaelix.tex   (ou pdflatex duas vezes)
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.7cm]{geometry}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{float}
+
+% Floats: permitir mais figura por página e evitar páginas de float esvaziadas
+\setcounter{topnumber}{2}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{3}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.75}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.80}
+
+% Figuras largas: avançam levemente sobre as margens para preservar legibilidade
+\newcommand{\figuralarga}[1]{%
+  \makebox[\textwidth][c]{\includegraphics[width=1.13\textwidth]{#1}}}
+
+\sisetup{output-decimal-marker={,}, group-separator={.}, per-mode=symbol}
+\captionsetup{font=small, labelfont=bf, width=1.02\textwidth}
+\setlist{itemsep=2pt, topsep=4pt, parsep=0pt}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.7em}{}
+\graphicspath{{../../figures/output/}{../img/}}
+
+\newcommand{\pt}{\,p.p.}
+
+\begin{document}
+
+\noindent
+\begin{minipage}[c]{0.16\textwidth}
+  \includegraphics[width=\linewidth]{skala_logo.jpeg}
+\end{minipage}%
+\begin{minipage}[c]{0.84\textwidth}
+  \centering
+  {\LARGE\bfseries Kaelix: análise por simulação computacional}\\[4pt]
+  {\large Limites de aquisição, conformidade normativa e efeitos de montagem\\
+  em um sensor IoT de vibração de baixo custo}\\[10pt]
+  {\normalsize agosto de 2026}
+\end{minipage}
+
+\vspace{6pt}
+\hrule
+\vspace{14pt}
+
+\section{Objetivo e escopo}
+
+Este relatório reúne as simulações realizadas sobre o Kaelix, um dispositivo IoT de
+baixo custo para manutenção preditiva de motores industriais. O projeto combina um
+acelerômetro MPU6050, um microcontrolador ESP32-S3, rádio LoRa e um invólucro em ASA
+impresso em três dimensões, com detecção de anomalias por Isolation Forest embarcado e
+rotulagem de severidade pela norma ISO 10816-3.
+
+As especificações de hardware, as cotas do desenho mecânico e a arquitetura de
+processamento foram fornecidas pela equipe do projeto e tomadas como dadas. A partir
+delas, modelou-se computacionalmente o comportamento dinâmico do dispositivo, com o
+objetivo de determinar o que essas especificações permitem medir. Nenhum ensaio físico
+foi conduzido, e nenhuma medição de campo alimenta os modelos.
+
+Oito pontos foram levantados a partir da documentação e do desenho. Seis puderam ser
+respondidos por simulação e por modelagem analítica, e são o objeto deste relatório. Os
+dois restantes dependem de levantamento em campo e de consulta regulatória.
+
+A estratégia adotada foi construir sinais e configurações cuja resposta correta é
+conhecida de antemão, submetê-los à cadeia de medição proposta e verificar o que
+sobrevive. Quando a resposta certa é conhecida, um erro de implementação não consegue se
+esconder atrás de um resultado plausível.
+
+\section{Método}
+
+Esta seção descreve os procedimentos empregados nas análises subsequentes. A abordagem é
+comum às seis questões: em cada caso, constrói-se uma condição de referência cujo
+resultado correto decorre de solução analítica ou de definição normativa, e mede-se o
+desvio introduzido pela configuração adotada no projeto. A subseção~\ref{ssec:sinal}
+apresenta o modelo de sinal e os parâmetros do caso de estudo; a
+subseção~\ref{ssec:cadeias} define as cadeias de aquisição comparadas e os descritores
+extraídos; a subseção~\ref{ssec:conversao} formula a conversão normativa e o critério de
+decisão do detector; a subseção~\ref{ssec:mecanica} descreve os modelos mecânico e
+térmico do invólucro.
+
+\subsection{Simulação de vibração}
+\label{ssec:sinal}
+
+Os sinais de vibração foram sintetizados com dois mecanismos de escalas de frequência
+distintas. Desbalanceamento e desalinhamento aparecem como componentes harmônicas da
+rotação, todas abaixo de \SI{100}{\hertz}. Defeito de pista externa aparece como um trem
+de impulsos amortecidos, repetido na taxa BPFO e modulando uma ressonância estrutural. A
+aceleração simulada é
+
+\begin{equation}
+a(t) \;=\; \underbrace{\sum_{k=1}^{3} A_k \sin\!\left(2\pi k f_r t + \varphi_k\right)}_{\text{banda baixa}}
+\;+\; \underbrace{\sum_{i} D\, e^{-\zeta_d (t-t_i)} \sin\!\left(2\pi f_{\mathrm{res}} (t-t_i)\right) u(t-t_i)}_{\text{impactos do defeito}}
+\;+\; \varepsilon(t),
+\label{eq:sinal}
+\end{equation}
+
+\noindent
+com $f_r$ a rotação, $A_k$ as amplitudes harmônicas, $D$ a amplitude do defeito,
+$\zeta_d$ a taxa de amortecimento do impacto, $f_{\mathrm{res}}$ a ressonância excitada,
+$u(\cdot)$ o degrau unitário e $\varepsilon(t)$ ruído gaussiano branco. Os instantes de
+impacto são $t_i = i/\mathrm{BPFO} + \delta_i$, em que $\delta_i$ é um desvio aleatório
+que modela o escorregamento das esferas.
+
+As frequências características decorrem da geometria do rolamento:
+
+\begin{equation}
+\mathrm{BPFO} = \frac{N_b}{2}\, f_r \left(1 - \frac{d}{D_p}\cos\theta\right),
+\qquad
+\mathrm{BPFI} = \frac{N_b}{2}\, f_r \left(1 + \frac{d}{D_p}\cos\theta\right),
+\label{eq:bpfo}
+\end{equation}
+
+\noindent
+com $N_b$ o número de esferas, $d$ o diâmetro da esfera, $D_p$ o diâmetro primitivo e
+$\theta$ o ângulo de contato.
+
+Essa separação entre taxa de repetição e frequência portadora é a característica física
+central do problema. O caso de estudo adotou um motor de \SI{1750}{rpm} com rolamento
+SKF~6205, o mesmo do conjunto de dados CWRU \cite{smith2015}, o que permite comparação direta com a
+literatura (Tabela~\ref{tab:parametros}).
+
+\begin{table}[!htb]
+\centering
+\caption{Parâmetros do caso de estudo. As frequências características de defeito derivam
+da geometria do rolamento pelas expressões usuais, com $f_r$ a rotação em hertz, $N_b$ o
+número de esferas, $d$ o diâmetro da esfera e $D$ o diâmetro primitivo.}
+\label{tab:parametros}
+\small
+\begin{tabular}{llc}
+\toprule
+Grandeza & Símbolo ou origem & Valor \\
+\midrule
+\multicolumn{3}{l}{\itshape Máquina e rolamento} \\
+Rotação nominal              & --                      & \SI{1750}{rpm} \\
+Rotação em frequência        & $f_r$                   & \SI{29,17}{\hertz} \\
+Rolamento                    & SKF~6205, $N_b = 9$     & $d/D = \num{0,203}$ \\
+Passagem de esfera, pista externa & BPFO               & \SI{104,6}{\hertz} \\
+Passagem de esfera, pista interna & BPFI               & \SI{157,9}{\hertz} \\
+\midrule
+\multicolumn{3}{l}{\itshape Sinal simulado} \\
+Ressonância excitada         & $f_{\mathrm{res}}$      & \SI{3,5}{\kilo\hertz} \\
+Amortecimento do impacto     & --                      & \SI{800}{\per\second} \\
+Escorregamento das esferas   & desvio na posição       & \SI{1}{\percent} de $1/\mathrm{BPFO}$ \\
+Defeito grosseiro            & amplitude               & \num{2,0} \\
+Defeito incipiente           & amplitude               & \num{0,25} \\
+\midrule
+\multicolumn{3}{l}{\itshape Aquisição} \\
+Referência de banda larga    & $f_s$                   & \SI{20}{\kilo\hertz} \\
+MPU6050                      & $f_s$ máxima            & \SI{1}{\kilo\hertz} \\
+Banda útil do MPU6050        & Nyquist                 & \SI{500}{\hertz} \\
+Banda exigida pela norma     & ISO 10816-3             & \SIrange{10}{1000}{\hertz} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Cadeias de aquisição comparadas}
+\label{ssec:cadeias}
+
+Três cadeias foram comparadas sobre o mesmo sinal físico. A cadeia de referência amostra
+a \SI{20}{\kilo\hertz}, representando um acelerômetro de banda larga. A segunda decima
+para \SI{1}{\kilo\hertz} com filtro antialiasing, representando o MPU6050 corretamente
+configurado. A terceira subamostra para \SI{1}{\kilo\hertz} sem filtro, representando a
+leitura direta do registrador quando o filtro passa-baixa digital interno não é
+configurado. Nesse último caso, uma componente em $f$ acima de Nyquist é observada na
+frequência aparente
+
+\begin{equation}
+f_{\mathrm{ap}} = \left| f - f_s \left\lfloor \frac{f}{f_s} + \frac{1}{2} \right\rceil \right|,
+\label{eq:alias}
+\end{equation}
+
+\noindent
+com $f_s$ a taxa de amostragem e $\lfloor\cdot\rceil$ o arredondamento ao inteiro mais
+próximo.
+
+Os descritores estatísticos avaliados sobre cada janela são o valor eficaz, a curtose, o
+fator de crista, o pico e o pico a pico:
+
+\begin{equation}
+x_{\mathrm{rms}} = \sqrt{\tfrac{1}{N}\textstyle\sum_n x_n^2},
+\quad
+\kappa = \frac{\tfrac{1}{N}\sum_n (x_n-\bar{x})^4}{\sigma^4},
+\quad
+C_f = \frac{\max_n |x_n|}{x_{\mathrm{rms}}}.
+\label{eq:descritores}
+\end{equation}
+
+A análise de envelope, usada como referência de detecção, filtra o sinal na banda de
+ressonância, extrai a amplitude instantânea pela transformada de Hilbert
+$\mathcal{H}\{\cdot\}$ e aplica a transformada de Fourier ao envelope:
+
+\begin{equation}
+e(t) = \left| x_b(t) + j\,\mathcal{H}\{x_b(t)\} \right|,
+\qquad
+E(f) = \mathcal{F}\{e(t) - \bar{e}\},
+\label{eq:envelope}
+\end{equation}
+
+\noindent
+com $x_b$ o sinal restrito à banda de \SI{2}{} a \SI{6}{\kilo\hertz}. O contraste
+diagnóstico é a razão entre as amplitudes de $E$ em BPFO nas condições com e sem defeito.
+
+\subsection{Conversão para velocidade e limiar do detector}
+\label{ssec:conversao}
+
+A ISO 10816-3 avalia a severidade em velocidade eficaz sobre \SIrange{10}{1000}{\hertz}.
+A conversão adotada opera no domínio da frequência: cada componente do espectro de
+aceleração $A(f)$ é dividida por $j2\pi f$ e a máscara normativa é aplicada antes da
+síntese,
+
+\begin{equation}
+V(f) = \frac{A(f)}{j 2\pi f}\, \Pi(f),
+\qquad
+\Pi(f) = \begin{cases} 1, & f_1 \leq f \leq f_2 \\ 0, & \text{caso contrário,}\end{cases}
+\label{eq:integracao}
+\end{equation}
+
+\noindent
+com $f_1 = \SI{10}{\hertz}$ e $f_2 = \SI{1000}{\hertz}$. O valor eficaz decorre da
+identidade de Parseval. As variantes no domínio do tempo, usadas para comparação,
+calculam $v(t) = \int a(\tau)\,d\tau$ por soma cumulativa, com e sem filtro passa-alta
+prévio. A referência analítica é a senoide $a(t) = A\sin(2\pi f_0 t)$, cuja velocidade
+eficaz exata é $v_{\mathrm{rms}} = A/(\sqrt{2}\,2\pi f_0)$. A conversão entre velocidade
+e aceleração empregada na análise de fixação é $a = 2\pi f v$.
+
+O detector de anomalias atribui a cada amostra o escore do Isolation Forest,
+$s(x) = 2^{-\mathbb{E}[h(x)]/c(n)}$, em que $h(x)$ é o comprimento de caminho de
+isolamento e $c(n)$ o comprimento médio esperado. A decisão decorre de um deslocamento
+aplicado ao escore, controlado pelo parâmetro \texttt{contamination}; no modo automático
+esse deslocamento vale \num{0,5}. O desempenho foi medido pela área sob a curva ROC e
+pela área parcial normalizada, restrita a taxas de falso alarme abaixo de $\alpha$:
+
+\begin{equation}
+\mathrm{pAUC}(\alpha) = \frac{1}{2}\left[1 + \frac{\mathrm{AUC}_\alpha - \alpha^2/2}{\alpha - \alpha^2/2}\right],
+\label{eq:pauc}
+\end{equation}
+
+\noindent
+com $\mathrm{AUC}_\alpha$ a área acumulada até $\alpha$. A normalização situa o acaso em
+\num{0,5}, tal como na área completa.
+
+\subsection{Análise mecânica e térmica}
+\label{ssec:mecanica}
+
+O invólucro foi analisado a partir das cotas do desenho técnico, versão 4, por fórmulas
+fechadas de resistência dos materiais (Tabela~\ref{tab:geometria}). A rigidez do caminho
+de transmissão foi modelada como associação em série de três elos, a base como placa
+circular engastada com carga central, o ressalto de centragem em compressão axial e o
+corpo como viga tubular engastada:
+
+\begin{equation}
+k_{\mathrm{base}} = \frac{16\pi \mathcal{D}}{a^2},
+\qquad
+k_{\mathrm{res}} = \frac{E A}{L},
+\qquad
+k_{\mathrm{corpo}} = \frac{3 E I}{L^3},
+\qquad
+\frac{1}{k} = \sum_i \frac{1}{k_i},
+\label{eq:rigidez}
+\end{equation}
+
+\noindent
+com $\mathcal{D} = E h^3 / [12(1-\nu^2)]$ a rigidez flexional da placa e
+$I = [\ell^4 - (\ell-2t)^4]/12$ o momento de inércia da seção tubular quadrada. A
+frequência de montagem e a transmissibilidade de base decorrem do modelo de um grau de
+liberdade:
+
+\begin{equation}
+f_n = \frac{1}{2\pi}\sqrt{\frac{k}{m}},
+\qquad
+T(f) = \frac{1}{\sqrt{\left(1-r^2\right)^2 + \left(2\zeta r\right)^2}},
+\quad r = \frac{f}{f_n}.
+\label{eq:transmissibilidade}
+\end{equation}
+
+O modo fundamental dos painéis foi estimado pela solução de placa retangular
+simplesmente apoiada, $f_{11} = (\pi/2)\sqrt{\mathcal{D}/(\rho h)}\,(a^{-2}+b^{-2})$. A
+força de retenção de cada ímã de disco sobre superfície ferromagnética seguiu o método
+das imagens,
+
+\begin{equation}
+F(z) = \frac{B_r^2 A}{2\mu_0}\left[\frac{z}{\sqrt{z^2+R^2}} - \frac{z+t_m}{\sqrt{(z+t_m)^2+R^2}}\right]^2,
+\label{eq:ima}
+\end{equation}
+
+\noindent
+com $B_r$ a remanência, $R$ o raio e $t_m$ a espessura do ímã. O entreferro imposto pela
+curvatura da carcaça é a flecha $z(x) = R_c - \sqrt{R_c^2 - x^2}$, com $R_c$ o raio da
+carcaça e $x$ a distância transversal ao ponto de contato.
+
+A análise térmica usou modelo de parâmetros concentrados em regime permanente. O
+equilíbrio iguala a condução que entra pelo caminho sólido à convecção natural e à
+radiação que saem pela superfície externa:
+
+\begin{equation}
+\frac{T_c - T}{R_{\mathrm{cond}}} = h A_e (T - T_a) + \varepsilon \sigma A_e \left(T^4 - T_a^4\right),
+\qquad
+R_{\mathrm{cond}} = \sum_i \frac{L_i}{k_i A_i},
+\label{eq:termico}
+\end{equation}
+
+\noindent
+com $T_c$ a temperatura da carcaça, $T_a$ a do ambiente, $A_e$ a área externa,
+$\varepsilon$ a emissividade e $\sigma$ a constante de Stefan-Boltzmann. O coeficiente de
+convecção natural para placa vertical foi tomado como $h = 1{,}42\,(\Delta T/L_c)^{1/4}$.
+A equação~\eqref{eq:termico} foi resolvida numericamente por iteração. A constante de
+tempo de resfriamento decorre de $\tau = C_{\mathrm{th}} R_{\mathrm{amb}}$, com
+$C_{\mathrm{th}} = \sum_i m_i c_{p,i}$.
+
+\begin{table}[!htb]
+\centering
+\caption{Geometria do invólucro e propriedades dos materiais. As cotas provêm do desenho
+técnico. O módulo do ASA impresso é anisotrópico e varia com orientação e preenchimento,
+razão pela qual os resultados foram testados por varredura desse parâmetro.}
+\label{tab:geometria}
+\small
+\begin{tabular}{llc}
+\toprule
+Grandeza & Observação & Valor \\
+\midrule
+\multicolumn{3}{l}{\itshape Geometria} \\
+Corpo, seção externa       & tubo quadrado            & \qtyproduct{50 x 50}{\milli\meter} \\
+Corpo, parede              & --                       & \SI{3,5}{\milli\meter} \\
+Corpo, altura total        & --                       & \SI{78}{\milli\meter} \\
+Base de fixação            & permanece no motor       & \qtyproduct{54 x 54}{\milli\meter} \\
+Base, espessura efetiva    & sob o ressalto            & \SI{6,0}{\milli\meter} \\
+Ressalto de centragem      & diâmetro e altura        & \qtyproduct{28 x 3,3}{\milli\meter} \\
+Ímãs                       & quatro, em raio \SI{20}{\milli\meter} & \qtyproduct{10 x 3}{\milli\meter} \\
+Massa do conjunto          & estimada                 & \SI{118}{\gram} \\
+\midrule
+\multicolumn{3}{l}{\itshape Materiais} \\
+Módulo do ASA              & $E$                      & \SI{2,0}{\giga\pascal} \\
+Módulo do alumínio         & $E$, comparação          & \SI{69}{\giga\pascal} \\
+Condutividade do ASA       & $k$                      & \SI{0,17}{\watt\per\meter\per\kelvin} \\
+Condutividade do alumínio  & $k$                      & \SI{205}{\watt\per\meter\per\kelvin} \\
+Densidade do ASA           & $\rho$                   & \SI{1070}{\kilogram\per\meter\cubed} \\
+Emissividade               & $\varepsilon$, superfície fosca & \num{0,90} \\
+Ambiente de referência     & $T_{\mathrm{amb}}$       & \SI{30}{\celsius} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Resultados}
+
+Os resultados agrupam-se em três blocos. O primeiro trata da aquisição do sinal e reúne o
+efeito da banda do sensor sobre a evidência de defeito e a conversão exigida pela norma
+(subseções~\ref{ssec:banda} e \ref{ssec:norma}). O segundo trata do tratamento de dados e
+examina o protocolo de validação e o limiar do detector
+(subseções~\ref{ssec:vazamento} e \ref{ssec:limiar}). O terceiro trata do invólucro como
+elemento da cadeia de medição, sob os aspectos mecânico e térmico
+(subseções~\ref{ssec:montagem} e \ref{ssec:termica}). Cada subseção relata o observado; a
+interpretação e as objeções da literatura são tratadas na Seção~\ref{sec:literatura}.
+
+\subsection{A banda do sensor descarta a evidência de defeito de rolamento}
+\label{ssec:banda}
+
+O MPU6050 tem taxa máxima de amostragem de \SI{1}{\kilo\hertz}, o que situa a frequência
+de Nyquist em \SI{500}{\hertz}. A frequência BPFO, de \SI{104,6}{\hertz}, cai dentro
+dessa banda, mas a ressonância que carrega a informação diagnóstica não.
+
+\begin{figure}[!htb]
+\centering
+\figuralarga{fig1_banda_sensor.png}
+\caption{\textbf{O limite de banda do MPU6050 descarta a evidência de defeito de
+rolamento.} \textbf{a}, Densidade espectral de potência para rolamento sadio e com
+defeito de pista externa, amostrada a \SI{20}{\kilo\hertz}. A faixa sombreada marca a
+banda acessível ao MPU6050. Os impactos excitam uma ressonância em \SI{3,5}{\kilo\hertz},
+inteiramente fora dessa banda. \textbf{b}, Razão entre as amplitudes em BPFO nas condições
+com e sem defeito. A análise de envelope sobre a banda de ressonância entrega contraste
+\num{21} vezes maior que o espectro direto. \textbf{c}, Razão entre as condições para
+quatro descritores de impacto. Nenhuma sobrevive à limitação de banda com antialiasing
+correto, incluindo pico e pico a pico. \textbf{d}, Frequência aparente da ressonância após
+subamostragem sem filtro; a energia reaparece onde nada existe fisicamente.}
+\label{fig:banda}
+\end{figure}
+
+O contraste entre as condições com e sem defeito, medido na amplitude do pico em BPFO,
+foi de \num{413} vezes pela análise de envelope sobre a banda de ressonância, disponível
+apenas a \SI{20}{\kilo\hertz}. No espectro direto da banda do MPU6050 o contraste caiu
+para \num{20} vezes. A detecção permanece possível, porém a margem disponível para
+variação de carga, temperatura e montagem reduz-se por um fator próximo de \num{21}.
+
+Os descritores estatísticos de impacto perderam completamente o poder de separação
+(Tabela~\ref{tab:features} e Figura~\ref{fig:banda}c). Na cadeia de referência, todas as quatro separam as classes.
+Na banda do MPU6050 com antialiasing correto, todas colapsam para razões próximas da
+unidade.
+
+\begin{table}[!htb]
+\centering
+\caption{Razão entre os valores dos descritores nas condições com e sem defeito. Valores
+próximos de \num{1,0} indicam ausência de separação entre as classes.}
+\label{tab:features}
+\small
+\begin{tabular}{lccc}
+\toprule
+Descritor & Referência \SI{20}{\kilo\hertz} & MPU6050 com AA & MPU6050 sem AA \\
+\midrule
+Curtose          & \num{2,57} & \num{1,01} & \num{2,49} \\
+Fator de crista  & \num{2,11} & \num{1,00} & \num{1,98} \\
+Pico             & \num{2,93} & \num{1,01} & \num{2,73} \\
+Pico a pico      & \num{3,28} & \num{1,07} & \num{3,16} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+O comportamento de pico e pico a pico contraria a expectativa inicial. Fidali e
+colaboradores identificam
+esses dois parâmetros como os mais sensíveis a falhas de fadiga em rolamento, acima da
+velocidade eficaz \cite{fidali2024}. Esperava-se, portanto, maior resistência à limitação de banda. Os
+dois colapsam junto com os demais, o que indica que a escolha do descritor não compensa
+uma aquisição insuficiente.
+
+A cadeia sem antialiasing produz um artefato de interpretação. Os descritores voltam a
+separar as classes, aparentando funcionamento correto, mas a energia real de
+\SI{3,5}{\kilo\hertz} reaparece dobrada em \SI{500}{\hertz}, uma frequência onde nada
+existe fisicamente. Qualquer diagnóstico baseado em frequência fica errado com aparência
+de acerto.
+
+\subsection{A norma exige velocidade, e a integração precisa ser feita na frequência}
+\label{ssec:norma}
+
+A ISO 10816-3 define as zonas de severidade em velocidade eficaz, sobre a banda de
+\SI{10}{\hertz} a \SI{1000}{\hertz} \cite{iso10816,iso20816}. O acelerômetro entrega aceleração. A conversão foi
+testada contra uma senoide cuja integral é conhecida analiticamente, com amplitude
+\SI{3,0}{\meter\per\second\squared} a \SI{50}{\hertz}, correspondendo a
+\SI{6,7524}{\milli\meter\per\second} eficazes (Tabela~\ref{tab:integracao}).
+
+\begin{table}[!htb]
+\centering
+\caption{Velocidade eficaz obtida por cinco variantes de integração, contra o valor
+analítico exato de \SI{6,7524}{\milli\meter\per\second}.}
+\label{tab:integracao}
+\small
+\begin{tabular}{lcc}
+\toprule
+Método & Resultado (\si{\milli\meter\per\second}) & Erro \\
+\midrule
+Integração no tempo, sem passa-alta          & \num{11,69}  & $+\SI{73}{\percent}$ \\
+Integração no tempo, com passa-alta          & \num{17,31}  & $+\SI{156}{\percent}$ \\
+\textbf{Integração na frequência, banda ISO} & \num{6,7525} & \textbf{\SI{0,0}{\percent}} \\
+Na frequência, com viés de \SI{0,02}{\meter\per\second\squared} & \num{6,7525} & \SI{0,0}{\percent} \\
+No tempo sem passa-alta, com o mesmo viés    & \num{55,08}  & $+\SI{716}{\percent}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Dois resultados são contraintuitivos. O filtro passa-alta não corrige a integração no
+tempo, e chega a piorá-la, porque a soma cumulativa continua acumulando o transiente de
+borda do filtro. Um viés de \SI{0,02}{\meter\per\second\squared}, valor contido na
+especificação de qualquer MPU6050, leva o resultado a \SI{55}{\milli\meter\per\second}
+quando o correto é \num{6,75}. Um sinal situado na zona A da norma seria classificado
+muito além da zona D.
+
+A integração no domínio da frequência permanece exata mesmo sob viés, porque o termo
+contínuo cai fora da máscara de \SI{10}{\hertz} a \SI{1000}{\hertz} imposta pela própria
+norma. O método foi validado também em sinal com três componentes, com erro de
+\SI{0,003}{\percent}.
+
+Com a frequência de Nyquist em \SI{500}{\hertz}, o dispositivo cobre metade da banda que a
+norma exige. A conformidade plena com a ISO 10816-3 não é alcançável com o sensor atual,
+independentemente da questão de detecção de rolamento.
+
+\subsection{O protocolo de validação infla a acurácia}
+\label{ssec:vazamento}
+
+Janelas consecutivas de um mesmo ensaio compartilham a assinatura da montagem, que
+inclui nível de ruído, ganho do sensor e condição de aperto. Quando essas janelas são
+divididas aleatoriamente entre treino e teste, o modelo pode identificar o ensaio em vez
+da falha e ainda assim acertar o rótulo. Varejão e colaboradores denominam esse fenômeno
+\emph{similarity bias} e relatam que, de \num{41} estudos revisados baseados no CWRU,
+\num{40} adotaram delineamento suscetível a ele \cite{varejao2025}. Na simulação, o efeito
+foi introduzido deliberadamente: cada ensaio recebeu ganho e nível de ruído próprios,
+sorteados por ensaio.
+
+O efeito foi reproduzido com defeito incipiente, assinatura de montagem sorteada por
+ensaio e cinco ensaios por classe. O mesmo modelo, sobre os mesmos dados e os mesmos
+descritores, atingiu \SI{99,0}{\percent} de acurácia com divisão aleatória por janela e
+$\num{63,2} \pm \num{19,2}\,\si{\percent}$ com divisão por ensaio. A inflação foi de aproximadamente
+\num{36} pontos percentuais.
+
+A distribuição entre as partições revela o mecanismo. Três dos cinco grupos ficaram
+próximos de \num{0,50}, o nível do acerto ao acaso, enquanto um alcançou \num{1,00}. O
+desvio elevado evidencia ausência de generalização, informação que a média única do
+protocolo incorreto suprime.
+
+\subsection{O limiar padrão do detector produz falso alarme incompatível com operação}
+\label{ssec:limiar}
+
+O Isolation Forest é adequado ao cenário de manutenção preditiva, no qual se coleta
+abundante dado de operação normal e quase nenhum de falha. O parâmetro
+\texttt{contamination} informa ao modelo a fração esperada de anomalias no conjunto de
+treino, e determina apenas a posição do limiar de decisão.
+
+Treinando exclusivamente com dados normais, o valor padrão \texttt{auto} classificou
+\SI{42,1}{\percent} das janelas de operação normal como anomalia. Com
+\texttt{contamination} igual a \num{0,01}, o falso alarme caiu para \SI{1,4}{\percent}. A
+taxa de detecção permaneceu em \SI{100}{\percent} nos quatro valores testados, e a área
+sob a curva ROC permaneceu em \num{1,000}. O parâmetro desloca o corte, não a qualidade do
+detector.
+
+O efeito da banda de aquisição sobre o detector foi avaliado com defeito incipiente
+(Tabela~\ref{tab:pauc}). A área sob a curva completa caiu apenas \SI{3,7}{\percent}. A
+área parcial, restrita à região de falso alarme baixo, caiu entre \num{16} e
+\SI{20}{\percent}.
+
+\begin{table}[!htb]
+\centering
+\caption{Desempenho do Isolation Forest sobre defeito incipiente, com descritores e modelo
+idênticos. A área parcial segue o protocolo do benchmark DCASE2020, cujo cenário
+corresponde ao do Kaelix \cite{koizumi2020}.}
+\label{tab:pauc}
+\small
+\begin{tabular}{lccc}
+\toprule
+Métrica & \SI{20}{\kilo\hertz} & MPU6050 & Queda \\
+\midrule
+AUC global                                & \num{1,000} & \num{0,963} & \SI{3,7}{\percent} \\
+pAUC, falso alarme $\leq$ \SI{10}{\percent} & \num{0,999} & \num{0,837} & \SI{16,2}{\percent} \\
+pAUC, falso alarme $\leq$ \SI{5}{\percent}  & \num{0,998} & \num{0,795} & \SI{20,3}{\percent} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A Figura~\ref{fig:metodologia} reúne os três resultados metodológicos. A escolha da
+métrica é determinante, pois a área global não caracteriza o ponto de operação. A
+perda real, na região em que um dispositivo de campo precisa operar, é quatro a cinco
+vezes maior do que a área global sugere.
+
+
+\begin{figure}[!htb]
+\centering
+\figuralarga{fig2_metodologia.png}
+\caption{\textbf{Três escolhas metodológicas alteram os resultados mais do que o efeito
+medido.} \textbf{a}, Velocidade eficaz por cinco variantes de integração, contra o valor
+analítico exato. Apenas a integração no domínio da frequência recupera o valor correto.
+\textbf{b}, Deriva causada por viés de \SI{0,02}{\meter\per\second\squared}, dentro da
+especificação do sensor. \textbf{c}, Acurácia do mesmo modelo sobre os mesmos dados,
+variando apenas a estratégia de partição. Pontos indicam as partições individuais.
+\textbf{d}, Fração da operação normal classificada como anomalia por valor de
+\texttt{contamination}. \textbf{e}, Curvas ROC por banda de aquisição sobre defeito
+incipiente; a faixa sombreada marca a região de operação realista.}
+\label{fig:metodologia}
+\end{figure}
+
+\subsection{O invólucro filtra o sinal antes que ele alcance o sensor}
+\label{ssec:montagem}
+
+O invólucro não é apenas proteção mecânica. Ele integra a cadeia de medição, e o caminho
+entre a superfície do motor e o chip atravessa base, ressalto e corpo, todos em ASA. Cada
+elo funciona como uma mola, e o conjunto forma um sistema massa-mola com frequência
+natural própria.
+
+Duas hipóteses iniciais foram testadas e descartadas. A curvatura da carcaça reduz a
+força de retenção magnética entre \num{7} e \SI{30}{\percent}, o que preserva margem
+próxima de duas vezes a força inercial sob vibração severa. Os modos próprios dos painéis
+situam-se acima de \SI{1300}{\hertz}, com folga sobre a banda normativa.
+
+A terceira hipótese foi confirmada (Figura~\ref{fig:involucro}). A rigidez do caminho resultou em
+\SI{1,45e6}{\newton\per\meter}, o que para uma massa de \SI{118}{\gram} situa a frequência
+de montagem em \SI{557}{\hertz}, dentro da banda de medição. A transmissibilidade atinge
+aproximadamente cinco vezes em \SI{500}{\hertz}, e o erro de amplitude ultrapassa
+\SI{10}{\percent} já em \SI{168}{\hertz}. A prática consolidada em acelerometria exige que
+a frequência de montagem seja pelo menos três vezes a maior frequência de interesse, o que
+corresponderia a \SI{3}{\kilo\hertz} para a banda normativa.
+
+A decomposição da flexibilidade localiza o problema. A base responde por
+\SI{51,1}{\percent} e o corpo por \SI{48,5}{\percent}, enquanto o ressalto contribui com
+\SI{0,4}{\percent}. O resultado é robusto à incerteza da espessura da base: dobrando esse
+valor, a frequência sobe apenas para \SI{750}{\hertz}. A mesma geometria em alumínio
+alcançaria \SI{3273}{\hertz}.
+
+
+\begin{figure}[!htb]
+\centering
+\figuralarga{fig3_involucro.png}
+\caption{\textbf{O invólucro em ASA filtra o sinal antes que ele alcance o sensor.}
+\textbf{a}, Transmissibilidade do conjunto invólucro e sensor, modelado como sistema
+massa-mola de um grau de liberdade, para a mesma geometria em três materiais. Em ASA a
+frequência de montagem cai dentro da banda de medição. \textbf{b}, Erro de amplitude
+correspondente dentro da banda do sensor. \textbf{c}, Decomposição da flexibilidade por
+elo do caminho; base e corpo respondem por praticamente toda ela. \textbf{d}, Força de
+retenção magnética por diâmetro de carcaça, com a força inercial marcada. \textbf{e}, Modo
+fundamental dos painéis, todos acima da banda normativa. Os painéis \textbf{d} e
+\textbf{e} correspondem a hipóteses testadas e descartadas.}
+\label{fig:involucro}
+\end{figure}
+
+\subsection{A bateria, e não o invólucro, define a margem térmica}
+\label{ssec:termica}
+
+A hipótese inicial atribuía ao ASA o papel de elo térmico mais fraco, pela proximidade
+entre sua temperatura de transição vítrea e a temperatura de uma carcaça em regime. A
+análise inverteu essa leitura.
+
+A resistência térmica do caminho condutivo em ASA (Figura~\ref{fig:termica}) é de \SI{88,8}{\kelvin\per\watt}, contra
+\SI{0,074}{\kelvin\per\watt} em alumínio, uma razão de \num{1206} vezes. Com a carcaça a
+\SI{80}{\celsius}, a temperatura interna estabiliza em \SI{44,8}{\celsius} com base em
+ASA, e alcançaria \SI{79,0}{\celsius} com base em alumínio. O autoaquecimento é
+irrelevante, pois a potência média de \SI{2,0}{\milli\watt} eleva a temperatura interna em
+\SI{0,01}{\celsius}. Todo o calor relevante provém do exterior.
+
+O componente que atinge primeiro seu limite é a bateria de polímero de lítio, pela
+restrição de carga em \SI{45}{\celsius}. Essa temperatura interna é alcançada com carcaça
+em torno de \SI{81}{\celsius}. Os demais limites ficam bem acima: circuitos integrados em
+\SI{85}{\celsius}, deformação térmica do ASA em \SI{98}{\celsius} e ímãs em
+\SI{150}{\celsius}.
+
+Este resultado impõe uma restrição adicional ao anterior. A análise de vibração recomenda base
+metálica para elevar a frequência de montagem, e a análise térmica mostra que o metal
+conduziria calor para o interior. Uma quebra térmica de \SI{2}{\milli\meter} entre a base
+metálica e o corpo preserva o ganho de rigidez e mantém a temperatura interna em
+\SI{47}{\celsius}. Meio milímetro de espaçador já recupera a maior parte do isolamento,
+pois a resistência em série é dominada pelo elo de menor condutividade.
+
+
+\begin{figure}[!htb]
+\centering
+\figuralarga{fig4_termica.png}
+\caption{\textbf{O ASA protege a eletrônica, e a bateria é o elo térmico mais fraco.}
+\textbf{a}, Temperatura interna em regime permanente em função da temperatura da carcaça,
+para três configurações de base. \textbf{b}, Limite térmico de cada componente comparado à
+temperatura interna com carcaça a \SI{80}{\celsius}; a cor indica a margem disponível.
+\textbf{c}, As duas análises impõem requisitos opostos à base, e nenhuma das três
+configurações alcança simultaneamente a região desejável. \textbf{d}, Temperatura interna
+com base metálica em função da espessura do espaçador isolante.}
+\label{fig:termica}
+\end{figure}
+
+\section{Confronto com a literatura}
+\label{sec:literatura}
+
+Os resultados da seção anterior foram confrontados com a literatura publicada, por meio
+de busca sistemática em cinco eixos temáticos que resultou em \num{58} referências.
+Nenhum dos seis resultados foi refutado. A literatura, contudo, aponta fragilidades no
+procedimento adotado e questiona decisões de hardware. A subseção~\ref{ssec:conv} reúne
+as convergências, a subseção~\ref{ssec:frag} as objeções ao método e a
+subseção~\ref{ssec:hw} as objeções ao projeto.
+
+\subsection{Convergências}
+\label{ssec:conv}
+
+O estudo de Vieira e colaboradores, \cite{vieira2026}, aceito em \emph{Mechanical Systems and Signal
+Processing}, mede inflação de \num{33} a \num{37} pontos percentuais por vazamento no CWRU,
+faixa que contém nossos \num{36} pontos. A exigência de resposta plana entre
+\SI{10}{\hertz} e \SI{1000}{\hertz} consta do texto normativo. Brandt e Brincker concluem
+que a integração via transformada discreta com divisão por $j\omega$ é o método preferível
+\cite{brandt2014}.
+Randall e Antoni \cite{randall2011} estabelecem que a informação diagnóstica de rolamento reside na modulação
+de ressonâncias de alta frequência.
+
+\subsection{Fragilidades apontadas nesta análise}
+\label{ssec:frag}
+
+O problema metodológico mais sério não foi identificado por nós. Toda a literatura de
+vazamento trata de classificação supervisionada, e não existe trabalho equivalente para
+detecção não supervisionada. A consequência é prática. Treinar o detector apenas com
+dados normais e simultaneamente particionar por rolamento é impossível no CWRU, que
+contém uma única configuração saudável, e problemático no MAFAULDA, cujas sequências
+normais provêm de uma única montagem. As duas recomendações que emitimos não podem ser
+satisfeitas ao mesmo tempo nos conjuntos de dados previstos.
+
+A magnitude do nosso resultado de vazamento situa-se no extremo superior da faixa
+publicada. Abburi e colaboradores medem queda de aproximadamente \num{15} pontos
+percentuais no CWRU \cite{abburi2023}, contra os \num{36} observados aqui. A faixa real vai de \num{10} a
+\num{37} pontos, e depende de modelo, descritores e conjunto de dados.
+
+A escolha do Isolation Forest não se sustenta como decisão ótima. O benchmark ADBench,
+com \num{98436} experimentos, mostra que nenhum algoritmo não supervisionado supera
+estatisticamente os demais \cite{han2022}. O mesmo estudo indica que, com apenas \SI{1}{\percent} de
+anomalias rotuladas, métodos semi-supervisionados superam o melhor método não
+supervisionado. Rotular alguns ensaios de falha renderia mais que otimizar o detector
+atual.
+
+\subsection{Escolhas de hardware contestadas}
+\label{ssec:hw}
+
+A bateria recarregável contraria a prática estabelecida. Os quatro sistemas de referência
+levantados, incluindo o produto usado como benchmark pelo projeto, empregam bateria de
+lítio primária. Nabavi e colaboradores \cite{nabavi2025} recomendam essa química para implantações de
+longa duração e baixa potência, categoria em que o Kaelix se enquadra com seus
+\SI{2,0}{\milli\watt} médios. A troca eliminaria o conector de recarga, o problema térmico
+de carga e parte da complexidade de gerenciamento de energia. Em contrapartida, a
+manutenção passaria a exigir abertura do invólucro, o que conflita com a vedação.
+
+A fixação exclusivamente magnética também é contrariada pelo próprio benchmark. A
+documentação do produto de referência indica que o ímã auxilia a instalação, mas que a
+base deve preferencialmente ser colada ao ativo, tanto para evitar queda quanto para
+elevar a qualidade da aquisição. Essa observação converge com nosso resultado sobre
+frequência de montagem por caminho independente.
+
+O sistema publicado mais próximo do Kaelix combina ESP32, MPU6050 e Isolation Forest com
+limiar automático \cite{kolok2025}. Ele foi avaliado apenas em desbalanceamento e atingiu acurácia próxima
+de \SI{73}{\percent}. O valor serve como referência de comparação: resultado muito superior, sob hardware e
+modo de falha equivalentes, sugere vazamento.
+
+\section{Limitações}
+
+Os sinais são sintéticos e as conclusões valem para a cadeia de processamento, não para o
+desempenho em campo. Os valores absolutos dependem dos parâmetros de simulação, entre eles
+a amplitude do defeito, a frequência de ressonância e o nível de ruído. Devem ser lidos
+como ordens de grandeza.
+
+A análise mecânica emprega fórmulas fechadas com condições de contorno idealizadas. A
+rigidez real depende de pré-carga dos parafusos, planicidade das faces impressas e
+orientação das camadas. A análise térmica assume regime permanente e não modela
+resistência de contato, convecção forçada pelo ventilador do motor nem radiação recebida
+de superfícies próximas.
+
+A revisão de literatura não passou por auditoria independente das citações. Duas das
+referências de maior peso apresentaram problemas quando verificadas em fonte primária, o
+que recomenda cautela. Cada citação deve ser confirmada antes do uso em texto definitivo.
+
+Três dados externos permanecem pendentes e limitam o alcance das conclusões: a temperatura
+real de carcaça dos equipamentos, a classe normativa dos motores e a validação dos
+carregadores de conjuntos de dados públicos.
+
+
+\small
+\begin{thebibliography}{99}
+\setlength{\itemsep}{2pt}
+
+\bibitem{abburi2023}
+H.~Abburi \emph{et al.},
+\newblock A closer look at bearing fault classification approaches,
+\newblock \emph{Annual Conference of the PHM Society}, v.~15, 2023.
+\newblock Preprint: arXiv:2309.17001.
+
+\bibitem{brandt2014}
+A.~Brandt e R.~Brincker,
+\newblock Integrating time signals in frequency domain: comparison with time domain integration,
+\newblock \emph{Measurement}, v.~58, p.~511--519, 2014.
+
+\bibitem{fidali2024}
+M.~Fidali, D.~Augustyn, M.~Ochmann e W.~Uchman,
+\newblock Evaluation of the diagnostic sensitivity of digital vibration sensors based on capacitive MEMS,
+\newblock \emph{Sensors}, v.~24, n.~14, art.~4463, 2024.
+
+\bibitem{han2022}
+S.~Han, X.~Hu, H.~Huang, M.~Jiang e Y.~Zhao,
+\newblock ADBench: anomaly detection benchmark,
+\newblock \emph{NeurIPS 2022, Datasets and Benchmarks Track}, 2022.
+
+\bibitem{iso10816}
+ISO,
+\newblock \emph{ISO 10816-3: Mechanical vibration: evaluation of machine vibration by measurements on non-rotating parts},
+\newblock International Organization for Standardization, 2009.
+
+\bibitem{iso20816}
+ISO,
+\newblock \emph{ISO 20816-3: Mechanical vibration: measurement and evaluation of machine vibration},
+\newblock International Organization for Standardization, 2022.
+
+\bibitem{koizumi2020}
+Y.~Koizumi \emph{et al.},
+\newblock Description and discussion on DCASE2020 challenge task 2: unsupervised anomalous sound detection,
+\newblock \emph{DCASE2020 Workshop}, 2020.
+\newblock Preprint: arXiv:2006.05822.
+
+\bibitem{kolok2025}
+M.~Kolok, M.~Hodoň, P.~Ševčík, M.~Hotz e P.~Remy,
+\newblock Low-cost IoT-based predictive maintenance using vibration,
+\newblock \emph{Sensors}, v.~25, n.~21, art.~6610, 2025.
+
+\bibitem{nabavi2025}
+S.~Nabavi, S.~Hajforoosh e S.~Nabavi,
+\newblock Battery selection for energy-efficient IoT devices: a comparative study of longevity across environments,
+\newblock \emph{International Journal of Electrochemistry}, v.~2025, art.~7783200, 2025.
+
+\bibitem{randall2011}
+R.~B.~Randall e J.~Antoni,
+\newblock Rolling element bearing diagnostics: a tutorial,
+\newblock \emph{Mechanical Systems and Signal Processing}, v.~25, n.~2, p.~485--520, 2011.
+
+\bibitem{smith2015}
+W.~A.~Smith e R.~B.~Randall,
+\newblock Rolling element bearing diagnostics using the Case Western Reserve University data: a benchmark study,
+\newblock \emph{Mechanical Systems and Signal Processing}, v.~64--65, p.~100--131, 2015.
+
+\bibitem{varejao2025}
+F.~M.~Varejão \emph{et al.},
+\newblock The similarity bias problem: what it is and how it impacts vibration-based intelligent fault diagnosis,
+\newblock \emph{Mechanical Systems and Signal Processing}, v.~235, art.~112822, 2025.
+
+\bibitem{vieira2026}
+J.~P.~Vieira, V.~A.~Bauler, R.~K.~Rosa e D.~Silva,
+\newblock Towards a more realistic evaluation of machine learning models for bearing fault diagnosis,
+\newblock \emph{Mechanical Systems and Signal Processing}, v.~258, art.~114640, 2026.
+\newblock Preprint: arXiv:2509.22267.
+
+\end{thebibliography}
+
+\end{document}

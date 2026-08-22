@@ -1,0 +1,10 @@
+componente,limite_c,grupo,ordem,excedido_a_80,margem_c
+LiPo — carga,45,bateria,0,False,0.158510209709533
+LiPo — descarga,60,bateria,1,False,15.158510209709533
+LiPo — risco,70,bateria,2,False,25.158510209709533
+MPU6050,85,eletrônica,3,False,40.15851020970953
+ESP32-S3,85,eletrônica,4,False,40.15851020970953
+ASA — HDT,98,invólucro,5,False,53.15851020970953
+ASA — Tg,105,invólucro,6,False,60.15851020970953
+Ímã N42SH,150,fixação,7,False,105.15851020970953
+Ímã N35UH,180,fixação,8,False,135.15851020970953
