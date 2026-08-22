@@ -5,6 +5,106 @@ Registro das mudanças do projeto Kaelix. Formato baseado em
 
 ## [Não publicado]
 
+## Firmware — bloco de energia e integridade do pacote
+
+### Corrigido — o SX1278 nunca entrava em sleep
+
+Correção de maior impacto do bloco. O rádio não está no barramento cortado
+pelos BC337, e o código nunca chamava `radio.sleep()`: depois do
+`transmit()`, o RadioLib devolve o módulo para STANDBY, onde consome
+~1,5 mA continuamente — inclusive durante os 10 minutos de deep sleep.
+
+```
+sem lora_sleep():  (1,5 + 0,018) mA × 600s = 910,8 mA·s
+com lora_sleep():  (0,0002 + 0,018) mA × 600s = 10,9 mA·s
+```
+
+Sozinha, a diferença é 5,5× o orçamento inteiro do ciclo. O orçamento
+publicado não tinha termo nenhum de LoRa idle.
+
+### Corrigido — orçamento de energia refeito
+
+Além do rádio, dois erros na conta anterior: a autonomia era calculada para
+uma 18650 de 3000 mAh enquanto `project.md` especifica LiPo de 2000 mAh, e
+a autodescarga da bateria (~2,5%/mês = ~68,5 µA, 25% do orçamento) não
+entrava.
+
+| | Antes (publicado) | Real, sem a correção | Depois |
+|---|---|---|---|
+| Corrente média | 270 µA | ~1,84 mA | **~346 µA** |
+| Autonomia | 464 dias (18650 3000mAh) | ~45 dias | **~241 dias** (LiPo 2000mAh) |
+| Meta <1 mA | ✅ margem 3,7× | ❌ 84% acima | ✅ margem 2,9× |
+
+Os números anteriores estavam em `sleep.cpp`, `ARQUITETURA.md`, `README.md`
+e `project.md`, agora todos alinhados.
+
+### Corrigido — GPIO flutuava durante o deep sleep
+
+GPIOs não-RTC vão para alta impedância ao entrar em deep sleep, deixando a
+base dos BC337 flutuando justamente durante os 10 minutos em que o corte de
+energia precisa valer. `deep_sleep()` agora chama `gpio_hold_en()` +
+`gpio_deep_sleep_hold_en()`, e `peripherals_power()` chama `gpio_hold_dis()`
+no boot seguinte — o hold sobrevive ao reset e travaria o pino se não fosse
+solto.
+
+### Corrigido — pacote LoRa não identificava o emissor nem detectava erro
+
+O pacote tinha status, RMS, temperatura e um `timestamp` que era `millis()`
+— que zera a cada deep sleep, então todo pacote chegava com ~3000 ms. Não
+era um relógio. E sem identificação, um gateway com mais de um Kaelix na
+planta não teria como saber de quem era a leitura.
+
+Novo formato, 20 bytes: `version`, `device_id` (eFuse MAC), `boot_count`
+(RTC memory, sobrevive ao sleep), `status`, `rms`, `temperature_c`, `crc`.
+
+O CRC-16/CCITT vive em `lib/crc16/` como função pura, testada no host
+contra o vetor de conferência padrão (`"123456789"` → `0x29B1`) e contra
+bit invertido e troca de bytes. Um pacote corrompido no ar que chegue ao
+gateway como leitura válida é pior que um pacote perdido.
+
+Layout e round-trip verificados isoladamente: 20 bytes, offsets corretos,
+CRC detecta 1 bit invertido.
+
+### Corrigido — retornos de init eram ignorados
+
+`main.cpp` descartava o `bool` dos quatro `*_init()` e de `lora_send()`: o
+dispositivo transmitia mesmo com o rádio fora do ar, e uma falha de TX
+sumia em silêncio. Agora cada falha é reportada e a transmissão é
+condicionada ao rádio ter subido.
+
+Acrescenta também `delay(100ms)` após energizar os periféricos — o MPU6050
+precisa estabilizar antes do init.
+
+### Corrigido — ADC do NTC assumia linearidade que o hardware não tem
+
+`analogRead()` no ESP32-S3 é sensivelmente não-linear. A leitura passa a
+usar `analogReadMilliVolts()`, que aplica a curva de calibração gravada no
+eFuse de fábrica, com `analogSetPinAttenuation(ADC_11db)` para abrir a
+faixa aos ~3,3 V do divisor. `lib/thermistor` ganhou
+`ntc_resistance_from_millivolts` com testes.
+
+### Corrigido — `platformio.ini` não declarava o hardware alvo
+
+O alvo é o WROOM-1 **N16R8** (16 MB de flash, 8 MB de PSRAM octal), mas o
+perfil default da `esp32-s3-devkitc-1` declara 8 MB de flash e nenhuma
+PSRAM — metade da flash e toda a PSRAM ficavam invisíveis. Adicionados
+`board_build.flash_size`, `partitions`, `memory_type = qio_opi` e
+`-D BOARD_HAS_PSRAM`.
+
+### Verificação
+
+26 testes C++ (eram 20) e 35 Python passando. O firmware completo não pôde
+ser compilado aqui (sem toolchain ESP32 nesta máquina) — `pio run -e esp32-s3`
+continua sendo o passo que fecha esta rodada.
+
+### Ainda aberto no firmware
+
+Leitura I2C real do MPU6050 e configuração do DLPF (item 1) seguem
+bloqueadas por hardware. As correntes do SX1278 e a autodescarga da LiPo
+são valores de datasheet — são os dois termos que mais pesam no orçamento e
+precisam de INA219 na Fase 3.
+
+
 ### Contexto
 
 Rodada de correções no pipeline de treino (`training/`) para

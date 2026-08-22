@@ -12,7 +12,7 @@ Dispositivo IoT de baixo custo para manutenção preventiva de motores industria
 
 **Comunicação:** LoRa 433 MHz (módulo RA-02 / SX1278), escolhido em vez de Wi-Fi por robustez a interferência e alcance em ambiente industrial.
 
-**Energia:** bateria LiPo 2000 mAh, deep sleep com corte de alimentação por transistor BC337, recarga por USB-C IP67 sem necessidade de abrir o invólucro.
+**Energia:** bateria LiPo 2000 mAh, deep sleep com corte de alimentação por transistor BC337, recarga por USB-C IP67 sem necessidade de abrir o invólucro. Consumo médio estimado de ~346 µA, autonomia de ~241 dias — ver o orçamento em [ARQUITETURA.md](ARQUITETURA.md).
 
 **Fixação:** base magnética (ímãs N42SH / N35UH, 150 °C), não destrutiva, permite remover o dispositivo para recarga e manutenção.
 

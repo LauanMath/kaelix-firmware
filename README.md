@@ -28,8 +28,8 @@ a integração com o hardware real seja só calibração quando ele chegar.
 | Processamento de vibração (RMS, curtose, fator de crista, FFT) | ✅ Implementado e testado |
 | Leitura I2C real do MPU6050 | ⬜ Bloqueado — precisa do hardware físico |
 | Temperatura (NTC + Steinhart-Hart) | ✅ Implementado e testado |
-| Deep sleep + corte de energia | ✅ Implementado, consumo estimado em ~270µA médio |
-| Comunicação LoRa (RadioLib) | ✅ Implementado, compila; transmissão real não testada |
+| Deep sleep + corte de energia | ✅ Implementado, com retenção de GPIO; consumo estimado ~346µA médio (autonomia ~241 dias) |
+| Comunicação LoRa (RadioLib) | ✅ Implementado, com device id, sequência e CRC-16; transmissão real não testada |
 | Simulação Wokwi | 🟡 Arquivo pronto; verificação visual pendente |
 | Pipeline de treino (Isolation Forest) | ✅ Implementado e validado ponta-a-ponta com dados sintéticos |
 | Split por ensaio, limiar por falso alarme alvo | ✅ `GroupKFold` + calibração por quantil (itens 6 e 7) |
@@ -97,8 +97,8 @@ pio run -e esp32-s3
 pio test -e native
 ```
 
-Cobre `lib/signal_processing`, `lib/thermistor` e `lib/isolation_forest` — 17
-testes no total.
+Cobre `lib/signal_processing`, `lib/thermistor`, `lib/isolation_forest` e
+`lib/crc16` — 26 testes no total.
 
 ### Pipeline de treino (Python)
 
@@ -129,6 +129,9 @@ disponível).
 - **Pinos GPIO** (`NTC_ADC_PIN`, `PERIPHERALS_POWER_PIN`, pinos do LoRa) são
   placeholders sem conflito entre si, mas ainda não conferidos contra um
   esquemático final — ajustar quando o hardware for definido.
+- **Correntes do SX1278** (standby ~1,5mA, sleep ~0,2µA) e a autodescarga da
+  LiPo (~2,5%/mês) são valores de datasheet/literatura. São os dois termos
+  que mais pesam no orçamento de energia — medir com INA219 na Fase 3.
 - **Datasets MAFAULDA/CWRU**: o pipeline já entrega os sinais no domínio do
   firmware (1 kHz, janelas de 512 amostras) e lê o rótulo verdadeiro da
   estrutura de diretórios — mas o layout de colunas/variáveis e os **nomes

@@ -42,10 +42,15 @@ chamador (`vibration_read_features`, com `VIBRATION_SAMPLES = 512` em
 
 Duas funções puras:
 
-1. `ntc_resistance_from_adc` — converte a leitura do ADC para a
-   resistência do NTC, assumindo um divisor de tensão
-   `Vcc → R_FIXED → nó de leitura → NTC → GND`. **Topologia assumida, não
-   confirmada contra o esquemático final.**
+1. `ntc_resistance_from_adc` / `ntc_resistance_from_millivolts` —
+   convertem a leitura para a resistência do NTC, assumindo um divisor de
+   tensão `Vcc → R_FIXED → nó de leitura → NTC → GND`. **Topologia
+   assumida, não confirmada contra o esquemático final.**
+
+   O firmware usa a variante em milivolts: o ADC bruto do ESP32-S3 é
+   sensivelmente não-linear, e `analogReadMilliVolts` aplica a curva de
+   calibração gravada no eFuse de fábrica. Usar a contagem crua assume uma
+   linearidade que o hardware não tem, e produz temperatura enviesada.
 2. `ntc_resistance_to_celsius` — equação B (Steinhart-Hart simplificada),
    com os valores nominais do NTC 10K (beta 3950).
 
@@ -55,7 +60,7 @@ Corte de energia via GPIO (assumindo topologia low-side com os transistores
 BC337: GPIO em nível alto satura o transistor, completando o retorno a GND
 do MPU6050 e do divisor de tensão do NTC).
 
-### Estimativa teórica de consumo médio
+### Orçamento de energia
 
 Ciclo: acordar → ler MPU6050+NTC / processar (3s) → transmitir LoRa
 (~150ms) → deep sleep (10min) → repete.
@@ -68,22 +73,62 @@ medição real na Fase 3):
 | ESP32-S3 ativo (sem WiFi) | ~40 mA | típico, datasheet Espressif |
 | MPU6050 em operação | ~3,9 mA | datasheet InvenSense |
 | SX1278 TX @ ~17dBm | ~90 mA | datasheet Semtech |
+| **SX1278 standby (STDBY)** | **~1,5 mA** | datasheet Semtech |
+| **SX1278 sleep** | **~0,2 µA** | datasheet Semtech |
 | ESP32-S3 deep sleep | ~10 µA | fornecido no escopo do projeto |
 | HT7333 quiescente | ~8 µA | fornecido no escopo do projeto |
 
-Carga por ciclo (`Q = I × t`):
+#### A linha que decide o orçamento
+
+O rádio **não** está no barramento cortado pelos BC337, então o estado em
+que ele passa os 10 minutos de sleep é decidido por software:
 
 ```
-Fase ativa (3,0s):   (40 + 3,9 + 0,008) mA × 3,0s        = 131,72 mA·s
-Fase TX (0,15s):     (40 + 3,9 + 90 + 0,008) mA × 0,15s  =  20,09 mA·s
-Fase sleep (600s):   (0,010 + 0,008) mA × 600s           =  10,80 mA·s
-                                                    Total = 162,61 mA·s
-                                              = 0,04517 mAh por ciclo (603,15s)
+sem lora_sleep():  (1,5 + 0,018) mA × 600s = 910,8 mA·s
+com lora_sleep():  (0,0002 + 0,018) mA × 600s = 10,9 mA·s
 ```
 
-Corrente média: `0,04517 mAh ÷ (603,15s / 3600) ≈ 0,2696 mA ≈ 270 µA` —
-dentro da meta de <1mA, com margem de ~3,7×. Autonomia estimada com bateria
-18650 3000mAh: ~464 dias (~15,5 meses).
+Sozinha, essa diferença é 5,5× maior que o orçamento inteiro do ciclo.
+`comms::lora_sleep()` é obrigatório antes do `deep_sleep()`, não opcional.
+
+#### Carga por ciclo (`Q = I × t`), com o rádio dormindo
+
+```
+Fase ativa (3,0s):   (40 + 3,9 + 1,5 + 0,008) mA × 3,0s      = 136,22 mA·s
+                     (o rádio fica em standby depois do begin())
+Fase TX (0,15s):     (40 + 3,9 + 90 + 0,008) mA × 0,15s      =  20,09 mA·s
+Fase sleep (600s):   (0,0002 + 0,010 + 0,008) mA × 600s      =  10,92 mA·s
+                                                      Total  = 167,23 mA·s
+                                            = 0,04645 mAh por ciclo (603,15s)
+```
+
+Corrente média do circuito: `167,23 ÷ 603,15 ≈ 0,2772 mA ≈ 277 µA`.
+
+#### Autodescarga da bateria
+
+Uma LiPo perde ~2,5%/mês em prateleira. Sobre 2000 mAh são 50 mAh/mês, o
+equivalente a **~68,5 µA contínuos** — 25% do orçamento, e estava faltando
+nas contas anteriores.
+
+```
+Consumo efetivo: 277 + 68,5 ≈ 346 µA   → dentro da meta de <1mA (margem ~2,9×)
+Autonomia (LiPo 2000mAh): 2000 ÷ 0,346 ≈ 5780h ≈ 241 dias (~8 meses)
+```
+
+**Nota sobre a versão anterior deste documento.** A estimativa de 270 µA e
+464 dias tinha dois erros: não incluía termo nenhum de LoRa idle (o rádio
+nunca era posto em sleep) e calculava a autonomia para uma 18650 de
+3000 mAh, enquanto o projeto especifica LiPo de 2000 mAh. Com o rádio em
+standby, o consumo real seria ~1,84 mA e a autonomia ~45 dias.
+
+#### Retenção do GPIO durante o sleep
+
+GPIOs não-RTC vão para alta impedância ao entrar em deep sleep, o que
+deixaria a base dos BC337 flutuando justamente durante os 10 minutos em
+que o corte de energia precisa valer. `deep_sleep()` chama `gpio_hold_en()`
++ `gpio_deep_sleep_hold_en()` antes de dormir, e `peripherals_power()`
+chama `gpio_hold_dis()` no boot seguinte — o hold sobrevive ao reset e
+travaria o pino se não fosse solto.
 
 ## Comunicação LoRa (`src/comms/lora.cpp`)
 
@@ -91,8 +136,27 @@ RadioLib, módulo RA-02/SX1278, 433MHz, potência de TX 17dBm. API conferida
 contra o código-fonte real da versão instalada (`Module`, `begin`,
 `setOutputPower`, `transmit`) — não só "compilou por acaso".
 
-Pacote (`LoraPacket`, ~13 bytes): status (normal/anômalo), RMS, temperatura,
-timestamp.
+#### Pacote (`LoraPacket`, 20 bytes)
+
+| Campo | Bytes | Por quê |
+|---|---|---|
+| `version` | 1 | o gateway precisa saber interpretar o layout; sem isso, mudar o formato vira leitura silenciosamente errada do outro lado |
+| `device_id` | 4 | do eFuse MAC. Com mais de um Kaelix na planta, sem ele o gateway não sabe de quem é a leitura |
+| `boot_count` | 4 | contador em RTC memory, sobrevive ao deep sleep. Dá sequência e detecção de pacote perdido |
+| `status` | 1 | normal/anômalo |
+| `rms` | 4 | |
+| `temperature_c` | 4 | |
+| `crc` | 2 | CRC-16/CCITT sobre os 18 bytes anteriores |
+
+O campo `timestamp` que existia aqui era `millis()`, que zera a cada deep
+sleep — todo pacote chegava com ~3000 ms. Não era um relógio. O tempo de
+parede é responsabilidade do gateway, que carimba na recepção;
+`boot_count` dá a ordem.
+
+O CRC vive em `lib/crc16/` como função pura, testada no host contra o
+vetor de conferência padrão (`"123456789"` → `0x29B1`): um pacote
+corrompido no ar que chegue ao gateway como leitura válida é pior que um
+pacote perdido.
 
 ### Pinos GPIO (ESP32-S3-DevKitC-1, variante Arduino `esp32s3`)
 
@@ -270,6 +334,7 @@ automaticamente quando `python -m kaelix_ml.train` roda com sucesso.
 | `test_signal_processing` | `test/` (PlatformIO/Unity, `native`) | RMS, curtose, fator de crista, frequência dominante — valores analíticos conhecidos |
 | `test_thermistor` | `test/` | conversão ADC→resistência→°C — ponto de ancoragem exato + monotonicidade + limites |
 | `test_isolation_forest` | `test/` | `c(n)` contra valores de referência, caminhos de árvore construída à mão, score |
+| `test_crc16` | `test/` | vetor de conferência padrão, detecção de bit invertido e de troca de bytes |
 | `test_features` | `training/tests/` (pytest) | espelha `test_signal_processing`, garante paridade Python↔C++ |
 | `test_labeling` | `training/tests/` | conversão g→m/s², integração na frequência contra valor analítico, máscara de banda 10–1000 Hz, imunidade a bias, limites de zona ISO |
 | `test_dataset` | `training/tests/` | recursão da busca, decimação, janelamento, unidade, rótulo por caminho |
