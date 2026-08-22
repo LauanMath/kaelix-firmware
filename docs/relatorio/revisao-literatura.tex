@@ -68,16 +68,16 @@
 Este documento confronta as escolhas de projeto e os resultados do Kaelix com a
 literatura publicada. O Kaelix é um dispositivo IoT de manutenção preditiva para motores
 industriais, construído sobre um ESP32-S3-WROOM-1, um acelerômetro MPU6050 em barramento
-I\textsuperscript{2}C com taxa de saída de \SI{1}{\kilo\hertz} --- e, portanto, frequência
-de Nyquist de \SI{500}{\hertz} ---, um termistor NTC \SI{10}{\kilo\ohm}, rádio LoRa SX1278
+I\textsuperscript{2}C com taxa de saída de \SI{1}{\kilo\hertz} (e, portanto, frequência de
+Nyquist de \SI{500}{\hertz}), um termistor NTC \SI{10}{\kilo\ohm}, rádio LoRa SX1278
 em \SI{433}{\mega\hertz}, invólucro em ASA impresso com fixação magnética e bateria LiPo
 de \SI{2000}{\milli\ampere\hour}. A detecção de anomalias é feita por Isolation Forest com
 inferência nativa em C++ embarcada, sem TFLite Micro, sobre quatro descritores: valor
 eficaz, curtose, fator de crista e frequência dominante.
 
 A revisão não é um inventário de trabalhos correlatos. Cada eixo temático parte de um
-achado próprio do projeto e pergunta o que a literatura diz sobre ele --- se o confirma,
-se o contesta ou se simplesmente não o cobre. Os eixos são:
+achado próprio do projeto e pergunta o que a literatura diz sobre ele: se o confirma, se o
+contesta ou se não o cobre. Os eixos são:
 
 \begin{enumerate}[label=\textbf{Eixo \arabic*.}, leftmargin=2.6cm]
 \item Isolation Forest, limiar de decisão e TinyML embarcado.
@@ -89,10 +89,10 @@ se o contesta ou se simplesmente não o cobre. Os eixos são:
 
 O Eixo~2 não integra esta versão do documento. Nenhuma das referências que o sustentariam
 consta do conjunto conferido em fonte primária que ampara este texto, e a regra adotada
-aqui foi não citar o que não foi conferido. Os achados próprios correspondentes --- o
-vazamento por partição aleatória de janela, que infla a acurácia em cerca de 36 pontos
+aqui foi não citar o que não foi conferido. Os achados próprios correspondentes são dois:
+o vazamento por partição aleatória de janela, que infla a acurácia em cerca de 36 pontos
 percentuais quando comparado a validação por \emph{GroupKFold} por ensaio, e o confundidor
-de massa de desbalanceamento nos ensaios de rolamento do MAFAULDA --- aparecem neste
+de massa de desbalanceamento nos ensaios de rolamento do MAFAULDA. Ambos aparecem neste
 documento apenas onde incidem sobre os outros quatro eixos, e sempre marcados como
 resultado próprio, nunca como literatura. O eixo permanece em auditoria.
 
@@ -111,7 +111,7 @@ sete registros perdiam de um a quatro autores no fim da lista. Segundo, versão 
 trabalho: dois artigos estavam datados pelo \emph{preprint} arXiv enquanto se citava o
 título da versão de periódico, o que mistura dois documentos distintos. Terceiro, achado
 mal atribuído: em três casos o número que se pretendia citar pertence a outro método, a
-outro artigo ou a outra edição do mesmo desafio --- o caso mais grave é um protocolo de
+outro artigo ou a outra edição do mesmo desafio. O caso mais grave é um protocolo de
 limiar por distribuição gama que não existe no artigo do DCASE2020 e só aparece na edição
 de 2022. Quarto, folhas de dados citadas por revisão e ano errados, o que importa porque
 revisões alteram bandas e faixas térmicas. Quinto, e mais consequente para o
@@ -119,54 +119,53 @@ Eixo~4: a ISO 10816-3:2009 está \textbf{retirada}, substituída pela ISO 20816-
 levantamento original a listava como vigente; além disso, a URL registrada para a norma
 substituta apontava para outra norma inteiramente.
 
-Três regras foram aplicadas na redação. Primeira: nenhuma afirmação que dependesse de um
-número não confirmado sobreviveu na forma em que estava --- ou foi reescrita para o que a
-fonte sustenta, ou foi removida. Segunda: valores que vêm de folha de dados do fabricante
+A redação seguiu três regras. Primeira: nenhuma afirmação que dependesse de um número não
+confirmado sobreviveu na forma em que estava. Cada uma foi reescrita para o que a fonte
+sustenta, ou foi removida. Segunda: valores que vêm de folha de dados do fabricante
 ou das notas internas de leitura do projeto, e não da literatura revisada por pares, estão
 marcados como tal no corpo do texto e \emph{não} recebem entrada na bibliografia; é o caso
 da densidade de ruído do MPU6050 e do orçamento de ruído da Analog Devices discutido no
 Eixo~4. Terceira: resultados próprios do Kaelix estão sempre identificados como próprios,
 com a indicação de se vêm de simulação, de decimação controlada do MAFAULDA ou de medição
-no dispositivo --- distinção que importa, porque a camada de aquisição do firmware ainda
+no dispositivo. A distinção importa, porque a camada de aquisição do firmware ainda
 não está implementada e, portanto, \emph{nenhum} número deste documento vem de medição no
 dispositivo.
 
-Duas normas citadas no levantamento do projeto como pertinentes --- a ISO 13373-1 e -2,
-sobre monitoramento de condição por vibração, e a ISO 5348, sobre montagem mecânica de
-acelerômetros --- não foram conferidas em fonte primária nesta auditoria. Elas são
-mencionadas no texto onde a omissão seria desonesta, sempre com essa ressalva explícita, e
-não integram a bibliografia.
+Duas normas que o levantamento do projeto cita como pertinentes não foram conferidas em
+fonte primária nesta auditoria: a ISO 13373-1 e -2, sobre monitoramento de condição por
+vibração, e a ISO 5348, sobre montagem mecânica de acelerômetros. Elas são mencionadas no
+texto onde a omissão seria desonesta, sempre com essa ressalva explícita, e não integram a
+bibliografia.
 
 \section{Revisão por eixo}
 
 \subsection{Eixo 1 --- Isolation Forest, limiar de decisão e TinyML embarcado}
 
 A literatura recente de detecção não supervisionada de anomalias desloca a pergunta de
-engenharia, mas o deslocamento é condicional, e convém enunciá-lo com a condição à vista:
+engenharia, mas o deslocamento é condicional, e a condição precisa ficar à vista:
 \emph{dada banda de medição suficiente}, o que decide o desempenho não é qual detector se
 escolhe, e sim como o limiar é calibrado, com que métrica o resultado é lido e quanto do
-orçamento de um microcontrolador o modelo consome. Sem banda, nada disso importa --- e os
+orçamento de um microcontrolador o modelo consome. Sem banda, nada disso importa. Os
 Eixos~3 e~4 mostram que essa é exatamente a situação do Kaelix para a falha de rolamento,
-onde nenhum corte de escore transforma contraste ausente em detecção. Vale também
-delimitar de onde vem a evidência deste eixo: os grandes comparativos invocados a seguir
-são de \emph{benchmark tabular} \emph{offline}, não de desempenho em campo, e a
-transferência de um para o outro é hipótese, não resultado.
+onde nenhum corte de escore transforma contraste ausente em detecção. Os grandes
+comparativos invocados a seguir são de \emph{benchmark tabular} \emph{offline}, não de
+desempenho em campo, e a transferência de um para o outro é hipótese, não resultado.
 
 \subsubsection{A escolha do detector é menos decisiva do que parece --- e não há consenso}
 
 Dois comparativos de grande porte discordam, e a discordância é informativa porque eles
 medem coisas diferentes. O ADBench é o maior em número de experimentos e em cobertura de
-paradigmas: \num{30} algoritmos --- \num{14} não supervisionados, \num{7}
-semissupervisionados e \num{9} supervisionados --- sobre \num{57} conjuntos de dados,
+paradigmas: \num{30} algoritmos (\num{14} não supervisionados, \num{7}
+semissupervisionados e \num{9} supervisionados) sobre \num{57} conjuntos de dados,
 \num{98436} experimentos ao todo, e conclui que \emph{nenhum} método não supervisionado é
 estatisticamente superior aos demais~\cite{han2022}. O trabalho de Bouman, Bukhsh e Heskes
 é a maior comparação restrita a algoritmos \emph{não supervisionados}: \num{33} algoritmos
-sobre \num{52} conjuntos tabulares reais, e nele o Extended Isolation Forest (EIF) supera
-significativamente a maioria dos concorrentes, com a ressalva de que os dados se separam
-em dois regimes --- em conjuntos \emph{locais} vence o kNN, em conjuntos \emph{globais} o
-EIF~\cite{bouman2024}. Não há contradição entre os dois resultados; há escopos distintos.
-Mas há consequência direta para este projeto: a evidência disponível recomenda o EIF, não
-o Isolation Forest canônico adotado aqui.
+sobre \num{52} conjuntos tabulares reais. Nele o Extended Isolation Forest (EIF) supera a
+maioria dos concorrentes, com a ressalva de que os dados se separam em dois regimes: em
+conjuntos \emph{locais} vence o kNN, em conjuntos \emph{globais} o EIF~\cite{bouman2024}.
+Não há contradição entre os dois resultados; há escopos distintos. Mas há consequência
+direta para este projeto: a evidência disponível recomenda o EIF, não o Isolation Forest
+canônico adotado aqui.
 
 Essa objeção não pode ser apenas nomeada. A razão declarada para permanecer no Isolation
 Forest é de implementação embarcada, e é verificável: um nó do iForest canônico armazena
@@ -176,9 +175,9 @@ intercepto, e a inferência custa um produto interno por nó. Com quatro descrit
 custo por nó cresce de duas para cinco palavras e a inferência passa de comparação para
 soma de produtos, em uma árvore percorrida uma vez por janela. É um preço pequeno em
 valor absoluto e grande em relação ao orçamento de um ESP32-S3 quando multiplicado pelo
-tamanho da floresta --- mas é um argumento de projeto, e não um resultado de literatura.
-Enquanto não for medido no dispositivo, a escolha do iForest canônico deve constar como
-limitação de escopo, não como conclusão.
+tamanho da floresta. Esse, porém, é um argumento de projeto, e não um resultado de
+literatura. Enquanto não for medido no dispositivo, a escolha do iForest canônico deve
+constar como limitação de escopo, não como conclusão.
 
 O suporte específico para máquinas rotativas, em contrapartida, é o melhor que o Isolation
 Forest tem. Entre \num{11} detectores não supervisionados, ele atinge F1 \num{97,19} e
@@ -186,8 +185,8 @@ PR-AUC \num{99,92} em rolamento \emph{run-to-failure}, \num{99,71} e \num{99,99}
 de engrenagens e \num{97,20} e \num{99,74} em faltas mecânicas~\cite{brito2022}. Os dois
 primeiros conjuntos são adquiridos a \SI{20}{\kilo\hertz}, banda que o MPU6050 do Kaelix,
 com Nyquist de \SI{500}{\hertz}, não possui; o terceiro é descrito de outra forma no
-artigo --- arquivos de \num{3200} pontos com resolução espectral de \SI{0,125}{\hertz}
----, e o registro de auditoria não permite identificar o conjunto de dados nem a taxa de
+artigo, como arquivos de \num{3200} pontos com resolução espectral de \SI{0,125}{\hertz},
+e o registro de auditoria não permite identificar o conjunto de dados nem a taxa de
 aquisição correspondente.
 
 Esse terceiro caso merece parágrafo próprio, porque é onde a literatura mais favorável ao
@@ -200,8 +199,8 @@ no artigo, o corte do Caso~3 foi definido a partir da razão de contaminação
 \emph{conhecida}~\cite{brito2022}, isto é, com informação que o operador em campo não
 tem; um limiar-oráculo desloca o ponto de operação para onde o F1 é máximo, e não para
 onde o falso alarme é tolerável. O segundo é o protocolo de partição, que o registro
-verificado não documenta --- e o achado próprio deste projeto é que a partição aleatória
-de janelas infla a acurácia em cerca de 36 pontos percentuais em relação à validação por
+verificado não documenta. O achado próprio deste projeto é que a partição aleatória de
+janelas infla a acurácia em cerca de 36 pontos percentuais em relação à validação por
 ensaio. O terceiro só se aplica se o conjunto do Caso~3 for o MAFAULDA, o que não foi
 possível confirmar: nesse conjunto, os ensaios de rolamento rodam \emph{com} massa de
 desbalanceamento adicionada, e a detecção acompanha a massa e não o defeito, de modo que
@@ -210,8 +209,8 @@ que medida, é trabalho a fazer; enquanto não for feito, o F1 \num{97,20} não 
 como evidência de que o Isolation Forest resolve rolamento na banda do Kaelix.
 
 Um quarto trabalho é frequentemente invocado como contraponto e não sustenta o que dele
-se pede. Hermansa \emph{et al.} comparam quatro detectores --- HDBSCAN, LOF, Isolation
-Forest e \emph{one-class} SVM --- em sensores de britadores de carvão e de pórticos, e
+se pede. Hermansa \emph{et al.} comparam quatro detectores (HDBSCAN, LOF, Isolation
+Forest e \emph{one-class} SVM) em sensores de britadores de carvão e de pórticos, e
 adotam o HDBSCAN como modelo-base do \emph{pipeline} de redução de falsos
 alarmes~\cite{hermansa2022}. O registro verificado não contém ranqueamento que coloque o
 Isolation Forest atrás dos demais, e essa afirmação foi removida daqui. O que resta é
@@ -221,16 +220,15 @@ recaiu sobre outro detector.
 \subsubsection{O limiar: o \emph{default} não é calibração}
 
 No artigo fundador, o escore $s(x,n) = 2^{-E(h(x))/c(n)}$ tem $0,5$ como \emph{referência
-interpretativa} --- ``if all the instances return $s \approx 0,5$, then the entire sample
-does not really have any distinct anomaly'' ---, e a robustez demonstrada está nos
-parâmetros do \emph{ensemble} ($t = \num{100}$, $\psi = \num{256}$), não no
+interpretativa}, na formulação ``if all the instances return $s \approx 0,5$, then the
+entire sample does not really have any distinct anomaly'', e a robustez demonstrada está
+nos parâmetros do \emph{ensemble} ($t = \num{100}$, $\psi = \num{256}$), não no
 corte~\cite{liu2008}. A documentação oficial explicita o mecanismo: com
 \texttt{contamination='auto'} o \texttt{offset\_} é fixado em $-0,5$ e
 \texttt{decision\_function = score\_samples - offset\_}; qualquer valor diferente redefine
 apenas o \emph{offset}, nunca o \texttt{score\_samples}~\cite{scikitlearn2026}. Seguem daí
 duas consequências mecânicas: o corte padrão é herdado de uma interpretação, não estimado
-nos dados, e toda métrica de ranqueamento --- ROC-AUC inclusive --- é invariante ao
-parâmetro.
+nos dados, e toda métrica de ranqueamento, ROC-AUC inclusive, é invariante ao parâmetro.
 
 Os trabalhos que reportam bons resultados não usam o padrão. O limiar é fixado em
 \num{0,75} sobre o escore normalizado, sob a hipótese de que o treino contém apenas
@@ -241,8 +239,8 @@ Teoria de Valores Extremos: SPOT e DSPOT dispensam hipótese sobre a distribuiç
 o número de falsos positivos, com DSPOT estendendo o método a fluxos com
 deriva~\cite{siffer2017}. Convém não superestimar a facilidade. A teoria não dispensa
 hipótese: ela assume que a \emph{cauda} das excedências segue uma Pareto generalizada, o
-que exige excedências em número suficiente para estimar seus parâmetros, e a
-implementação precisa de mais do que $q$ --- é preciso escolher o limiar inicial de
+que exige excedências em número suficiente para estimar seus parâmetros. A implementação
+também precisa de mais do que $q$: é preciso escolher o limiar inicial de
 \emph{peaks-over-threshold} e a janela de calibração. Além disso, $q$ é uma probabilidade
 de excedência sob a cauda ajustada, e não o falso alarme empírico do detector implantado;
 os dois coincidem apenas na medida em que o ajuste esteja correto. Nada no material
@@ -250,17 +248,16 @@ revisado indica que SPOT ou DSPOT já tenham sido aplicados a escores de Isolati
 nem que o custo caiba na RAM de um ESP32-S3: aplicá-los aqui é proposta deste trabalho,
 não resultado herdado da literatura.
 
-Cabe uma ressalva sobre um argumento que poderia ser usado contra tudo isto. O estudo de
-seleção de modelos \emph{label-free} mostra que nenhuma estratégia interna é praticamente
-útil --- as isoladas não diferem de sorteio, e as por consenso não superam o iForest com
-hiperparâmetros padrão e ainda custam mais~\cite{ma2023}. Poder-se-ia concluir daí que o
-padrão é tão bom quanto qualquer coisa. Não se pode: o registro verificado descreve
-\num{297} modelos candidatos formados por \num{8} detectores e várias configurações de
-hiperparâmetros, sem enumerá-las, e não reporta \texttt{contamination} entre os
-hiperparâmetros varridos. Como o parâmetro não altera \texttt{score\_samples}, ele não
-afeta o ranqueamento sobre o qual aquele estudo se pronuncia. A conclusão de
-Ma \emph{et al.} --- que não existe método confiável sem rótulos para escolher detector
-e hiperparâmetro --- permanece válida e não se transfere ao limiar.
+Contra tudo isto pode-se invocar o estudo de seleção de modelos \emph{label-free}, que
+mostra que nenhuma estratégia interna é praticamente útil: as isoladas não diferem de
+sorteio, e as por consenso não superam o iForest com hiperparâmetros padrão e ainda custam
+mais~\cite{ma2023}. Poder-se-ia concluir daí que o padrão é tão bom quanto qualquer coisa.
+Não se pode: o registro verificado descreve \num{297} modelos candidatos formados por
+\num{8} detectores e várias configurações de hiperparâmetros, sem enumerá-las, e não
+reporta \texttt{contamination} entre os hiperparâmetros varridos. Como o parâmetro não
+altera \texttt{score\_samples}, ele não afeta o ranqueamento sobre o qual aquele estudo se
+pronuncia. A conclusão de Ma \emph{et al.}, de que não existe método confiável sem rótulos
+para escolher detector e hiperparâmetro, permanece válida e não se transfere ao limiar.
 
 \subsubsection{Custo em microcontrolador, métricas e falso alarme}
 
@@ -279,7 +276,7 @@ orçamento. A primeira é de atribuição: o registro de auditoria associa o pic
 projeto registram uma faixa de \SIrange{536}{1576}{\kilo\byte} para \numrange{10}{50}
 árvores; a divergência precisa ser resolvida contra o artigo antes de o número ser
 transportado. A segunda é de natureza: trata-se de implementação em MicroPython
-interpretado, e o Kaelix é C++ nativo --- comparar pegadas de memória e latências entre as
+interpretado, e o Kaelix é C++ nativo. Comparar pegadas de memória e latências entre as
 duas sem dizê-lo é comparar coisas diferentes. O orçamento correspondente do Kaelix ainda
 não foi medido, porque a camada de aquisição do firmware permanece não implementada, e
 por isso este documento não apresenta números próprios de RAM e de latência.
@@ -292,13 +289,13 @@ disponível, e ela exige alguns rótulos.
 
 Quanto à métrica, o benchmark de referência para o mesmo \emph{regime de treino} do Kaelix
 --- apenas dados normais no treino, anomalias desconhecidas --- adota AUC \emph{e} pAUC
-sobre a faixa de baixa FPR $[0, p]$ com $p = \num{0,1}$, justamente porque a AUC global não
+sobre a faixa de baixa FPR $[0, p]$ com $p = \num{0,1}$, porque a AUC global não
 caracteriza o ponto de operação~\cite{koizumi2020}. A identidade com o caso do Kaelix
 termina aí: aquele é um desafio de detecção de som anômalo de máquina, com modalidade,
 banda e classe de modelo distintas das deste projeto. A justificativa do pAUC não depende
 dessa aproximação, e Brito \emph{et al.} reforçam a mesma disciplina ao reportar PR-AUC
-além do F1~\cite{brito2022}. Isso ampara a decisão de reportar pAUC a FPR
-$\leq \SI{10}{\percent}$, e o resultado próprio mostra por que ela importa: a pAUC cai
+além do F1~\cite{brito2022}. Isso ampara a decisão de reportar pAUC a FPR $\leq
+\SI{10}{\percent}$, e o resultado próprio mostra por que ela importa: a pAUC cai
 \SI{16,2}{\percent} onde a AUC global cai apenas \SI{3,7}{\percent}.
 
 Sobre falso alarme, a evidência mais direta e mais desfavorável ao desenho do Kaelix é a
@@ -306,25 +303,25 @@ de Chevtchenko \emph{et al.}: em nó IoT com ESP32 e IMU ISM330DLCTR amostrada a
 \SI{1}{\kilo\hertz}, sobre \num{3750} amostras normais e \num{2250} anômalas de três
 motores de indução de 1~hp a \num{1000}~rpm, o Isolation Forest atinge sensibilidade de
 \SI{88,9}{\percent} em validação e \SI{86,3}{\percent} em teste, mas especificidade de
-apenas \SI{61,6}{\percent} e \SI{67,4}{\percent} --- isto é, de \SI{32,6}{\percent} a
+apenas \SI{61,6}{\percent} e \SI{67,4}{\percent}, isto é, de \SI{32,6}{\percent} a
 \SI{38,4}{\percent} da operação normal marcada como anomalia~\cite{chevtchenko2023}.
 Existe, portanto, FPR publicado para Isolation Forest embarcado, e ele é alto. A
 evidência de campo sobre redução de falso alarme com detector não supervisionado genérico
-é complementar e mais otimista --- a métrica $N$ cai de \numrange{0,457}{0,939} para
+é complementar e mais otimista: a métrica $N$ cai de \numrange{0,457}{0,939} para
 \numrange{0,026}{0,115} com adaptação do modelo-base somada a um modelo de correção, uma
-redução média de \SI{90,25}{\percent}~\cite{hermansa2022} ---, mas é preciso registrar
-que esses números são do HDBSCAN, o modelo-base escolhido, e não do Isolation Forest.
+redução média de \SI{90,25}{\percent}~\cite{hermansa2022}. Esses números, porém, são do
+HDBSCAN, o modelo-base escolhido, e não do Isolation Forest.
 
 A Tabela~\ref{tab:fpr} reúne o que se sabe. Os \SI{22}{\percent} atribuídos a
 Kolok \emph{et al.} não são reportados no artigo: são derivados aqui a partir dos
 valores publicados de acurácia (\num{0,729}), precisão (\num{0,755}) e revocação
 (\num{0,679}), que juntos determinam prevalência de \num{0,50} e especificidade de
 \num{0,78}. A derivação é aritmética e só vale se os três valores forem internamente
-consistentes --- e o artigo é internamente inconsistente em outro ponto, ao mencionar
+consistentes. O artigo é internamente inconsistente em outro ponto, ao mencionar
 \SI{93,4}{\percent} de acurácia diagnóstica na discussão sem que o número apareça nos
-resultados. Ainda assim, o quadro é claro: três implementações independentes com Isolation
-Forest em nó embarcado ficam entre \num{22} e \SI{38}{\percent} de falso alarme sobre
-operação normal, e o valor próprio de cerca de \SI{42}{\percent} com
+resultados. Ainda assim, o quadro é o seguinte: três implementações independentes com
+Isolation Forest em nó embarcado ficam entre \num{22} e \SI{38}{\percent} de falso alarme
+sobre operação normal, e o valor próprio de cerca de \SI{42}{\percent} com
 \texttt{contamination='auto'} é da mesma ordem de grandeza. É preciso dizer o que essa
 compatibilidade \emph{não} é: Chevtchenko \emph{et al.} não declaram, no registro
 verificado, qual política de limiar usaram, de modo que a proximidade numérica entre
@@ -376,8 +373,8 @@ supervisionada um custo deliberado num conjunto rotulado como o MAFAULDA. A resp
 declarada é de cenário de implantação, e não de desempenho: o dispositivo é destinado a
 máquinas sem histórico rotulado, os rótulos do MAFAULDA são usados aqui para
 \emph{validar} e não para treinar, e um detector que só funciona com rótulos não se
-implanta em uma máquina nova. Onde esse critério não se aplicar --- em uma planta que já
-tenha histórico anotado --- a escolha não se defende, e deve ser tratada como limitação de
+implanta em uma máquina nova. Onde esse critério não se aplicar, como em uma planta que já
+tenha histórico anotado, a escolha não se defende e deve ser tratada como limitação de
 escopo. A segunda objeção corre na direção contrária: trocar o Isolation Forest por um
 autoencoder não resolve, pois anomalias distantes dos dados normais podem ser
 perfeitamente reconstruídas~\cite{bouman2025} --- com a ressalva de que essa fonte é
@@ -394,9 +391,9 @@ Antonini \emph{et al.} fixam \num{0,75} e declaram que ``an evaluation of the de
 accuracy is beyond the scope of this work''~\cite{antonini2023}. Segundo, não há falso
 alarme reportado para Isolation Forest \emph{treinado no próprio dispositivo}: o único
 trabalho que treina \emph{on-device} é justamente o que declara a acurácia fora de escopo.
-E ninguém cruza as três restrições simultâneas deste projeto --- acelerômetro MEMS
-limitado a \SI{500}{\hertz}, detector não supervisionado embarcado e limiar calibrado para
-um FPR alvo.
+E ninguém cruza as três restrições simultâneas deste projeto: acelerômetro MEMS limitado
+a \SI{500}{\hertz}, detector não supervisionado embarcado e limiar calibrado para um FPR
+alvo.
 
 \subsection{Eixo 3 --- Banda de acelerômetros MEMS e detectabilidade de falha de rolamento}
 
@@ -441,7 +438,7 @@ DLPF, uma ressonância de alguns quilohertz não desaparece: ela reaparece rebat
 alguma frequência dentro da banda, e a curtose e o fator de crista medidos sobre esse
 sinal podem \emph{parecer} separar as classes por uma razão que nada tem a ver com a
 física do defeito. Uma medição ingênua com MPU6050 pode, portanto, funcionar pelos motivos
-errados --- e passar em validação enquanto o mecanismo real é aliasing. Não se localizou,
+errados e passar em validação enquanto o mecanismo real é aliasing. Não se localizou,
 na literatura revisada por pares de diagnóstico de rolamento, descrição experimental desse
 artefato; ele aparece em notas de aplicação de fabricante, registradas no levantamento do
 projeto e não conferidas nesta auditoria.
@@ -455,13 +452,13 @@ busca um trabalho (Hu, Xiang, Xu e Lin, 2019, \emph{Chinese Journal of Mechanica
 Engineering}) cujo resumo sustenta que BPFO e BPFI podem \emph{desaparecer} do espectro
 por cancelamento de fase entre múltiplas respostas ressonantes, mesmo com banda adequada;
 como o texto integral não pôde ser aberto, a referência não integra esta bibliografia e a
-objeção fica registrada como pendência --- verificar, no MAFAULDA decimado, em que fração
-dos ensaios o pico de BPFO é de fato observável. A segunda é que o par
+objeção fica registrada como pendência: verificar, no MAFAULDA decimado, em que fração dos
+ensaios o pico de BPFO é de fato observável. A segunda é que o par
 \num{413}$\times$/\num{20}$\times$ não mede o que se pretendia: \num{413} é envelope na
 banda de ressonância a \SI{20}{\kilo\hertz} e \num{20} é espectro direto a
-\SI{1}{\kilo\hertz}, de modo que duas variáveis mudam --- a banda e o método de demodulação
---- e o efeito estava sendo atribuído a uma. Não é ``a mesma métrica'', e dois pontos não
-são ``função da banda''.
+\SI{1}{\kilo\hertz}: mudam duas variáveis --- a banda e o método de demodulação --- e o
+efeito estava sendo atribuído a uma. Não é ``a mesma métrica'', e dois pontos não são
+``função da banda''.
 
 \subsubsection{Quão estreita pode ser a banda de um MEMS}
 
@@ -470,22 +467,21 @@ mas nenhum chega perto de \SI{500}{\hertz}. Albarbar \emph{et al.} compararam tr
 capacitivos (\SIrange{1}{6000}{\hertz}, \SIrange{1}{10000}{\hertz} e \SI{1500}{\hertz}) a
 um piezo ICP de \SIrange{1}{2000}{\hertz} e \SI{100}{\milli\volt\per\gram}: o de banda
 mais estreita foi declarado inadequado para monitoramento de condição~\cite{albarbar2008}.
-É importante dizer por quê, porque a razão não é a banda: ele foi reprovado por
-sensibilidade instável (\SIrange{63}{111}{\milli\volt\per\gram}), ruído e desvio de fase
-substanciais. Mesmo os dois de banda larga produziram, em máquina CNC, ``\textit{lots of
-noise including extra un-interpretable peaks}''~\cite{albarbar2008}. O dado de
-sensibilidade é usado aqui apenas de forma qualitativa: o registro verificado documenta a
-faixa medida e o piezo de referência, mas a rotulagem dos sensores no artigo é
-internamente inconsistente, e a sensibilidade nominal com que a faixa medida deveria ser
-comparada não consta do registro (ela aparece nas notas do projeto como valor de folha de
-dados). O Eixo~4 retoma o ponto.
+A razão não é a banda: ele foi reprovado por sensibilidade instável
+(\SIrange{63}{111}{\milli\volt\per\gram}), ruído e desvio de fase substanciais. Mesmo os
+dois de banda larga produziram, em máquina CNC, ``\textit{lots of noise including extra
+un-interpretable peaks}''~\cite{albarbar2008}. O dado de sensibilidade é usado aqui apenas
+de forma qualitativa: o registro verificado documenta a faixa medida e o piezo de
+referência, mas a rotulagem dos sensores no artigo é internamente inconsistente, e a
+sensibilidade nominal com que a faixa medida deveria ser comparada não consta do registro
+(ela aparece nas notas do projeto como valor de folha de dados). O Eixo~4 retoma o ponto.
 
 Fidali \emph{et al.} avaliaram dois sensores MEMS digitais contra referência
-piezoelétrica em onze rolamentos 6303 de esferas com gaiola polimérica --- seis novos e
+piezoelétrica em onze rolamentos 6303 de esferas com gaiola polimérica, seis novos e
 cinco alterados: pista externa, pista interna, elemento rolante, gaiola progressivamente
 danificada e, como quinta condição, ausência de lubrificante, que não é defeito mecânico e
-sim condição de lubrificação~\cite{fidali2024}. Convém separar duas grandezas que estavam
-sendo confundidas neste documento: as faixas de catálogo dos sensores são
+sim condição de lubrificação~\cite{fidali2024}. Duas grandezas estavam sendo confundidas
+neste documento: as faixas de catálogo dos sensores são
 \SIrange{2}{2500}{\hertz} e \SIrange{10}{4000}{\hertz}, enquanto as bandas em que os
 descritores foram efetivamente calculados são \SIrange{2}{3500}{\hertz} e
 \SIrange{1000}{4000}{\hertz}. Uma é especificação de sensor, a outra é banda de análise, e
@@ -504,13 +500,13 @@ fraco do que o que estava escrito: \emph{nenhum estudo de adequação revisado t
 com limite superior abaixo de \SI{1500}{\hertz}}. Comparar isso com o Kaelix exige
 comparar banda com banda, e não banda com Nyquist: o MPU6050 a \SI{1}{\kilo\hertz} de taxa
 de saída tem banda útil de, no máximo, \SI{500}{\hertz}, e isso somente se o DLPF for
-configurado abaixo de $f_s/2$ --- o que ainda não foi feito. Contra os \SI{1500}{\hertz}
+configurado abaixo de $f_s/2$, o que ainda não foi feito. Contra os \SI{1500}{\hertz}
 do sensor mais estreito já submetido a um estudo de adequação, é um terço da banda. E o
 argumento por ausência não vale: ninguém ter reprovado algo mais estreito não é o mesmo
 que alguém ter aprovado.
 
 A evidência arquitetural reforça a leitura. Jakobsen, projetando um nó IoT
-com LoRa e bateria muito próximo do Kaelix, separou os papéis entre dois acelerômetros: o
+com LoRa e bateria próximo do Kaelix, separou os papéis entre dois acelerômetros: o
 ADXL1002 (\num{25}~\dens, resposta plana DC--\SI{11}{\kilo\hertz}, ressonância em
 \SI{21}{\kilo\hertz}, amostrado a \SI{40}{\kilo\hertz}) para falha de rolamento,
 confirmada por $F_o$ e harmônicos no espectro de envelope em \SIrange{0}{700}{\hertz}, e o
@@ -518,7 +514,7 @@ ADXL362 (\num{550}~\dens, amostrado a \SI{400}{\hertz}) apenas para desbalanceam
 rotação abaixo de \SI{200}{\hertz}~\cite{jakobsen2024}. Sharma \emph{et al.} repetem a
 escolha em bancada de rolamentos e engrenagens com ADXL1002Z e \textit{Random
 Forest}~\cite{sharma2024}. O MPU6050 do Kaelix tem densidade de ruído da ordem de
-\num{400}~\dens{} --- valor de folha de dados do fabricante (InvenSense), não conferido
+\num{400}~\dens{}, valor de folha de dados do fabricante (InvenSense), não conferido
 experimentalmente e, por isso, sem entrada nesta bibliografia. Se ele estiver correto, o
 sensor está mais próximo daquele que Jakobsen restringiu a
 \SI{200}{\hertz} do que daquele que ele reservou ao rolamento. A ressalva é a mesma que o
@@ -534,7 +530,7 @@ defeituosos, com esfera, pista interna e pista externa em três severidades cada
 concluem que ``\textit{depending on the machine learning algorithm used, better training
 accuracies are not systematically achieved when training with vibration signals sampled at
 a relatively high frequency}''~\cite{elbouharrouti2024}. É classificação supervisionada
-(SVM, MNLR, MLP, LSTM e XGBoost) com \textit{downsampling} fracionário correto --- e não
+(SVM, MNLR, MLP, LSTM e XGBoost) com \textit{downsampling} fracionário correto, e não
 um IMU com anti-\textit{aliasing} de prateleira. O registro verificado não documenta o
 protocolo de partição, de modo que não é possível afirmar que o vazamento entre janelas
 tenha sido controlado; verificá-lo é pendência, não acusação.
@@ -548,31 +544,31 @@ vazamento por ensaio é categoria inaplicável. O que cabe registrar é outra co
 falhas semeadas, de severidade não incipiente, sob condições elétricas que amplificam a
 assinatura.
 
-O caso mais próximo do Kaelix \emph{em hardware e em modo de falha} é o mais sóbrio.
-Kolok \emph{et al.} construíram protótipo com MPU6050 e microfone MEMS INMP441 sobre
-MCU da mesma classe, com Isolation Forest não supervisionado treinado só em dados
-saudáveis, e obtiveram \SI{72,9}{\percent} ($\pm$~\SI{2,4}{\percent}) de acurácia em
-validação cruzada de cinco dobras, com revocação de \num{0,679} --- para uma única falha,
-obstrução deliberada de roda, isto é, desbalanceamento; o desgaste de rolamento foi
-explicitamente adiado para trabalho futuro, e o \textit{streaming} efetivo foi de uma
-linha a cada \SI{0,5}{\second}, cerca de \SI{2}{\hertz}, contra taxa interna de
-\SI{1}{\kilo\hertz}~\cite{kolok2025}. Um dado adicional, registrado nas notas de leitura do
-projeto e não presente no registro de auditoria --- e que por isso precisa ser
-reconfirmado no artigo antes de sustentar comparação ---, é que o filtro passa-baixas
-interno do MPU6050 foi configurado em \SI{5}{\hertz}. Se assim for, a banda efetiva
-daquele trabalho está duas ordens de grandeza abaixo da do Kaelix, e ele não é evidência
-sobre o que um MPU6050 com Nyquist de \SI{500}{\hertz} consegue: é evidência sobre
-desbalanceamento em banda quase contínua. O padrão qualitativo --- o MPU6050 resolve
-desbalanceamento e cala sobre rolamento --- é o que os resultados do Kaelix em dados reais
-reproduzem, mas o número \SI{72,9}{\percent} não pode ser lido como teto da classe.
+O caso mais próximo do Kaelix \emph{em hardware e em modo de falha} é o mais sóbrio. Kolok
+\emph{et al.} construíram protótipo com MPU6050 e microfone MEMS INMP441 sobre MCU da
+mesma classe, com Isolation Forest não supervisionado treinado só em dados saudáveis, e
+obtiveram \SI{72,9}{\percent} ($\pm$~\SI{2,4}{\percent}) de acurácia em validação cruzada
+de cinco dobras, com revocação de \num{0,679} --- para uma única falha, obstrução
+deliberada de roda, isto é, desbalanceamento; o desgaste de rolamento foi explicitamente
+adiado para trabalho futuro, e o \textit{streaming} efetivo foi de uma linha a cada
+\SI{0,5}{\second}, cerca de \SI{2}{\hertz}, contra taxa interna de
+\SI{1}{\kilo\hertz}~\cite{kolok2025}. Um dado adicional, registrado nas notas de leitura
+do projeto, é que o filtro passa-baixas interno do MPU6050 foi configurado em
+\SI{5}{\hertz}. Ele não consta do registro de auditoria e precisa ser reconfirmado no
+artigo antes de sustentar comparação. Se assim for, a banda efetiva daquele trabalho está
+duas ordens de grandeza abaixo da do Kaelix, e ele não é evidência sobre o que um MPU6050
+com Nyquist de \SI{500}{\hertz} consegue: é evidência sobre desbalanceamento em banda
+quase contínua. O padrão qualitativo de que o MPU6050 resolve desbalanceamento e cala
+sobre rolamento é o que os resultados do Kaelix em dados reais reproduzem, mas o número
+\SI{72,9}{\percent} não pode ser lido como teto da classe.
 
 \subsubsection{As alternativas que não foram tomadas}
 
-Este eixo trata \SI{500}{\hertz} como restrição, e é preciso dizer que ela é escolha de
+Este eixo trata \SI{500}{\hertz} como restrição, mas ela é escolha de
 componente, não limite de classe. Existem IMUs de faixa de preço equivalente com taxa de
 saída muito superior à do MPU6050; esta revisão não localizou, no conjunto auditado,
 nenhum estudo que as caracterize em falha de rolamento, de modo que a comparação fica
-registrada como decisão de projeto a documentar por folha de dados --- e não como
+registrada como decisão de projeto a documentar por folha de dados, e não como
 resultado de literatura. A permanência no MPU6050 precisa então ser justificada por
 critério declarado: disponibilidade do componente, custo e escopo do trabalho. Deixá-la
 implícita produz a impressão de restrição física onde há escolha.
@@ -604,11 +600,11 @@ com o mesmo valor eficaz de velocidade na faixa de \SIrange{10}{1000}{\hertz} po
 geral, ser consideradas de igual severidade, e explicita que, se deslocamento ou
 aceleração fossem usados na avaliação, os critérios variariam com a
 frequência~\cite{iso208163_2022}. Daí a forma das tabelas de zona: os limites existem em
-\si{\milli\meter\per\second} eficazes --- no Grupo~2 em fundação rígida,
+\si{\milli\meter\per\second} eficazes, no Grupo~2 em fundação rígida,
 \SI{1,4}{\milli\meter\per\second} em A/B, \SI{2,8}{\milli\meter\per\second} em B/C e
-\SI{4,5}{\milli\meter\per\second} em C/D --- e os deslocamentos tabelados (\num{22},
-\num{45} e \SI{71}{\micro\meter}) são \emph{calculados} a partir da velocidade supondo
-frequência dominante de \SI{10}{\hertz}, não medidos~\cite{iso208163_2022}.
+\SI{4,5}{\milli\meter\per\second} em C/D. Os deslocamentos tabelados (\num{22}, \num{45} e
+\SI{71}{\micro\meter}) são \emph{calculados} a partir da velocidade supondo frequência
+dominante de \SI{10}{\hertz}, não medidos~\cite{iso208163_2022}.
 
 Antes de qualquer discussão de banda, é preciso declarar o escopo, porque ele decide a
 quem a norma se aplica. A ISO 20816-3:2022 vale para conjuntos de máquina com potência
@@ -617,14 +613,14 @@ de \SI{1,4}{\milli\meter\per\second} pertence ao Grupo~2, isto é, máquinas de
 \SIrange{15}{300}{\kilo\watt} com altura de eixo entre \num{160} e
 \SI{315}{\milli\meter}~\cite{iso208163_2022}. A bancada do MAFAULDA, sobre a qual todos os
 resultados próprios em dados reais foram obtidos, está muito abaixo desse escopo. Isso não
-invalida o uso do conjunto --- ele é usado aqui como \emph{sinal}, para estudar a cadeia
-de medição ---, mas invalida tratá-lo como caso de aplicação da norma, e o enquadramento
-das máquinas-alvo do Kaelix precisa ser declarado no projeto antes que qualquer rótulo de
-zona seja emitido.
+invalida o uso do conjunto: ele é usado aqui como \emph{sinal}, para estudar a cadeia de
+medição. Invalida, sim, tratá-lo como caso de aplicação da norma, e o enquadramento das
+máquinas-alvo do Kaelix precisa ser declarado no projeto antes que qualquer rótulo de zona
+seja emitido.
 
-Registre-se ainda que a ISO 10816-3:2009, tratada como vigente em parte da literatura
-aplicada e em parte do levantamento que originou este documento, foi \textbf{retirada} e
-substituída pela ISO 20816-3:2022, que cancela também as emendas de
+A ISO 10816-3:2009, tratada como vigente em parte da literatura aplicada e em parte do
+levantamento que originou este documento, foi \textbf{retirada} e substituída pela
+ISO 20816-3:2022, que cancela também as emendas de
 2017~\cite{iso108163_2009,iso208163_2022}. Os valores de zona são idênticos nas duas, de
 modo que a substituição afeta a rastreabilidade da citação, e não os números. A norma
 antiga é mantida na bibliografia porque é a que a prática industrial e boa parte da
@@ -642,47 +638,47 @@ inferior de até \SI{2}{\hertz} em máquinas próximas ou abaixo de
 de \SI{-3,01}{\decibel} (\num{0,707}) com tolerância de $\pm$\,\SI{2}{\decibel}, e
 limitação de banda por par de Butterworth de terceira ordem com $f_1=\SI{10}{\hertz}$
 ($Q_1=Q_3=1/2$) e $f_2=\SI{1000}{\hertz}$ ($Q_2=Q_4=1/\sqrt{2}$)~\cite{iso2954_2012}. A
-norma impõe ainda disciplina de relato diretamente relevante a dispositivos truncados: as
+norma impõe ainda disciplina de relato relevante a dispositivos truncados: as
 frequências de corte de \SI{3}{\decibel} devem ser declaradas junto ao valor
 medido~\cite{iso2954_2012}. Para um MPU6050 a \SI{1}{\kilo\hertz}, com Nyquist em
-\SI{500}{\hertz}, isso não é diferença de grau --- o corte superior fica uma oitava abaixo
-do exigido ---, e a leitura honesta é $v_{\mathrm{rms}}$ declarado em
+\SI{500}{\hertz}, isso não é diferença de grau: o corte superior fica uma oitava abaixo do
+exigido. A leitura honesta é $v_{\mathrm{rms}}$ declarado em
 \SIrange{10}{500}{\hertz}, jamais ``conforme ISO 20816-3''.
 
-Há um requisito normativo mais severo que este documento omitia, e cuja omissão convém
-desfazer mesmo sem poder citá-lo em fonte primária. O levantamento do projeto registra que
-a ISO 13373-1 e -2, que tratam de monitoramento de condição por vibração e cobrem
-especificamente rolamentos e engrenagens, recomendam \emph{aceleração} como grandeza para
-esse tipo de falha e indicam limite superior da ordem de \SI{10}{\kilo\hertz}, podendo ser
-aumentado. Essas normas não foram conferidas em fonte primária nesta auditoria e por isso
-não constam da bibliografia; mas, se a leitura estiver correta, a consequência é dura e
-precisa ser dita: para a falha-alvo do Kaelix o requisito normativo de instrumentação é
-violado por uma ordem de grandeza, e não por uma oitava. Citar a norma que o projeto quase
-atende e calar sobre a norma que o reprova seria seleção de evidência.
+Este documento omitia um requisito normativo mais severo, e a omissão convém ser desfeita
+mesmo sem fonte primária para citar. O levantamento do projeto registra que a ISO 13373-1
+e -2, que tratam de monitoramento de condição por vibração e cobrem especificamente
+rolamentos e engrenagens, recomendam \emph{aceleração} como grandeza para esse tipo de
+falha e indicam limite superior da ordem de \SI{10}{\kilo\hertz}, podendo ser aumentado.
+Essas normas não foram conferidas em fonte primária nesta auditoria e por isso não constam
+da bibliografia; mas, se a leitura estiver correta, a consequência é dura e precisa ser
+dita: para a falha-alvo do Kaelix o requisito normativo de instrumentação é violado por
+uma ordem de grandeza, e não por uma oitava. Citar a norma que o projeto quase atende e
+calar sobre a norma que o reprova seria seleção de evidência.
 
 \subsubsection{Integração: obrigação normativa e problema numérico}
 
 A cláusula 4.3 da ISO 20816-3:2022 é explícita: acelerômetros montados em partes
-estacionárias --- prática comum --- \emph{devem} ter a saída integrada para fornecer sinal
+estacionárias, prática comum, \emph{devem} ter a saída integrada para fornecer sinal
 de velocidade, com ressalva quanto à dupla integração e à filtragem
 passa-alta~\cite{iso208163_2022}. A norma obriga a integrar, mas não prescreve o método.
-Esse vazio é ocupado por Brandt e Brincker: a regra do trapézio deve ser evitada por
+Brandt e Brincker ocupam esse vazio: a regra do trapézio deve ser evitada por
 produzir resultados enviesados, particularmente em frequências mais altas, enquanto o
 percurso DFT $\rightarrow$ divisão por $j\omega$ $\rightarrow$ IDFT é o melhor método para
 registros acima de 16K amostras, com filtro IIR otimizado de exatidão comparável, e WOLA
-só é aceitável em regime permanente~\cite{brandt2014}. Cabe distinguir dois mecanismos: o
-viés descrito ali é erro de amplitude dependente da frequência, distinto da deriva por
+só é aceitável em regime permanente~\cite{brandt2014}. São dois mecanismos distintos: o
+viés descrito ali é erro de amplitude dependente da frequência, e não a deriva por
 \emph{offset} DC residual que domina a integração de MEMS de baixo custo.
 
 Os erros de \SIrange{73}{716}{\percent} medidos no Kaelix com integração no tempo,
-contra \SI{0,0}{\percent} na frequência com máscara de banda, combinam os dois mecanismos
---- e a forma como esse par foi apresentado precisa ser corrigida em dois pontos. O
+contra \SI{0,0}{\percent} na frequência com máscara de banda, combinam os dois mecanismos.
+A forma como esse par foi apresentado precisa ser corrigida em dois pontos. O
 primeiro: \SI{0,0}{\percent} não é medição, é identidade. Quando o sinal de teste é
 sintetizado como soma de senoides contidas na máscara e a integração é feita na mesma base
 DFT, o resultado é exato por construção, e nada diz sobre desempenho com sinal real, onde
 há transiente, vazamento espectral e janelamento. O segundo: a faixa de \numrange{73}{716}
 foi apresentada sem as condições que a geram --- frequência dominante, \emph{offset} DC,
-comprimento da janela, presença de rampa ---, o que impede reprodução e sugere escolha do
+comprimento da janela, presença de rampa. A omissão impede reprodução e sugere escolha do
 pior caso. O que o relatório de simulação de fato fixa é um ponto verificável: com viés de
 \SI{0,02}{\meter\per\second\squared}, valor contido na especificação do sensor, a
 integração na frequência com máscara devolve o valor de referência, enquanto a integração
@@ -690,17 +686,17 @@ no tempo deriva. Reportar isso corretamente exige tabelar os erros do domínio d
 condição, e repetir a integração na frequência sobre sinal real do MAFAULDA, com
 janelamento e vazamento presentes.
 
-A lacuna, na forma em que estava enunciada --- ``não se localizou trabalho que quantifique
-o erro de integração para $v_{\mathrm{rms}}$ na banda normativa'' ---, era construída por
-excesso de especificação. Brandt e Brincker quantificam o erro dos métodos de
-integração; o que não está publicado é a \emph{aplicação} desses métodos ao indicador da
-norma, o que é cálculo, e não lacuna de conhecimento. Há, em compensação, um número
-decisivo que este projeto pode computar e ainda não computou: quanto da energia de
-$v_{\mathrm{rms}}$ de um motor está entre \num{500} e \SI{1000}{\hertz}, isto é, quanto um
-dispositivo truncado \emph{subestima} a severidade. Com o MAFAULDA a
-\SI{50}{\kilo\hertz} já disponível, comparar $v_{\mathrm{rms}}(\SIrange{10}{1000}{\hertz})$
-com $v_{\mathrm{rms}}(\SIrange{10}{500}{\hertz})$ é imediato, e transforma uma afirmação
-qualitativa --- ``o truncamento não é diferença de grau'' --- em resultado.
+A lacuna estava enunciada assim: ``não se localizou trabalho que quantifique o erro de
+integração para $v_{\mathrm{rms}}$ na banda normativa''. Nessa forma, era construída por
+excesso de especificação. Brandt e Brincker quantificam o erro dos métodos de integração;
+o que não está publicado é a \emph{aplicação} desses métodos ao indicador da norma, o que
+é cálculo, e não lacuna de conhecimento. Há, em compensação, um número decisivo que este
+projeto pode computar e ainda não computou: quanto da energia de $v_{\mathrm{rms}}$ de um
+motor está entre \num{500} e \SI{1000}{\hertz}, isto é, quanto um dispositivo truncado
+\emph{subestima} a severidade. Com o MAFAULDA a \SI{50}{\kilo\hertz} já disponível,
+comparar $v_{\mathrm{rms}}(\SIrange{10}{1000}{\hertz})$ com
+$v_{\mathrm{rms}}(\SIrange{10}{500}{\hertz})$ é imediato, e transforma em resultado a
+afirmação qualitativa ``o truncamento não é diferença de grau''.
 
 \subsubsection{O que a literatura de sensores objeta}
 
@@ -711,29 +707,29 @@ respectivamente, em \SIrange{2}{3500}{\hertz} e \SIrange{1000}{4000}{\hertz} ---
 referência piezoelétrica de \SIrange{0,5}{10000}{\hertz}~\cite{fidali2024}. Os autores
 relatam que a sensibilidade diagnóstica depende do limite superior de banda dos sensores e
 que os descritores mais sensíveis à fadiga de rolamento são pico e pico a pico de
-\emph{aceleração}, não a velocidade eficaz --- o que tensiona o critério normativo ---,
-mas registram, no mesmo texto, que naquele estágio não era possível afirmar
-inequivocamente que o piezoelétrico aumentasse de forma decisiva a sensibilidade
-diagnóstica frente aos MEMS capacitivos~\cite{fidali2024}. É a mesma leitura adotada no
-Eixo~3: tendência observada, não veredito --- e uma ressalva que se refere a MEMS de
-\SIrange{2,5}{4}{\kilo\hertz}, não a um sensor de \SI{500}{\hertz}.
+\emph{aceleração}, não a velocidade eficaz, o que tensiona o critério normativo, mas
+registram, no mesmo texto, que naquele estágio não era possível afirmar inequivocamente
+que o piezoelétrico aumentasse de forma decisiva a sensibilidade diagnóstica frente aos
+MEMS capacitivos~\cite{fidali2024}. É a mesma leitura adotada no Eixo~3: tendência
+observada, não veredito. E a ressalva se refere a MEMS de \SIrange{2,5}{4}{\kilo\hertz},
+não a um sensor de \SI{500}{\hertz}.
 
 A própria norma reconhece a cisão. A NOTA da cláusula 3.2 da ISO 10816-3:2009 já advertia
 que, para fins diagnósticos, um limite superior acima de \SI{1000}{\hertz} pode ser
 necessário~\cite{iso108163_2009}. Severidade e diagnóstico são perguntas distintas, e
 nenhuma delas é respondida por um sensor limitado a \SI{500}{\hertz}.
 
-Há objeção anterior à banda, e mais desconfortável: a escala.
-Albarbar \emph{et al.} mediram, em um dos MEMS avaliados, sensibilidade entre \num{63}
-e \SI{111}{\milli\volt\per\gram}, contra um piezo de referência de
+Há objeção anterior à banda, e mais desconfortável: a escala. Albarbar \emph{et al.}
+mediram, em um dos MEMS avaliados, sensibilidade entre \num{63} e
+\SI{111}{\milli\volt\per\gram}, contra um piezo de referência de
 \SI{100}{\milli\volt\per\gram}~\cite{albarbar2008}. O registro de auditoria contém apenas
 esses dois valores; a sensibilidade nominal de \SIrange{450}{550}{\milli\volt\per\gram},
 com que a faixa medida costuma ser comparada, vem das notas de leitura do projeto como
 valor de folha de dados do fabricante e não do artigo. Se esse par estiver correto, a
-discrepância vai de cerca de quatro a nove vezes ($450/111 \approx 4,1$ e
-$550/63 \approx 8,7$); como a rotulagem dos sensores no artigo é internamente
-inconsistente, o dado é usado aqui apenas como ilustração qualitativa da dispersão de
-fator de escala em MEMS não calibrados, e a mesma ressalva vale no Eixo~3.
+discrepância vai de cerca de quatro a nove vezes ($450/111 \approx 4,1$ e $550/63 \approx
+8,7$); como a rotulagem dos sensores no artigo é internamente inconsistente, o dado é
+usado aqui apenas como ilustração qualitativa da dispersão de fator de escala em MEMS não
+calibrados, e a mesma ressalva vale no Eixo~3.
 
 No polo oposto, Landi \emph{et al.} descrevem o sensor tido como apto: calibração de
 \SIrange{10}{25000}{\hertz} conforme ISO 16063-21:2003, sensibilidade a \SI{10}{\hertz} de
@@ -741,19 +737,19 @@ No polo oposto, Landi \emph{et al.} descrevem o sensor tido como apto: calibraç
 \SI{10}{\percent} até \SI{12}{\kilo\hertz}~\cite{landi2023}. Rodrigues \emph{et al.}
 dão apoio modesto ao MPU6050, mais uniforme que o ADXL345 sob o mesmo sinal aleatório de
 baixa intensidade, com a ressalva dos autores de que explicar as discrepâncias exigiria
-mais lotes e fabricantes --- e sem calibração rastreável~\cite{rodrigues2021}. Um valor em
+mais lotes e fabricantes, e sem calibração rastreável~\cite{rodrigues2021}. Um valor em
 \si{\milli\meter\per\second} vindo de um MPU6050 não calibrado herda, portanto, fator de
 escala não verificado, e compará-lo à fronteira de \SI{1,4}{\milli\meter\per\second} é
-exercício de aparência normativa --- mesmo quando a máquina medida estiver dentro do
-escopo da norma, o que na validação em MAFAULDA não é o caso.
+exercício de aparência normativa. Isso vale mesmo quando a máquina medida estiver dentro
+do escopo da norma, o que na validação em MAFAULDA não é o caso.
 
 \subsubsection{O orçamento de ruído, que é a objeção mais dura}
 
 Falta enfrentar o número que decide a questão antes mesmo da banda, e que estava sendo
 omitido enquanto três parágrafos discutiam calibração. Literatura técnica da Analog
-Devices estabelece que, para resolver a fronteira da zona ``boa'' de uma máquina de
-Classe~2 --- $v_{\min} = \SI{1,12}{\milli\meter\per\second}$ --- a \SI{10}{\hertz}, o
-ruído de aceleração precisa ficar abaixo de \num{7,18}~\mgf. Esse orçamento circula fora
+Devices estabelece que resolver a fronteira da zona ``boa'' de uma máquina de
+Classe~2 ($v_{\min} = \SI{1,12}{\milli\meter\per\second}$) a \SI{10}{\hertz} exige
+ruído de aceleração abaixo de \num{7,18}~\mgf. Esse orçamento circula fora
 da revisão por pares, em material de fabricante; a auditoria não conseguiu localizá-lo no
 artigo de Looney, que é a referência habitualmente citada para ele, e sua
 atribuição precisa permanece pendente~\cite{looney2017}. Com essa ressalva de
@@ -769,25 +765,25 @@ metade do exigido. Rastrear o documento correto da Analog Devices, e refazer a c
 uma densidade de ruído medida em vez de declarada, são as duas providências que faltam
 para que esse argumento passe de estimativa a resultado.
 
-Resta o vazio. O par de baixo custo mais próximo em hardware, Kolok \emph{et al.},
-combina MPU6050, ESP32 e Isolation Forest e reporta \SI{72,9}{\percent}
-$\pm$~\SI{2,4}{\percent} de acurácia, com revocação de \num{0,679} e ROC-AUC de
-\num{0,780}; o trabalho encerra em valor eficaz de aceleração e FFT, sem integração para
-velocidade, sem critério em \si{\milli\meter\per\second} e sem menção localizável à
-ISO 10816 ou 20816~\cite{kolok2025}. A pergunta específica --- o que uma IMU de consumo com
-taxa de saída de \SI{1}{\kilo\hertz} pode e não pode afirmar sobre severidade normativa
---- segue sem resposta publicada, e é nela que este trabalho se situa.
+Resta o vazio. O par de baixo custo mais próximo em hardware, Kolok \emph{et al.}, combina
+MPU6050, ESP32 e Isolation Forest e reporta \SI{72,9}{\percent} $\pm$~\SI{2,4}{\percent}
+de acurácia, com revocação de \num{0,679} e ROC-AUC de \num{0,780}; o trabalho encerra em
+valor eficaz de aceleração e FFT, sem integração para velocidade, sem critério em
+\si{\milli\meter\per\second} e sem menção localizável à ISO 10816 ou
+20816~\cite{kolok2025}. A pergunta específica segue sem resposta publicada: o que uma IMU
+de consumo com taxa de saída de \SI{1}{\kilo\hertz} pode e não pode afirmar sobre
+severidade normativa. É nessa pergunta que este trabalho se situa.
 
 \subsection{Eixo 5 --- Sistemas IoT comparáveis, invólucro e restrições térmicas}
 
 A literatura de nós sem fio para manutenção preditiva divide-se em duas populações que
 raramente se citam. De um lado, produtos comerciais, que compartilham três atributos:
 banda de medição uma ordem de grandeza acima da do Kaelix, caminho mecânico rígido até o
-elemento sensor --- base metálica aparafusada ou base colada ao ativo --- e alimentação
-por célula primária. Convém não generalizar mais do que isso: apenas um dos três usa
-elemento piezoelétrico, e dois têm corpo declaradamente plástico. Do outro lado, nós
-acadêmicos de baixo custo, que convergem para a mesma arquitetura do Kaelix --- ESP32, IMU
-MEMS na ordem de \SI{1}{\kilo\hertz} e detecção não supervisionada por \emph{Isolation
+elemento sensor, obtido por base metálica aparafusada ou por base colada ao ativo, e
+alimentação por célula primária. Convém não generalizar mais do que isso: apenas um dos
+três usa elemento piezoelétrico, e dois têm corpo declaradamente plástico. Do outro lado,
+nós acadêmicos de baixo custo, que convergem para a mesma arquitetura do Kaelix: ESP32,
+IMU MEMS na ordem de \SI{1}{\kilo\hertz} e detecção não supervisionada por \emph{Isolation
 Forest}. Lê-las lado a lado é o que separa, no projeto, escolha defensável de limitação
 herdada da classe de hardware.
 
@@ -803,29 +799,28 @@ a arquitetura como publicável. O que ele não faz é fixar teto de desempenho d
 dizer que fixa seria erro triplo: a amostra é de um único estudo com um único modo de
 falha; o \emph{streaming} efetivo é de uma linha a cada \SI{0,5}{\second}, cerca de
 \SI{2}{\hertz}, contra taxa interna de \SI{1}{\kilo\hertz}~\cite{kolok2025}; e as notas de
-leitura do projeto registram --- dado ausente do registro de auditoria e que precisa ser
-reconfirmado --- que o filtro passa-baixas interno do MPU6050 foi configurado em
-\SI{5}{\hertz}. Se isso se confirmar, aquele nó operou com banda útil duas ordens de
-grandeza abaixo da do Kaelix, e o que ele demonstra é que a arquitetura ESP32 + MPU6050 +
-Isolation Forest é publicável para desbalanceamento em banda baixíssima, sem informação
-sobre rolamento e sem informação sobre a banda deste projeto.
+leitura do projeto registram que o filtro passa-baixas interno do MPU6050 foi configurado
+em \SI{5}{\hertz}, dado ausente do registro de auditoria e que precisa ser reconfirmado.
+Se isso se confirmar, aquele nó operou com banda útil duas ordens de grandeza abaixo da do
+Kaelix, e o que ele demonstra é que a arquitetura ESP32 + MPU6050 + Isolation Forest é
+publicável para desbalanceamento em banda baixíssima, sem informação sobre rolamento e sem
+informação sobre a banda deste projeto.
 
-Chevtchenko \emph{et al.} são a comparação mais informativa, e a mais incômoda, porque
-o experimento é embarcado e mede três detectores no mesmo nó e no mesmo conjunto: ESP32 com
-IMU ISM330DLCTR a \SI{1}{\kilo\hertz}, dois microfones SPH0645LM4H-B a
-\SI{20}{\kilo\hertz}, fixação por ímã de neodímio, sobre \num{3750} amostras normais e
-\num{2250} anômalas de três motores de indução de 1~hp a \num{1000}~rpm. Os resultados de
-validação e teste, em sensibilidade e especificidade, são: Isolation Forest
-\SI{88,9}{\percent}/\SI{86,3}{\percent} e \SI{61,6}{\percent}/\SI{67,4}{\percent}, com
-inferência de \SI{21,40}{\milli\second}; LOF \SI{90,8}{\percent}/\SI{77,6}{\percent} e
-\SI{74,5}{\percent}/\SI{72,1}{\percent}, com \SI{0,81}{\milli\second}; \emph{one-class} SVM
-\SI{73,1}{\percent}/\SI{47,9}{\percent} e \SI{63,4}{\percent}/\SI{36,5}{\percent}, com
-\SI{0,43}{\milli\second}~\cite{chevtchenko2023}. A leitura obrigatória é que, no mesmo
-hardware e no mesmo dado, o LOF domina o Isolation Forest simultaneamente em falso alarme
---- \SI{74,5}{\percent} contra \SI{61,6}{\percent} de especificidade em validação --- e em
-latência, sendo cerca de \num{26} vezes mais rápido. A objeção mais direta ao desenho do
-Kaelix está, portanto, dentro de uma fonte que o projeto já cita, e não em outro conjunto
-de dados.
+Chevtchenko \emph{et al.} são a comparação mais direta, porque o experimento é embarcado e
+mede três detectores no mesmo nó e no mesmo conjunto: ESP32 com IMU ISM330DLCTR a
+\SI{1}{\kilo\hertz}, dois microfones SPH0645LM4H-B a \SI{20}{\kilo\hertz}, fixação por ímã
+de neodímio, sobre \num{3750} amostras normais e \num{2250} anômalas de três motores de
+indução de 1~hp a \num{1000}~rpm. Os resultados de validação e teste, em sensibilidade e
+especificidade, são: Isolation Forest \SI{88,9}{\percent}/\SI{86,3}{\percent} e
+\SI{61,6}{\percent}/\SI{67,4}{\percent}, com inferência de \SI{21,40}{\milli\second}; LOF
+\SI{90,8}{\percent}/\SI{77,6}{\percent} e \SI{74,5}{\percent}/\SI{72,1}{\percent}, com
+\SI{0,81}{\milli\second}; \emph{one-class} SVM \SI{73,1}{\percent}/\SI{47,9}{\percent} e
+\SI{63,4}{\percent}/\SI{36,5}{\percent}, com
+\SI{0,43}{\milli\second}~\cite{chevtchenko2023}. No mesmo hardware e no mesmo dado, o LOF
+domina o Isolation Forest tanto em falso alarme, com \SI{74,5}{\percent} contra
+\SI{61,6}{\percent} de especificidade em validação, quanto em latência, sendo cerca de
+\num{26} vezes mais rápido. A objeção mais direta ao desenho do Kaelix está, portanto,
+dentro de uma fonte que o projeto já cita, e não em outro conjunto de dados.
 
 A resposta declarada é de memória, não de acurácia, e precisa ser verificada: o LOF é um
 método baseado em vizinhança, e sua inferência exige manter o conjunto de referência ---
@@ -840,16 +835,16 @@ hipótese de projeto e não conclusão.
 O mesmo trabalho traz um segundo achado que é restrição de implantação e não detalhe: os
 autores observam que o terceiro motor, com cerca de um ano de uso, tem assinatura normal
 distinta dos motores novos~\cite{chevtchenko2023}. Um modelo único com limiar fixo herda
-essa deriva do que conta como ``normal'' entre máquinas e ao longo da vida, o que é
-exatamente o cenário em que a calibração por risco alvo discutida no Eixo~1 deixa de ser
-refinamento e passa a ser requisito.
+essa deriva do que conta como ``normal'' entre máquinas e ao longo da vida, o que é o
+cenário em que a calibração por risco alvo discutida no Eixo~1 deixa de ser refinamento e
+passa a ser requisito.
 
 A taxa de falso alarme de \SIrange{32,6}{38,4}{\percent} medida ali é da mesma ordem de
 grandeza do achado próprio de que \texttt{contamination='auto'} marcaria cerca de
 \SI{42}{\percent} da operação normal do Kaelix como anômala. É preciso dizer o que essa
 proximidade não autoriza: o registro verificado de Chevtchenko \emph{et al.} não declara
 a política de limiar usada, e sem ela a comparação é de ordem de grandeza entre conjuntos,
-máquinas e cortes diferentes --- não é correlato empírico controlado. O Eixo~1 e a
+máquinas e cortes diferentes. Não é correlato empírico controlado. O Eixo~1 e a
 Tabela~\ref{tab:fpr} tratam o ponto.
 
 Há ainda uma objeção de viabilidade computacional, e ela precisa ser enunciada com o
@@ -862,19 +857,18 @@ em INT8 no mesmo ESP32-S3 com latência média determinística de
 \SI{42,3}{\milli\second}~\cite{kumar2026}. Esses números \emph{não} são comparáveis ao do
 Kaelix: são classificadores supervisionados, treinados com rótulos, sobre outros conjuntos
 de dados, enquanto o Kaelix aposta em detecção não supervisionada. O que eles autorizam
-concluir é apenas o que importa aqui --- que o orçamento de um microcontrolador desta
-classe comporta \emph{pipelines} bem mais caros que uma floresta de isolamento sobre
-quatro descritores, de modo que o custo computacional não é, por si só, justificativa para
-a escolha do detector.
+concluir é apenas o que importa aqui: o orçamento de um microcontrolador desta classe
+comporta \emph{pipelines} bem mais caros que uma floresta de isolamento sobre quatro
+descritores, de modo que o custo computacional não é, por si só, justificativa para a
+escolha do detector.
 
 \subsubsection{Banda, invólucro e caminho mecânico}
 
 É na física do dispositivo que a literatura contraria o projeto mais diretamente. Os
 produtos comerciais resolvem justamente a banda que ele descarta, e a
-Tabela~\ref{tab:comerciais} os apresenta com as grandezas separadas --- banda de exatidão
-de um lado, taxa de amostragem de outro ---, porque misturá-las é o erro que este
-documento cometia ao descrever o concorrente com o rigor de Nyquist que aplicava a si
-mesmo.
+Tabela~\ref{tab:comerciais} os apresenta com as grandezas separadas, banda de exatidão de
+um lado e taxa de amostragem de outro, porque misturá-las é o erro que este documento
+cometia ao descrever o concorrente com o rigor de Nyquist que aplicava a si mesmo.
 
 \begin{table}[!htb]
 \centering
@@ -917,24 +911,24 @@ O mecanismo que torna essa diferença decisiva já foi estabelecido no Eixo~3: o
 localizado é detectado pela ressonância estrutural de alta frequência que os impactos
 excitam, e a taxa de repetição aparece como modulação dessa portadora, o que faz da
 demodulação de envelope numa banda alta o método de referência~\cite{randall2011}, e da
-curtose uma função da frequência cuja banda ótima precisa ser
-escolhida~\cite{antoni2006}. Os três produtos, \emph{ao menos em um eixo}, medem uma ordem
-de grandeza acima do teto do MPU6050 e alcançam essa banda de ressonância; a assimetria
-importa e estava sendo omitida --- no Ranger Pro os \SI{10}{\kilo\hertz} existem apenas no
-eixo Z, com X e Y limitados a \SI{4}{\kilo\hertz}~\cite{bentlynevada2025}, e no Phantom a
-variante de alta sensibilidade EPH-V10E cobre apenas \SIrange{0,5}{4}{\kilo\hertz} em X e
-Y e \SIrange{0,5}{1,8}{\kilo\hertz} em Z~\cite{erbessd2025}. Dois deles entregam também
+curtose uma função da frequência cuja banda ótima precisa ser escolhida~\cite{antoni2006}.
+Os três produtos, \emph{ao menos em um eixo}, medem uma ordem de grandeza acima do teto do
+MPU6050 e alcançam essa banda de ressonância; a assimetria importa e estava sendo omitida:
+no Ranger Pro os \SI{10}{\kilo\hertz} existem apenas no eixo Z, com X e Y limitados a
+\SI{4}{\kilo\hertz}~\cite{bentlynevada2025}, e no Phantom a variante de alta sensibilidade
+EPH-V10E cobre apenas \SIrange{0,5}{4}{\kilo\hertz} em X e Y e
+\SIrange{0,5}{1,8}{\kilo\hertz} em Z~\cite{erbessd2025}. Dois deles entregam também
 velocidade: o Ranger Pro mede velocidade de \SIrange{5}{2000}{\hertz}, cobrindo
 integralmente a banda normativa de \SIrange{10}{1000}{\hertz}~\cite{bentlynevada2025}, e o
 Smart Trac reporta velocidade e aceleração com valor eficaz, pico, pico a pico e fator de
 crista, além de ferramentas de BPFO, BPFI, BSF, FTF e envelope~\cite{tractian2022}.
 
-A suposição de que carcaça plástica seria inviável não se sustenta --- o Smart Trac declara
+A suposição de que carcaça plástica seria inviável não se sustenta: o Smart Trac declara
 corpo externo em termoplástico policarbonato LEXAN com encapsulamento eletrônico integral
 em resina, IP69K e operação de \SIrange{-10}{90}{\celsius}~\cite{tractian2022}, e o Phantom
-declara ``\textit{Housing material: ABS, stainless steel}''~\cite{erbessd2025}. Registre-se
-que uma nota de leitura anterior do projeto descrevia o corpo do Smart Trac como metálico;
-a conferência da folha de dados primária resolveu a divergência a favor do policarbonato.
+declara ``\textit{Housing material: ABS, stainless steel}''~\cite{erbessd2025}. Uma nota de
+leitura anterior do projeto descrevia o corpo do Smart Trac como metálico; a conferência
+da folha de dados primária resolveu a divergência a favor do policarbonato.
 Mas a conclusão que interessa ao Kaelix é outra, e vai na direção contrária: em nenhum dos
 três o \emph{caminho mecânico} entre o ativo e o elemento sensor é plástico ou magnético.
 O Ranger Pro tem corpo em aço inoxidável 316 com topo em PPS reforçado e fixa por rosca
@@ -955,50 +949,50 @@ de \SI{557}{\hertz}, dentro da banda de medição, e transmissibilidade da ordem
 vezes em \SI{500}{\hertz}, precisa ser apresentado com duas ressalvas que estavam
 faltando. A primeira é de natureza: são saída de um modelo analítico de um grau de
 liberdade, com rigidez em série estimada a partir das cotas do desenho e coeficiente de
-amortecimento \emph{arbitrado} em $\zeta = \num{0,03}$ --- valor plausível para peça
-impressa em ASA, jamais medido, e do qual a transmissibilidade de pico depende
+amortecimento \emph{arbitrado} em $\zeta = \num{0,03}$. Esse valor é plausível para peça
+impressa em ASA, jamais foi medido, e a transmissibilidade de pico depende dele
 diretamente. O resultado é ainda sensível a um parâmetro geométrico incerto: dobrando a
 espessura da base, a frequência sobe para \SI{750}{\hertz}. São, portanto, estimativas com
 faixa de incerteza, e não medições. Medir a frequência natural do conjunto montado por
 excitação de impacto é ensaio de bancada barato, e é o que falta.
 
 A segunda ressalva é que ``não há precedente publicado'' era afirmação forte demais. Existe
-critério consolidado em acelerometria --- o de que a frequência de montagem deve ser pelo
-menos três vezes a maior frequência de interesse, o que corresponderia a
-\SI{3}{\kilo\hertz} para a banda normativa ---, e o levantamento do projeto o associa à
-ISO 5348, que também tabula a degradação por método de fixação e seria a referência óbvia
-para uma fixação magnética. Essa norma não foi conferida em fonte primária nesta auditoria
-e não integra a bibliografia, mas sua existência muda o estatuto do achado: os
-\SI{557}{\hertz} não são um resultado sem termo de comparação, são a reprovação previsível
-em um critério conhecido, por um fator de mais de cinco. A ressonância própria da fixação
-magnética, que degrada ainda mais o caminho, permanece ausente da análise.
+critério consolidado em acelerometria: a frequência de montagem deve ser pelo menos três
+vezes a maior frequência de interesse, o que corresponderia a \SI{3}{\kilo\hertz} para a
+banda normativa. O levantamento do projeto o associa à ISO 5348, que também tabula a
+degradação por método de fixação e seria a referência óbvia para uma fixação magnética.
+Essa norma não foi conferida em fonte primária nesta auditoria e não integra a
+bibliografia, mas sua existência muda o estatuto do achado: os \SI{557}{\hertz} não são um
+resultado sem termo de comparação, são a reprovação previsível em um critério conhecido,
+por um fator de mais de cinco. A ressonância própria da fixação magnética, que degrada
+ainda mais o caminho, permanece ausente da análise.
 
 O que continua sem precedente é o número publicado. Nenhum dos nós acadêmicos revisados
 reporta a frequência natural do conjunto montado: Jakobsen registra apenas
 autorressonâncias de PCB e estrutura entre \SIrange{6}{9}{\kilo\hertz}~\cite{jakobsen2024},
 Antonini \emph{et al.} adiam o invólucro para trabalho futuro~\cite{antonini2023}, e
 não localizamos, na parte acessível do trabalho de Bisio \emph{et al.}, publicação da
-frequência natural do conjunto montado --- o texto integral está atrás de assinatura, e
+frequência natural do conjunto montado. O texto integral está atrás de assinatura, e
 essa é a fronteira da nossa busca, não uma afirmação sobre o conteúdo do
 artigo~\cite{bisio2025}.
 
 \subsubsection{Bateria e margem térmica}
 
-Na energia, a literatura contraria o projeto com clareza. Nabavi \emph{et al.}
-recomendam explicitamente ``Li-SOCl$_2$ batteries for low-power, long-term deployments in
-extreme environments'' e reservam as químicas recarregáveis a ``high-power applications
-requiring frequent cycling''~\cite{nabavi2025}; a prática confirma em todos os sistemas
-revisados --- LS14500 com supercapacitor de \SI{100}{\milli\farad} para o pulso de
+Na energia, a literatura contraria o projeto com clareza. Nabavi \emph{et al.} recomendam
+explicitamente ``Li-SOCl$_2$ batteries for low-power, long-term deployments in extreme
+environments'' e reservam as químicas recarregáveis a ``high-power applications requiring
+frequent cycling''~\cite{nabavi2025}; a prática confirma em todos os sistemas revisados:
+LS14500 com supercapacitor de \SI{100}{\milli\farad} para o pulso de
 \SI{120}{\milli\ampere} do LoRa~\cite{jakobsen2024}, célula LiSOCl$_2$ D substituível com
 até cinco anos~\cite{bentlynevada2025}, CR2477 para \num{65000}
 medições~\cite{erbessd2025} e lítio não substituível por três anos~\cite{tractian2022}. A
-opção pela LiPo recarregável é, nesse ponto, contrariada pela literatura e deve ser tratada
-como pergunta de projeto, não como resultado.
+opção pela LiPo recarregável é, nesse ponto, contrariada pela literatura e deve ser
+tratada como pergunta de projeto, não como resultado.
 
 Já a \emph{forma} do limite térmico encontra apoio: no Ranger Pro o aparelho opera de
 \SIrange{-40}{85}{\celsius}, mas a temperatura ambiente admissível em área classificada é
 fixada \emph{pela bateria}, em \SI{80}{\celsius} ou \SI{70}{\celsius} conforme o
-modelo~\cite{bentlynevada2025} --- o mesmo padrão do Kaelix, cuja margem é imposta pela
+modelo~\cite{bentlynevada2025}. É o mesmo padrão do Kaelix, cuja margem é imposta pela
 célula e não pelo ASA. O valor específico, porém, não vem da literatura de manutenção
 preditiva, e é preciso dizer de onde ele vem: o limite de \SI{45}{\celsius} para carga é
 especificação de folha de dados da célula e requisito dos regimes de carga das normas de
@@ -1006,27 +1000,25 @@ segurança de baterias de lítio, documentos que não foram conferidos nesta aud
 constam da bibliografia. A revisão sobre efeitos térmicos em íon-lítio aqui citada
 estabelece que a temperatura ``significantly impacts on the performance of lithium-ion
 batteries and also limits the application''~\cite{ma2018}, mas o resumo não menciona limite
-de temperatura de carga e o texto integral está atrás de assinatura --- de modo que ela
-ampara o mecanismo geral, e não o número.
+de temperatura de carga e o texto integral está atrás de assinatura. Ela ampara, portanto,
+o mecanismo geral, e não o número.
 
 A lacuna, portanto, é mais estreita do que se afirmava. Não é verdade que o assunto esteja
 ``ausente da conversa'': a razão física do limite de carga é amplamente publicada na
 literatura de envelhecimento de íon-lítio. O que não se localizou foi orçamento térmico
 publicado para carga de célula secundária dentro de invólucro montado em carcaça quente de
-motor --- e a razão é estrutural: o campo usa célula primária e, portanto, nunca carrega
-nada.
+motor. A razão é estrutural: o campo usa célula primária e, portanto, nunca carrega nada.
 
 \section{Síntese}
 
 Lidos em conjunto, os quatro eixos não formam uma lista de pontos fortes e fracos: formam
-uma \emph{cadeia com ordem de precedência}. Primeiro vem a aquisição --- piso de ruído,
-banda e caminho mecânico ---, porque nenhuma decisão posterior recupera informação que o
-sensor não coletou. Depois vem a estimação --- limiar, métrica e protocolo de validação
----, que decide o que se faz com a informação disponível. Por último vem a implantação ---
-energia, térmica e invólucro ---, que decide por quanto tempo o dispositivo continua
-fazendo isso. A conclusão desconfortável desta revisão é que a literatura é mais forte
-exatamente onde o Kaelix é mais frágil, o primeiro elo, e mais frágil exatamente onde o
-Kaelix tem algo a dizer, o segundo.
+uma \emph{cadeia com ordem de precedência}. Primeiro vem a aquisição: piso de ruído, banda
+e caminho mecânico. Nenhuma decisão posterior recupera informação que o sensor não
+coletou. Depois vem a estimação, que decide o que se faz com a informação disponível:
+limiar, métrica e protocolo de validação. Por último, a implantação --- energia, térmica e
+invólucro --- decide por quanto tempo o dispositivo continua fazendo isso. A conclusão
+desta revisão é que a literatura é mais forte onde o Kaelix é mais frágil, o primeiro elo,
+e mais frágil onde o Kaelix tem algo a dizer, o segundo.
 
 \subsection{O que a literatura sustenta}
 
@@ -1034,9 +1026,9 @@ O problema do limiar é real, e não é preciosismo. O escore do Isolation Fores
 \num{0,5} como referência interpretativa e não como corte calibrado~\cite{liu2008}, e a
 implementação de referência apenas transporta essa interpretação para um \emph{offset}
 fixo, deixando o ranqueamento intocado~\cite{scikitlearn2026}. Os dois trabalhos que
-reportam bom desempenho com o detector abandonam o padrão --- um fixa o escore normalizado
+reportam bom desempenho com o detector abandonam o padrão: um fixa o escore normalizado
 em \num{0,75}~\cite{antonini2023}, o outro deriva o corte da contaminação
-conhecida~\cite{brito2022} ---, e existe alternativa principiada, com risco alvo em vez de
+conhecida~\cite{brito2022}. Existe ainda alternativa principiada, com risco alvo em vez de
 fração de anomalias adivinhada~\cite{siffer2017}. A decisão de reportar pAUC em faixa de
 baixa FPR, e não apenas AUC global, segue o benchmark de referência para o mesmo regime de
 treino~\cite{koizumi2020} e encontra eco em quem reporta PR-AUC~\cite{brito2022}; o
@@ -1045,21 +1037,21 @@ mostra por que a escolha importa.
 
 A viabilidade computacional está estabelecida: o Isolation Forest treina e executa dentro
 de um ESP32~\cite{antonini2023}, existe variante desenhada para reduzir seu custo em
-TinyML~\cite{barbariol2022}, e microcontroladores da mesma classe comportam \emph{pipelines}
-consideravelmente mais caros~\cite{uselis2025,kumar2026}. A arquitetura ESP32 + MPU6050 +
-detecção não supervisionada é publicável~\cite{kolok2025}. A exigência de integrar
-aceleração para velocidade é normativa~\cite{iso208163_2022} e o método correto está
-estabelecido: frequência, não trapézio no tempo~\cite{brandt2014}. E a forma do limite
-térmico do Kaelix --- margem imposta pela célula, não pelo invólucro --- tem precedente
-comercial direto~\cite{bentlynevada2025}.
+TinyML~\cite{barbariol2022}, e microcontroladores da mesma classe comportam
+\emph{pipelines} consideravelmente mais caros~\cite{uselis2025,kumar2026}. A arquitetura
+ESP32 + MPU6050 + detecção não supervisionada é publicável~\cite{kolok2025}. A exigência
+de integrar aceleração para velocidade é normativa~\cite{iso208163_2022} e o método
+correto está estabelecido: frequência, não trapézio no tempo~\cite{brandt2014}. E a forma
+do limite térmico do Kaelix, margem imposta pela célula e não pelo invólucro, tem
+precedente comercial direto~\cite{bentlynevada2025}.
 
 Há, por fim, uma convergência que o projeto deveria reivindicar explicitamente. Os
-resultados próprios em dados reais, a \SI{2}{\percent} de falso alarme --- desbalanceamento
-\SI{75,0}{\percent}, defeito de rolamento puro entre \num{15} e \SI{21}{\percent} ---
-reproduzem, por medição, a divisão de trabalho que Jakobsen implementou
-por projeto ao reservar um acelerômetro de \SI{400}{\hertz} para desbalanceamento e outro
-de \SI{40}{\kilo\hertz} para rolamento~\cite{jakobsen2024}, e o padrão que
-Kolok \emph{et al.} obtiveram ao demonstrar desbalanceamento e adiar
+resultados próprios em dados reais, a \SI{2}{\percent} de falso alarme, dão
+\SI{75,0}{\percent} em desbalanceamento e entre \num{15} e \SI{21}{\percent} em defeito de
+rolamento puro. Eles reproduzem, por medição, a divisão de trabalho que Jakobsen
+implementou por projeto ao reservar um acelerômetro de \SI{400}{\hertz} para
+desbalanceamento e outro de \SI{40}{\kilo\hertz} para rolamento~\cite{jakobsen2024}, e o
+padrão que Kolok \emph{et al.} obtiveram ao demonstrar desbalanceamento e adiar
 rolamento~\cite{kolok2025}. Três caminhos independentes chegam à mesma fronteira.
 
 \subsection{O que a literatura contesta}
@@ -1075,11 +1067,11 @@ MPU6050~\cite{bentlynevada2025,erbessd2025,tractian2022}. O mecanismo é conheci
 admite contorno: a assinatura do defeito viaja numa portadora de alta
 frequência~\cite{randall2011,antoni2006,antoni2007}.
 
-\textbf{O piso de ruído.} A objeção é anterior à banda e mais dura, e o projeto a possuía
-sem tê-la usado: com \num{400}~\dens{} de folha de dados integrados sobre a banda
-normativa, o sensor fica cerca de \num{1,8} vezes acima do ruído admissível para resolver
-a fronteira A/B em \SI{10}{\hertz}. A limitação é dupla, e a segunda metade dela não
-depende de nenhuma escolha de processamento.
+\textbf{O piso de ruído.} A objeção é anterior à banda, e o projeto a possuía sem tê-la
+usado: com \num{400}~\dens{} de folha de dados integrados sobre a banda normativa, o
+sensor fica cerca de \num{1,8} vezes acima do ruído admissível para resolver a fronteira
+A/B em \SI{10}{\hertz}. A limitação é dupla, e a segunda metade dela não depende de
+nenhuma escolha de processamento.
 
 \textbf{O detector.} A maior comparação restrita a métodos não supervisionados recomenda o
 Extended Isolation Forest~\cite{bouman2024}; com \SI{1}{\percent} de rótulos, métodos
@@ -1121,24 +1113,24 @@ plataforma sobre a qual questões de limiar e de métrica podem ser estudadas ho
 Reivindicar isso é mais forte do que reivindicar o resto e ter de recuar.
 
 A segunda é de método. As contribuições possíveis deste trabalho estão quase todas no
-segundo elo da cadeia --- limiar calibrado por risco alvo, pAUC no ponto de operação,
-validação por ensaio, estratificação por confundidor ---, e são contribuições reais porque
+segundo elo da cadeia: limiar calibrado por risco alvo, pAUC no ponto de operação,
+validação por ensaio, estratificação por confundidor. São contribuições reais porque
 a literatura de vibração embarcada as ignora sistematicamente. Mas elas só valem se o
 primeiro elo estiver declarado, e não disfarçado. Um resultado de \SI{75}{\percent} em
 desbalanceamento com banda declarada e falso alarme fixado em \SI{2}{\percent} é
 publicável; o mesmo número apresentado como ``detecção de falhas em motores'' não é.
 
 A observação que a literatura não explica é esta: dos três modos de falha medidos em dados
-reais, o desalinhamento --- \SIrange{5}{7}{\percent} de detecção a \SI{2}{\percent} de
-falso alarme --- é o pior, e ele \emph{não} é um problema de banda. Desalinhamento se
-manifesta em harmônicas da rotação, muito abaixo de \SI{500}{\hertz}, plenamente dentro da
-banda do sensor. Se o desempenho é ruim ali, a causa está em outro lugar: nos descritores
-escolhidos --- valor eficaz, curtose, fator de crista e frequência dominante ---, que
+reais, o desalinhamento é o pior, com \SIrange{5}{7}{\percent} de detecção a
+\SI{2}{\percent} de falso alarme, e ele \emph{não} é um problema de banda. Desalinhamento
+se manifesta em harmônicas da rotação, muito abaixo de \SI{500}{\hertz}, plenamente dentro
+da banda do sensor. Se o desempenho é ruim ali, a causa está em outro lugar: nos
+descritores escolhidos. Valor eficaz, curtose, fator de crista e frequência dominante
 descrevem energia e impulsividade e não capturam a estrutura harmônica e de fase em que o
 desalinhamento vive. Nenhum dos trabalhos revisados oferece explicação para esse caso,
 porque nenhum deles mede desalinhamento com detector não supervisionado em banda limitada.
-É a pista mais promissora do conjunto, e é inteiramente acionável: acrescentar descritores
-de razão harmônica não custa banda, não custa sensor e não custa dinheiro.
+É a pista mais direta do conjunto, e é acionável: acrescentar descritores de razão
+harmônica não custa banda, não custa sensor e não custa dinheiro.
 
 \section{Lacunas e oportunidades}
 
@@ -1173,19 +1165,19 @@ treinado no microcontrolador, o que é exatamente o modo de operação que um di
 histórico rotulado precisa adotar.
 
 \paragraph{Lacuna 3 --- contraste diagnóstico como função contínua da banda.} A literatura
-discute o efeito da banda qualitativamente --- ``estágio inicial \emph{versus} avançado'',
-``\SI{2,5}{\kilo\hertz} \emph{versus} \SI{10}{\kilo\hertz}'' --- e o único estudo revisado
-que faz varredura de taxa de amostragem o faz para acurácia de classificador
-supervisionado, não para contraste do indicador~\cite{elbouharrouti2024}. A oportunidade é
-executar a varredura com \emph{método fixo} sobre a mesma gravação decimada em vários
-$f_s$, e reportar a decomposição entre efeito de banda e efeito de perda do envelope --- o
-que o par \num{413}$\times$/\num{20}$\times$ deste projeto ainda não separa.
+discute o efeito da banda qualitativamente, em termos como ``estágio inicial \emph{versus}
+avançado'' e ``\SI{2,5}{\kilo\hertz} \emph{versus} \SI{10}{\kilo\hertz}'', e o único
+estudo revisado que faz varredura de taxa de amostragem o faz para acurácia de
+classificador supervisionado, não para contraste do indicador~\cite{elbouharrouti2024}. A
+oportunidade é executar a varredura com \emph{método fixo} sobre a mesma gravação decimada
+em vários $f_s$, e reportar a decomposição entre efeito de banda e efeito de perda do
+envelope, o que o par \num{413}$\times$/\num{20}$\times$ deste projeto ainda não separa.
 
 \paragraph{Lacuna 4 --- artefato de aliasing sobre descritores estatísticos.} Procurou-se,
 na literatura revisada por pares de diagnóstico de rolamento, descrição experimental do
 efeito de ausência de filtro anti-\emph{aliasing} sobre curtose e fator de crista em IMU de
 consumo. Não foi encontrada; o efeito aparece apenas em notas de aplicação de fabricante,
-não conferidas nesta auditoria. É um resultado publicável e diretamente acionável: medir
+não conferidas nesta auditoria. É um resultado publicável e acionável: medir
 os mesmos descritores com e sem DLPF configurado, no mesmo sinal.
 
 \paragraph{Lacuna 5 --- custo do truncamento sobre o indicador normativo.}
@@ -1198,8 +1190,8 @@ com os dados já disponíveis, e transforma retórica em número.
 \paragraph{Lacuna 6 --- detectabilidade limitada por piso de ruído.} Não se localizou, na
 literatura revisada, análise de defeito mínimo detectável em função da densidade de ruído
 para IMUs de consumo. O orçamento que existe é de literatura de fabricante e sua atribuição
-não pôde ser confirmada~\cite{looney2017}. Fechar essa conta com densidade de ruído medida
---- e não declarada --- é contribuição de instrumentação, e complementa a crítica de
+não pôde ser confirmada~\cite{looney2017}. Fechar essa conta com densidade de ruído medida,
+e não declarada, é contribuição de instrumentação, e complementa a crítica de
 ausência de calibração rastreável que os próprios estudos de MEMS
 levantam~\cite{albarbar2008,rodrigues2021}.
 
@@ -1219,8 +1211,8 @@ de motor. O campo usa célula primária e portanto nunca carrega nada~\cite{naba
 revisão térmica disponível estabelece o mecanismo mas não o limite de
 carga~\cite{ma2018}. O limite de \SI{45}{\celsius} vem da folha de dados da célula e das
 normas de segurança aplicáveis, não da literatura de manutenção preditiva. O que falta
-publicado é o orçamento térmico completo --- carcaça quente, invólucro fechado, célula
-carregando --- e é ele que decide se a escolha de bateria do projeto sobrevive.
+publicado é o orçamento térmico completo: carcaça quente, invólucro fechado, célula
+carregando. É ele que decide se a escolha de bateria do projeto sobrevive.
 
 \paragraph{Lacuna 9 --- separar efeito de banda de efeito de montagem.} Não se localizou
 benchmark aberto com sinais gravados \emph{simultaneamente} por MEMS de banda limitada e
