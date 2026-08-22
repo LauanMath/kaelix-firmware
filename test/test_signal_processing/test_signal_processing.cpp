@@ -64,9 +64,10 @@ void test_kurtosis_of_uniform_like_signal(void) {
 
 void test_dominant_frequency_of_sine_wave(void) {
     // sample_rate/n = 1 Hz por bin, então 50 Hz cai exatamente no bin 50
-    // (sem espalhamento espectral / leakage).
-    const size_t n = 1024;
-    const float sample_rate_hz = 1024.0f;
+    // (sem espalhamento espectral / leakage). n <= FFT_MAX_N: a FFT usa
+    // buffer estático dimensionado para a janela do dispositivo.
+    const size_t n = 512;
+    const float sample_rate_hz = 512.0f;
     const float freq_hz = 50.0f;
 
     auto samples = make_sine(n, 1.0f, freq_hz, sample_rate_hz);
@@ -84,8 +85,8 @@ void test_dominant_frequency_of_sine_wave(void) {
 //   aceleração: 5,0 (200 Hz) > 1,0 (20 Hz)          -> pico em 200 Hz
 //   velocidade: 1,0/20 = 0,050 > 5,0/200 = 0,025    -> pico em 20 Hz
 void test_dominant_frequency_uses_velocity_not_acceleration(void) {
-    const size_t n = 1024;
-    const float fs = 1024.0f;
+    const size_t n = 512;   // <= FFT_MAX_N
+    const float fs = 512.0f;
 
     auto low = make_sine(n, 1.0f, 20.0f, fs);
     auto high = make_sine(n, 5.0f, 200.0f, fs);
@@ -99,8 +100,8 @@ void test_dominant_frequency_uses_velocity_not_acceleration(void) {
 // componente de baixíssima frequência vencer. A ISO 10816-3 mede a partir
 // de 10 Hz, e é esse corte que torna a reponderação utilizável.
 void test_dominant_frequency_ignores_below_band(void) {
-    const size_t n = 1024;
-    const float fs = 1024.0f;
+    const size_t n = 512;   // <= FFT_MAX_N
+    const float fs = 512.0f;
 
     auto sub = make_sine(n, 3.0f, 3.0f, fs);    // abaixo de 10 Hz
     auto in_band = make_sine(n, 1.0f, 50.0f, fs);
@@ -111,15 +112,15 @@ void test_dominant_frequency_ignores_below_band(void) {
 }
 
 void test_dominant_frequency_ignores_above_band(void) {
-    const size_t n = 4096;
-    const float fs = 8192.0f;
+    const size_t n = 512;   // <= FFT_MAX_N: a FFT usa buffer estático
+    const float fs = 4096.0f;
 
-    auto acima = make_sine(n, 50.0f, 2000.0f, fs);  // acima de 1000 Hz
-    auto in_band = make_sine(n, 1.0f, 60.0f, fs);
+    auto acima = make_sine(n, 50.0f, 2000.0f, fs);  // acima de 1000 Hz (Nyquist = 2048)
+    auto in_band = make_sine(n, 1.0f, 64.0f, fs);  // bin exato: 4096/512 = 8 Hz
     std::vector<float> mixed(n);
     for (size_t i = 0; i < n; ++i) mixed[i] = acima[i] + in_band[i];
 
-    TEST_ASSERT_FLOAT_WITHIN(2.0f, 60.0f, dominant_frequency(mixed.data(), n, fs));
+    TEST_ASSERT_FLOAT_WITHIN(8.0f, 64.0f, dominant_frequency(mixed.data(), n, fs));
 }
 
 int main(void) {
