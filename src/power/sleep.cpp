@@ -1,7 +1,15 @@
 #include "sleep.h"
+
+#include "watchdog.h"
+
+#include "kaelix_status.h"
+
 #include <Arduino.h>
 #include <driver/gpio.h>
 #include <esp_sleep.h>
+#include <esp_system.h>
+
+#include <cstdint>
 
 // Corte de energia via transistores BC337 (chave NPN low-side): um GPIO
 // habilita a base de ambos os transistores em paralelo, cortando o
@@ -54,23 +62,71 @@ static constexpr gpio_num_t PERIPHERALS_POWER_PIN = GPIO_NUM_5;
 
 namespace kaelix::power {
 
-void peripherals_power(bool on) {
+kaelix::Status peripherals_power(bool on) {
     // O hold do sleep anterior sobrevive ao boot e travaria o pino; é
     // preciso soltá-lo antes de reconfigurar.
-    gpio_hold_dis(PERIPHERALS_POWER_PIN);
+    const esp_err_t released = gpio_hold_dis(PERIPHERALS_POWER_PIN);
+
     pinMode(PERIPHERALS_POWER_PIN, OUTPUT);
     digitalWrite(PERIPHERALS_POWER_PIN, on ? HIGH : LOW);
+
+    // pinMode e digitalWrite são void e não têm nada a dizer. O único
+    // retorno verificável desta função é o do hold — e ele importa: um
+    // pino que recusa hold não mantém o corte de energia durante o sono.
+    if (released != ESP_OK) {
+        return kaelix::Status::PeripheralPowerFault;
+    }
+    return kaelix::Status::Ok;
 }
 
-[[noreturn]] void deep_sleep(uint32_t minutes) {
+kaelix::Status sleep_prepare(uint32_t minutes) {
+    kaelix::Status result = kaelix::Status::Ok;
+
+    uint32_t sleep_minutes = minutes;
+    if (sleep_minutes < SLEEP_MIN_MINUTES) {
+        sleep_minutes = SLEEP_MIN_MINUTES;
+        result = kaelix::Status::InvalidArgument;
+    }
+    if (sleep_minutes > SLEEP_MAX_MINUTES) {
+        sleep_minutes = SLEEP_MAX_MINUTES;
+        result = kaelix::Status::InvalidArgument;
+    }
+
     // Sem o hold, GPIOs não-RTC vão para alta impedância ao entrar em
     // deep sleep e a base dos BC337 fica flutuando — justamente durante
     // os 10 minutos em que o corte de energia precisa valer.
-    gpio_hold_en(PERIPHERALS_POWER_PIN);
+    if (gpio_hold_en(PERIPHERALS_POWER_PIN) != ESP_OK) {
+        result = kaelix::status_first_error(result, kaelix::Status::PeripheralPowerFault);
+    }
     gpio_deep_sleep_hold_en();
 
-    esp_sleep_enable_timer_wakeup((uint64_t)minutes * 60ULL * 1000000ULL);
+    // O WDT-1 passa a cobrir o sono como despertador de último recurso.
+    result = kaelix::status_first_error(result, watchdog_arm_for_sleep(sleep_minutes));
+
+    if (esp_sleep_enable_timer_wakeup(static_cast<uint64_t>(sleep_minutes) * 60ULL * 1000000ULL) != ESP_OK) {
+        // Sem fonte de despertar, quem traz o dispositivo de volta é o
+        // WDT-1, ~2 min depois do previsto. É por isso que ele é
+        // reprogramado em vez de desligado antes do sono.
+        result = kaelix::status_first_error(result, kaelix::Status::Internal);
+    }
+
+    return result;
+}
+
+[[noreturn]] void deep_sleep_now() {
     esp_deep_sleep_start();
+
+    // esp_deep_sleep_start() não deve retornar. Se retornar, cair pelo fim
+    // de uma função [[noreturn]] é comportamento indefinido — o compilador
+    // pode ter omitido o epílogo e a execução continuaria num endereço
+    // arbitrário. O estado seguro aqui é reiniciar: o novo boot lê a causa
+    // do reset, registra e volta ao ciclo de forma declarada.
+    esp_restart();
+
+    // esp_restart() também não retorna. Este laço existe para que esta
+    // função não termine por caminho nenhum, nem mesmo o impossível.
+    for (;;) {
+    }
 }
 
 } // namespace kaelix::power

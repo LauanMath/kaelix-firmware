@@ -2,12 +2,40 @@
 
 #include <cstdint>
 
+#include "kaelix_status.h"
+
 namespace kaelix::power {
 
-// Corta a alimentação do MPU6050/periféricos via transistor BC337 (GPIO).
-void peripherals_power(bool on);
+// Faixa aceita por deep_sleep(). O piso não é cosmético: dormir 0 minuto
+// é um despertar imediato, ou seja, um ciclo contínuo a ~40 mA — o
+// oposto exato do que esta função existe para fazer.
+inline constexpr uint32_t SLEEP_MIN_MINUTES = 1U;
+inline constexpr uint32_t SLEEP_MAX_MINUTES = 120U;
 
-// Entra em deep sleep por `minutes` minutos (esp_deep_sleep_start()).
-[[noreturn]] void deep_sleep(uint32_t minutes);
+// Corta a alimentação do MPU6050/periféricos via transistor BC337 (GPIO).
+//
+// Devolve Status porque o `hold` do GPIO pode ser recusado pelo pino, e
+// sem `hold` a base dos BC337 flutua durante os 10 minutos em que o corte
+// precisa valer — o periférico pode continuar energizado no sono inteiro
+// sem que nada acuse (Status::PeripheralPowerFault).
+[[nodiscard]] kaelix::Status peripherals_power(bool on);
+
+// Prepara o sono: hold do GPIO de corte, reprogramação do WDT-1 para
+// cobrir o período e armação do timer de despertar.
+//
+// Existe separada de `deep_sleep_now()` por uma razão de projeto: uma
+// função [[noreturn]] não tem canal para relatar erro, e estas três
+// operações têm consequências reais e distintas (periférico energizado
+// durante o sono, sono sem rede de segurança, sono sem despertador).
+// Separando, L3 fica com a chance de gravar a causa na RTC memory ANTES
+// de dormir — o que faz o próximo ciclo poder transmiti-la.
+//
+// `minutes` fora da faixa é SATURADO e relatado como InvalidArgument, não
+// recusado: recusar deixaria o dispositivo sem timer de despertar armado,
+// que é o pior desfecho possível desta função.
+[[nodiscard]] kaelix::Status sleep_prepare(uint32_t minutes);
+
+// Entra em deep sleep e não retorna. Pressupõe `sleep_prepare()` chamado.
+[[noreturn]] void deep_sleep_now();
 
 } // namespace kaelix::power
