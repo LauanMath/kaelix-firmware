@@ -1,4 +1,7 @@
 #include "lora.h"
+#include "crc16.h"
+
+#include <Arduino.h>
 #include <RadioLib.h>
 
 // RA-02 (SX1278) via SPI. Pinos e potência de TX são placeholders — o
@@ -15,6 +18,30 @@ static SX1278 radio = new Module(LORA_CS_PIN, LORA_DIO0_PIN, LORA_RST_PIN);
 
 namespace kaelix::comms {
 
+uint32_t device_id() {
+    // eFuse MAC é único de fábrica por chip. Os 32 bits baixos bastam
+    // para distinguir os dispositivos de uma planta.
+    return static_cast<uint32_t>(ESP.getEfuseMac() & 0xFFFFFFFFULL);
+}
+
+LoraPacket make_packet(kaelix::ml::Status status, float rms, float temperature_c, uint32_t boot_count) {
+    LoraPacket packet{};
+    packet.version = PACKET_VERSION;
+    packet.device_id = device_id();
+    packet.boot_count = boot_count;
+    packet.status = static_cast<uint8_t>(status);
+    packet.rms = rms;
+    packet.temperature_c = temperature_c;
+    packet.crc = crc16_ccitt(reinterpret_cast<const uint8_t*>(&packet),
+                             sizeof(LoraPacket) - sizeof(packet.crc));
+    return packet;
+}
+
+bool packet_is_valid(const LoraPacket& packet) {
+    return packet.crc == crc16_ccitt(reinterpret_cast<const uint8_t*>(&packet),
+                                     sizeof(LoraPacket) - sizeof(packet.crc));
+}
+
 bool lora_init() {
     int state = radio.begin(LORA_FREQUENCY_MHZ);
     if (state != RADIOLIB_ERR_NONE) return false;
@@ -26,6 +53,10 @@ bool lora_init() {
 bool lora_send(const LoraPacket& packet) {
     int state = radio.transmit(reinterpret_cast<const uint8_t*>(&packet), sizeof(packet));
     return state == RADIOLIB_ERR_NONE;
+}
+
+bool lora_sleep() {
+    return radio.sleep() == RADIOLIB_ERR_NONE;
 }
 
 } // namespace kaelix::comms
