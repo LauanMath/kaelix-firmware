@@ -40,21 +40,55 @@ def compute_crest_factor(samples: np.ndarray) -> float:
     return float(np.max(np.abs(x)) / rms)
 
 
-def dominant_frequency(samples: np.ndarray, sample_rate_hz: float) -> float:
-    """FFT (equivalente à fft_radix2 do C++ para n potência de 2) — ignora
-    o bin DC (k=0) e retorna a frequência do bin de maior magnitude na
-    primeira metade do espectro."""
+# Banda de análise, em Hz — a mesma da ISO 10816-3. Espelha
+# DOMINANT_BAND_LO_HZ / _HI_HZ em lib/signal_processing/signal_processing.h.
+DOMINANT_BAND_LO_HZ = 10.0
+DOMINANT_BAND_HI_HZ = 1000.0
+
+
+def dominant_frequency(
+    samples: np.ndarray,
+    sample_rate_hz: float,
+    band_lo_hz: float = DOMINANT_BAND_LO_HZ,
+    band_hi_hz: float = DOMINANT_BAND_HI_HZ,
+) -> float:
+    """Frequência dominante do espectro de VELOCIDADE, band-limitado.
+
+    Aceleração escala com ω², então o espectro de aceleração é dominado
+    pelo conteúdo de alta frequência — tipicamente um modo estrutural da
+    montagem, idêntico com a máquina sadia ou defeituosa. Medido no
+    MAFAULDA: o pico de aceleração fica em 117 Hz independente da rotação
+    (correlação com a rotação real: -0,018), enquanto no espectro de
+    velocidade o pico cai sobre 1x rotação — a assinatura de
+    desbalanceamento e desalinhamento.
+
+    A conversão é feita na magnitude: |V(f)| = |A(f)| / (2*pi*f). A fase
+    não importa para escolher o bin de pico. O limite inferior da banda
+    não é cosmético: sem ele a ponderação 1/f faria o bin mais baixo
+    vencer sempre.
+    """
     x = np.asarray(samples, dtype=np.float64)
     n = x.size
     if n < 4:
         return 0.0
-    spectrum = np.fft.fft(x)
-    magnitude = np.abs(spectrum)
+
+    bin_hz = sample_rate_hz / n
+    if bin_hz <= 0.0:
+        return 0.0
+
+    magnitude = np.abs(np.fft.fft(x))
     half = n // 2
     if half <= 1:
         return 0.0
-    best_bin = 1 + int(np.argmax(magnitude[1:half]))
-    return float(best_bin * sample_rate_hz / n)
+
+    k_lo = max(1, int(np.ceil(band_lo_hz / bin_hz)))
+    k_hi = min(half - 1, int(np.floor(band_hi_hz / bin_hz)))
+    if k_lo > k_hi:
+        return 0.0
+
+    k = np.arange(k_lo, k_hi + 1)
+    velocity_magnitude = magnitude[k_lo:k_hi + 1] / (2.0 * np.pi * k * bin_hz)
+    return float(k[int(np.argmax(velocity_magnitude))] * bin_hz)
 
 
 def extract_features(samples: np.ndarray, sample_rate_hz: float) -> dict:

@@ -85,23 +85,41 @@ void fft_radix2(float* real, float* imag, size_t n) {
     }
 }
 
-float dominant_frequency(const float* samples, size_t n, float sample_rate_hz) {
+float dominant_frequency(const float* samples, size_t n, float sample_rate_hz,
+                         float band_lo_hz, float band_hi_hz) {
+    if (n < 4) return 0.0f;
+
     std::vector<float> real(samples, samples + n);
     std::vector<float> imag(n, 0.0f);
     fft_radix2(real.data(), imag.data(), n);
 
-    // Só a primeira metade do espectro é útil (sinal real é simétrico);
-    // o bin 0 (componente DC) é ignorado.
-    size_t best_bin = 1;
-    float best_mag = 0.0f;
-    for (size_t k = 1; k < n / 2; ++k) {
-        float mag = std::sqrt(real[k] * real[k] + imag[k] * imag[k]);
+    const float bin_hz = sample_rate_hz / static_cast<float>(n);
+    if (bin_hz <= 0.0f) return 0.0f;
+
+    // Só a primeira metade do espectro é útil (sinal real é simétrico).
+    // A busca fica restrita à banda: o bin DC cai fora por construção, e
+    // sem o limite inferior a ponderação 1/f faria o bin mais baixo
+    // vencer sempre.
+    size_t k_lo = static_cast<size_t>(std::ceil(band_lo_hz / bin_hz));
+    if (k_lo < 1) k_lo = 1;
+    size_t k_hi = static_cast<size_t>(std::floor(band_hi_hz / bin_hz));
+    if (k_hi > n / 2 - 1) k_hi = n / 2 - 1;
+    if (k_lo > k_hi) return 0.0f;
+
+    constexpr float TWO_PI = 6.28318530718f;
+    size_t best_bin = k_lo;
+    float best_mag = -1.0f;
+    for (size_t k = k_lo; k <= k_hi; ++k) {
+        float freq = static_cast<float>(k) * bin_hz;
+        // |V(f)| = |A(f)| / (2*pi*f) — integração no domínio da
+        // frequência, aplicada só à magnitude.
+        float mag = std::sqrt(real[k] * real[k] + imag[k] * imag[k]) / (TWO_PI * freq);
         if (mag > best_mag) {
             best_mag = mag;
             best_bin = k;
         }
     }
-    return static_cast<float>(best_bin) * sample_rate_hz / static_cast<float>(n);
+    return static_cast<float>(best_bin) * bin_hz;
 }
 
 } // namespace kaelix::sensors

@@ -74,6 +74,54 @@ void test_dominant_frequency_of_sine_wave(void) {
     TEST_ASSERT_FLOAT_WITHIN(0.5f, freq_hz, detected);
 }
 
+
+// Regressão do achado no MAFAULDA: no espectro de ACELERAÇÃO o pico fica
+// na componente de alta frequência (tipicamente um modo estrutural da
+// montagem, igual com máquina sadia ou defeituosa); no de VELOCIDADE ele
+// cai sobre a linha de 1x rotação, que é a assinatura de desbalanceamento.
+//
+// Amplitudes escolhidas para que as duas leituras discordem:
+//   aceleração: 5,0 (200 Hz) > 1,0 (20 Hz)          -> pico em 200 Hz
+//   velocidade: 1,0/20 = 0,050 > 5,0/200 = 0,025    -> pico em 20 Hz
+void test_dominant_frequency_uses_velocity_not_acceleration(void) {
+    const size_t n = 1024;
+    const float fs = 1024.0f;
+
+    auto low = make_sine(n, 1.0f, 20.0f, fs);
+    auto high = make_sine(n, 5.0f, 200.0f, fs);
+    std::vector<float> mixed(n);
+    for (size_t i = 0; i < n; ++i) mixed[i] = low[i] + high[i];
+
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, 20.0f, dominant_frequency(mixed.data(), n, fs));
+}
+
+// Sem o limite inferior da banda, a ponderação 1/f faria qualquer
+// componente de baixíssima frequência vencer. A ISO 10816-3 mede a partir
+// de 10 Hz, e é esse corte que torna a reponderação utilizável.
+void test_dominant_frequency_ignores_below_band(void) {
+    const size_t n = 1024;
+    const float fs = 1024.0f;
+
+    auto sub = make_sine(n, 3.0f, 3.0f, fs);    // abaixo de 10 Hz
+    auto in_band = make_sine(n, 1.0f, 50.0f, fs);
+    std::vector<float> mixed(n);
+    for (size_t i = 0; i < n; ++i) mixed[i] = sub[i] + in_band[i];
+
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, 50.0f, dominant_frequency(mixed.data(), n, fs));
+}
+
+void test_dominant_frequency_ignores_above_band(void) {
+    const size_t n = 4096;
+    const float fs = 8192.0f;
+
+    auto acima = make_sine(n, 50.0f, 2000.0f, fs);  // acima de 1000 Hz
+    auto in_band = make_sine(n, 1.0f, 60.0f, fs);
+    std::vector<float> mixed(n);
+    for (size_t i = 0; i < n; ++i) mixed[i] = acima[i] + in_band[i];
+
+    TEST_ASSERT_FLOAT_WITHIN(2.0f, 60.0f, dominant_frequency(mixed.data(), n, fs));
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_rms_of_sine_wave);
@@ -82,5 +130,8 @@ int main(void) {
     RUN_TEST(test_kurtosis_of_two_point_distribution);
     RUN_TEST(test_kurtosis_of_uniform_like_signal);
     RUN_TEST(test_dominant_frequency_of_sine_wave);
+    RUN_TEST(test_dominant_frequency_uses_velocity_not_acceleration);
+    RUN_TEST(test_dominant_frequency_ignores_below_band);
+    RUN_TEST(test_dominant_frequency_ignores_above_band);
     return UNITY_END();
 }
