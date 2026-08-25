@@ -1,0 +1,165 @@
+# =====================================================================
+# Kaelix — estilo de formatação
+# =====================================================================
+#
+# Este arquivo NÃO propõe um estilo novo: ele descreve o estilo que o
+# código já tem. Cada opção abaixo foi escolhida medindo a divergência
+# real entre `clang-format` e as 28 unidades de tradução de lib/, src/ e
+# test/ — a configuração vencedora é a que menos reescreve o repositório.
+#
+# Método (reprodutível):
+#
+#   for f in lib/*/*.h lib/*/*.cpp src/*.h src/*.cpp src/*/*.* test/*/*.cpp; do
+#       clang-format --style=file "$f" | diff -u "$f" - | grep -cE '^[+-][^+-]'
+#   done
+#
+# Medido com Apple clang-format 21:
+#
+#   LLVM puro ................................. 4304 linhas reescritas
+#   + indentação 4, coluna 100, ponteiro à esq.  708
+#   + o restante das opções abaixo ............  512
+#
+# Das 512 que sobram, 170 são as duas tabelas alinhadas à mão descritas
+# no fim deste arquivo. O resto é quebra de linha em chamadas longas —
+# inevitável com qualquer configuração, porque o autor quebrou por
+# semântica, não por coluna.
+#
+# Aplicar em massa é uma decisão de projeto, não uma consequência deste
+# arquivo. O uso pretendido é `clang-format --dry-run --Werror` sobre o
+# diff de cada commit (tools/run-static-analysis.sh --format).
+# ---------------------------------------------------------------------
+
+Language: Cpp
+Standard: c++17
+BasedOnStyle: LLVM
+
+# ---------------------------------------------------------------------
+# Largura e indentação
+# ---------------------------------------------------------------------
+# 100 colunas: medido, não arbitrado. Testado 90 / 96 / 100 / 110 contra
+# o repositório — 90 dá 576 linhas de divergência, 96 dá 528, 110 dá 569,
+# 100 dá 512. É a largura em que o código já foi escrito (só 5 linhas de
+# lib/ passam de 100, todas comentário).
+ColumnLimit: 100
+IndentWidth: 4
+ContinuationIndentWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+
+# `namespace kaelix::sensors {` não indenta o corpo — é o que lib/ e src/
+# fazem, e com namespace aninhado a indentação só consumiria colunas.
+NamespaceIndentation: None
+FixNamespaceComments: true
+
+# `case` indentado dentro do `switch`: ver status_to_string() e
+# machine_state_to_string().
+IndentCaseLabels: true
+
+# Diretivas de pré-processador aninhadas indentam 2 colunas depois do `#`
+# (`#  define`, `#  include`) — é a forma usada em kaelix_status.h e nos
+# blocos POSIX de test_thermistor/test_crc16.
+IndentPPDirectives: AfterHash
+PPIndentWidth: 2
+
+# ---------------------------------------------------------------------
+# Chaves e construções curtas
+# ---------------------------------------------------------------------
+BreakBeforeBraces: Attach
+
+# Medição: com AllowShortBlocksOnASingleLine em `Always`, permitir `if`
+# de uma linha piorou a divergência de 522 para 686 linhas. Com `Empty`
+# (o valor adotado) as duas formas empatam em 512 — então aqui a escolha
+# NÃO é métrica, é de segurança: corpo sempre em linha própria e sempre
+# com chaves é a defesa contra o "goto fail", e
+# readability-braces-around-statements no .clang-tidy exige o mesmo do
+# lado da análise. Empatado na métrica, decide o argumento.
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+
+# `Inline` compacta apenas funções definidas dentro de classe/struct.
+# `All` compactaria também is_power_of_two() e outras funções de lib/ que
+# o autor escreveu expandidas — 516 linhas de divergência contra 512.
+# As one-liners que já existem (`constexpr bool is_ok(...) { ... }`) são
+# preservadas nos dois casos, porque clang-format não expande o que já
+# cabe na linha.
+AllowShortFunctionsOnASingleLine: Inline
+
+# ---------------------------------------------------------------------
+# Ponteiros
+# ---------------------------------------------------------------------
+# `const float* samples`, não `const float *samples`. É unânime no
+# repositório (lib/, src/ e test/), então DerivePointerAlignment fica
+# desligado: um arquivo novo escrito na outra convenção é corrigido, não
+# tolerado.
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+# ---------------------------------------------------------------------
+# Alinhamento
+# ---------------------------------------------------------------------
+# Alinhar `=` e declarações consecutivas parece atraente por causa da
+# tabela de Status, mas foi medido e é pior: ligar AlignConsecutive-
+# Assignments leva a divergência de 512 para 808 linhas, porque passa a
+# alinhar dezenas de atribuições que o autor deliberadamente não alinhou
+# — ganha 170 linhas no enum e perde 466 no resto do repositório.
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveBitFields: false
+AlignConsecutiveMacros: false
+
+# Esta, sim, compensa: preserva o formato de status_to_string() e
+# subsystem_to_string(), onde os `return` ficam em coluna comum e a
+# tabela pode ser lida como tabela.
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: true
+  AcrossComments: true
+  AlignCaseColons: false
+
+AlignAfterOpenBracket: Align
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments: true
+SpacesBeforeTrailingComments: 1
+
+# ---------------------------------------------------------------------
+# Includes e comentários
+# ---------------------------------------------------------------------
+# NÃO reordenar includes. Em src/ a ordem é significativa: <Arduino.h> e
+# os cabeçalhos do ESP-IDF precisam vir antes de headers que dependem
+# deles, e reordenar quebra a compilação sem aviso. Os blocos já estão
+# agrupados à mão (próprio → projeto → sistema).
+SortIncludes: false
+IncludeBlocks: Preserve
+
+# NÃO reflow de comentários. Os blocos de comentário deste projeto são
+# argumentação em prosa, com quebras escolhidas (parágrafos, listas com
+# `-`, tabelas de faixas de código). Reflow automático embaralharia todos.
+ReflowComments: false
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+InsertNewlineAtEOF: true
+SeparateDefinitionBlocks: Leave
+
+# ---------------------------------------------------------------------
+# Duas exceções conhecidas
+# ---------------------------------------------------------------------
+# clang-format não sabe alinhar UMA tabela sem alinhar o arquivo inteiro,
+# e há dois lugares onde o alinhamento à mão carrega informação:
+#
+#   1. lib/kaelix_status/kaelix_status.h — o enum Status, cujas colunas
+#      (nome / código hex / comentário) formam a tabela que o gateway usa
+#      para decodificar o byte `diag`;
+#   2. src/comms/lora.h — os membros de LoraPacket, cujo alinhamento
+#      exibe o layout de 21 bytes.
+#
+# Reformatar esses dois blocos custaria ~170 linhas de diff e a
+# legibilidade das tabelas. A solução correta é envolvê-los em
+# `// clang-format off` / `// clang-format on` na próxima vez que forem
+# tocados; até lá, `--dry-run` acusa esses dois blocos e a divergência é
+# conhecida e documentada, não uma surpresa.

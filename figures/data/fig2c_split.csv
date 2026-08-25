@@ -1,0 +1,5 @@
+estrategia,ordem,tipo,media,desvio
+"Split aleatório
+por janela",1,vazamento,0.9904761904761905,0.010378330817953993
+"Split por ensaio
+(GroupKFold)",2,correto,0.6321428571428571,0.19152982396845605

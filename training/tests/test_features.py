@@ -50,3 +50,38 @@ def test_dominant_frequency_of_sine_wave():
     x = make_sine(n, 1.0, freq_hz, sample_rate_hz)
     detected = dominant_frequency(x, sample_rate_hz)
     assert detected == pytest.approx(freq_hz, abs=0.5)
+
+
+def test_dominant_frequency_uses_velocity_not_acceleration():
+    """Espelha test_dominant_frequency_uses_velocity_not_acceleration do C++.
+
+    Regressão do achado no MAFAULDA: o pico de aceleração fica na
+    componente de alta frequência (modo estrutural da montagem, igual com
+    máquina sadia ou defeituosa); o de velocidade cai sobre 1x rotação.
+    Amplitudes escolhidas para que as duas leituras discordem:
+      aceleração: 5,0 (200 Hz) > 1,0 (20 Hz)       -> pico em 200 Hz
+      velocidade: 1,0/20 = 0,050 > 5,0/200 = 0,025 -> pico em 20 Hz
+    """
+    n, fs = 1024, 1024.0
+    x = make_sine(n, 1.0, 20.0, fs) + make_sine(n, 5.0, 200.0, fs)
+
+    # O pico bruto de aceleração é mesmo o de 200 Hz — é disso que a
+    # reponderação nos protege.
+    bruto = np.abs(np.fft.fft(x))[1:n // 2]
+    assert (1 + int(np.argmax(bruto))) * fs / n == pytest.approx(200.0, abs=1.0)
+
+    assert dominant_frequency(x, fs) == pytest.approx(20.0, abs=1.0)
+
+
+def test_dominant_frequency_ignores_below_band():
+    """Sem o corte inferior, a ponderação 1/f faria qualquer componente de
+    baixíssima frequência vencer."""
+    n, fs = 1024, 1024.0
+    x = make_sine(n, 3.0, 3.0, fs) + make_sine(n, 1.0, 50.0, fs)
+    assert dominant_frequency(x, fs) == pytest.approx(50.0, abs=1.0)
+
+
+def test_dominant_frequency_ignores_above_band():
+    n, fs = 4096, 8192.0
+    x = make_sine(n, 50.0, 2000.0, fs) + make_sine(n, 1.0, 60.0, fs)
+    assert dominant_frequency(x, fs) == pytest.approx(60.0, abs=2.0)

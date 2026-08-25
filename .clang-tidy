@@ -1,0 +1,274 @@
+# =====================================================================
+# Kaelix — análise estática (clang-tidy)
+# =====================================================================
+#
+# A lista começa em `-*`: nenhum check entra por ser padrão da versão
+# instalada. Isso é determinismo, não pedantismo — se a lista fosse
+# aditiva sobre o padrão, atualizar o clang-tidy mudaria o resultado da
+# verificação sem que nada do projeto tivesse mudado, e o relatório
+# deixaria de ser reproduzível na banca.
+#
+# POR QUE AS JUSTIFICATIVAS ESTÃO AQUI FORA E NÃO DENTRO DE `Checks:`
+# Em YAML, `#` dentro de um escalar de bloco (`Checks: >`) é TEXTO, não
+# comentário: a linha inteira entra na string e vira uma entrada de glob
+# inválida. Algumas versões do clang-tidy descartam essas entradas, e
+# outras as tratam como glob que não casa com nada — e a diferença entre
+# as duas é invisível no relatório. Um arquivo de verificação que pode
+# estar silenciosamente desligado é pior que não ter arquivo nenhum, e é
+# exatamente o modo de falha que este projeto combate. Então o `Checks:`
+# abaixo contém só nomes de check, e cada exclusão é justificada nesta
+# seção, agrupada pelo mesmo número [1]..[4] que marca o bloco lá
+# embaixo. tools/run-static-analysis.sh imprime quantos checks ficaram
+# efetivamente ativos, para que um erro de digitação apareça.
+#
+# Uma exclusão sem motivo é ruído com aparência de rigor: se um check foi
+# desligado porque incomodava, o relatório limpo não significa nada.
+#
+# ---------------------------------------------------------------------
+# [1] Exclusões impostas pela política de memória (arquitetura §4)
+# ---------------------------------------------------------------------
+# O firmware não aloca no heap: buffers são estáticos, dimensionados em
+# tempo de compilação, e a interface entre módulos é ponteiro +
+# comprimento.
+#
+#   cppcoreguidelines-pro-bounds-pointer-arithmetic
+#   cppcoreguidelines-pro-bounds-constant-array-index
+#   cppcoreguidelines-avoid-c-arrays
+#     Pedem exatamente o que §4 proíbe (std::vector, gsl::span, gsl::at).
+#     Não existe GSL no toolchain do ESP32 Arduino, e trocar
+#     `const float* samples, size_t n` por um container quebraria a
+#     paridade numérica com training/kaelix_ml/features.py, que é
+#     contrato verificado. O limite não some com a exclusão: ele é
+#     imposto por KAELIX_REQUIRE(n <= FFT_MAX_N, ...) na fronteira
+#     pública e testado em test/test_signal_processing.
+#
+#   cppcoreguidelines-avoid-non-const-global-variables
+#     `float s_fft_re[FFT_MAX_N]` em namespace anônimo é a rota "b" de
+#     §4, escolhida e documentada em signal_processing.cpp; e o estado
+#     retido em RTC memory (src/main.cpp) precisa sobreviver ao deep
+#     sleep — é o que dá continuidade ao boot_count. São globais
+#     mutáveis por necessidade física, não por descuido: ambas são
+#     file-local e a não reentrância está declarada no cabeçalho.
+#
+# ---------------------------------------------------------------------
+# [2] Exclusões impostas pelo modelo de erro (arquitetura §5)
+# ---------------------------------------------------------------------
+#   cppcoreguidelines-macro-usage
+#     KAELIX_REQUIRE / _VALUE / _VOID / KAELIX_ENSURE / KAELIX_CHECK
+#     precisam ser macros: capturam __FILE__, __LINE__ e o texto da
+#     condição (#cond), e executam `return` no frame do CHAMADOR.
+#     Nenhuma função, template ou lambda faz isso. Trocá-las por funções
+#     apagaria o diagnóstico que o modelo de erro existe para produzir.
+#
+#   cppcoreguidelines-avoid-do-while
+#     Corolário do item acima: `do { ... } while (0)` é o que torna essas
+#     macros seguras dentro de um `if` sem chaves. Proibi-lo aqui seria
+#     proibir a única forma correta de escrever a macro.
+#
+#   cppcoreguidelines-pro-type-vararg
+#     O único vararg do firmware é o std::fprintf de
+#     kaelix::detail::assert_failed, que só existe quando
+#     KAELIX_ASSERT_ABORT == 1 — ou seja, em bancada. Em produção
+#     (-D KAELIX_PRODUCTION) o pré-processador remove a função inteira,
+#     inclusive os literais __FILE__, que nem chegam à flash.
+#     cert-dcl50-cpp (DEFINIR função variádica) segue LIGADO: o projeto
+#     não define nenhuma, e passar a definir deve ser acusado.
+#
+# ---------------------------------------------------------------------
+# [3] Exclusões com custo real, aceitas conscientemente
+# ---------------------------------------------------------------------
+#   cppcoreguidelines-pro-type-reinterpret-cast
+#     Calcular CRC sobre um POD exige olhar a struct como bytes. O acesso
+#     via `const uint8_t*` é aliasing permitido por [basic.lval]/11, e é
+#     o que src/comms/lora.cpp e src/main.cpp fazem — dois locais, ambos
+#     sobre structs packed com static_assert de layout.
+#     CUSTO: um reinterpret_cast novo e injustificado deixa de ser
+#     acusado. A contrapartida é de processo, não de ferramenta — todo
+#     reinterpret_cast fora desses dois pontos é rejeitado em revisão, e
+#     o grep que sustenta isso é
+#     `grep -rn reinterpret_cast src/ lib/` (esperado: 2 ocorrências).
+#
+#   cppcoreguidelines-avoid-magic-numbers
+#   readability-magic-numbers
+#     0x1021, 0xFFFF, 0x8000 (polinômio CCITT), 0x68 (endereço I2C do
+#     MPU6050), 4095 (fundo de escala do ADC de 12 bits) são constantes
+#     de domínio, já nomeadas onde se repetem e explicadas onde aparecem
+#     uma vez só. Além disso src/ml/isolation_forest_data.h é GERADO por
+#     training/kaelix_ml/export_cpp.py e contém milhares de floats — com
+#     o check ligado, o relatório inteiro vira esse arquivo e nada mais
+#     é legível.
+#
+#   readability-identifier-length
+#     `n`, `i`, `k`, `re`, `im`, `wr`, `wi`, `m2`, `m4` são a notação da
+#     própria matemática e casam um a um com features.py e com a
+#     literatura de FFT. Renomear para caber num limite de caracteres
+#     afastaria o código da fórmula que ele implementa.
+#
+#   bugprone-easily-swappable-parameters
+#     As assinaturas de lib/ são (const float*, size_t, float, float,
+#     float) porque são o par verificado de features.py — a ordem dos
+#     parâmetros é contrato aferido em 15 casos de paridade, não uma
+#     escolha livre. O risco apontado (trocar dois argumentos do mesmo
+#     tipo) é real e está coberto pelo outro lado: os testes de paridade
+#     falham se a ordem mudar.
+#
+#   readability-uppercase-literal-suffix
+#     O projeto escreve `0.0f`, minúsculo, em todo lugar — inclusive nos
+#     literais que espelham os do Python. O check quer `0.0F`.
+#     Uniformizar tocaria centenas de literais numéricos em código cuja
+#     regra número um é "nenhum resultado válido muda de bit".
+#
+#   misc-non-private-member-variables-in-classes
+#   cppcoreguidelines-non-private-member-variables-in-classes
+#     LoraPacket e FftScratch são structs de dados puros: a primeira é o
+#     layout de 21 bytes que vai ao ar (com static_assert de tamanho e
+#     de offset), a segunda é um par de ponteiros com um invariante
+#     comum. Encapsular membros num layout de fio inverteria o
+#     propósito.
+#
+#   misc-include-cleaner
+#     Raciocina por símbolo usado; com <Arduino.h>, <RadioLib.h> e os
+#     cabeçalhos do ESP-IDF (que expõem quase tudo por inclusão
+#     transitiva) ele acusa dezenas de includes corretos. A ordem dos
+#     includes de src/ também é significativa — ver SortIncludes em
+#     .clang-format.
+#
+# ---------------------------------------------------------------------
+# [4] Aliases desligados para não contar o mesmo achado duas vezes
+# ---------------------------------------------------------------------
+#   cert-dcl03-c   -> alias de misc-static-assert
+#   cert-dcl16-c   -> alias de readability-uppercase-literal-suffix
+#   cert-err09-cpp -> alias de misc-throw-by-value-catch-by-reference
+#   cert-err61-cpp -> alias de misc-throw-by-value-catch-by-reference
+#   cert-oop11-cpp -> alias de performance-move-constructor-init
+# O check canônico continua ligado; só o nome duplicado sai do relatório.
+#
+# ---------------------------------------------------------------------
+# O QUE FICA LIGADO E NÃO É ÓBVIO
+# ---------------------------------------------------------------------
+#   misc-no-recursion          — sem exceção. A travessia da Isolation
+#                                Forest é iterativa com guarda de
+#                                profundidade justamente para ter pilha
+#                                limitada por construção; recursão nova
+#                                é regressão de projeto, não estilo.
+#   cppcoreguidelines-owning-memory, -no-malloc — nunca devem disparar.
+#                                Se dispararem, §4 foi violado.
+#   bugprone/cppcoreguidelines-narrowing-conversions — inclusive para
+#                                float: é onde a paridade com o Python
+#                                escorrega sem nada quebrar.
+#   readability-braces-around-statements — mesma regra que
+#                                .clang-format impõe do lado da
+#                                formatação (defesa contra "goto fail").
+#   readability-implicit-bool-conversion, cppcoreguidelines-init-
+#   variables, cppcoreguidelines-pro-type-cstyle-cast — alinhados com o
+#                                que o código já faz (MISRA C++ 5-0-13,
+#                                5-0-6), citados nos comentários de
+#                                lib/crc16/crc16.cpp.
+# =====================================================================
+
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  misc-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -bugprone-easily-swappable-parameters,
+  -readability-uppercase-literal-suffix,
+  -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -misc-include-cleaner,
+  -cert-dcl03-c,
+  -cert-dcl16-c,
+  -cert-err09-cpp,
+  -cert-err61-cpp,
+  -cert-oop11-cpp
+
+# Analisa apenas os cabeçalhos do projeto. Sem isto, todo diagnóstico do
+# Arduino core e do RadioLib entra no relatório e o sinal desaparece.
+HeaderFilterRegex: '.*/(lib|src|test)/.*\.h$'
+SystemHeaders: false
+
+# Nenhum check é erro por padrão: quem decide se o achado bloqueia é
+# tools/run-static-analysis.sh (--strict), não este arquivo. Assim o
+# mesmo .clang-tidy serve para o relatório de leitura e para o portão.
+WarningsAsErrors: ''
+
+# `--fix` deve respeitar o estilo do projeto, não o LLVM padrão.
+FormatStyle: file
+
+CheckOptions:
+  # Complexidade. IgnoreMacros é indispensável: cada KAELIX_REQUIRE
+  # expande para um `if` com `return`, e dominant_frequency_scratch tem
+  # onze delas. Sem esta opção, a função mais cuidadosamente validada do
+  # firmware é a que aparece como a mais complexa — o incentivo errado.
+  - key: readability-function-cognitive-complexity.Threshold
+    value: '25'
+  - key: readability-function-cognitive-complexity.IgnoreMacros
+    value: 'true'
+  # Aninhamento e número de parâmetros. Os limites de linhas/statements
+  # ficam desligados de propósito: setup() em src/main.cpp é o ciclo
+  # inteiro descrito em sequência linear, e é legível por isso.
+  - key: readability-function-size.NestingThreshold
+    value: '5'
+  - key: readability-function-size.ParameterThreshold
+    value: '8'
+
+  # Nomenclatura — formaliza §3 (o prefixo KAELIX_ é reservado a macro,
+  # constante é constexpr com nome MAIÚSCULO).
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypedefCase
+    value: CamelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstexprFunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: UPPER_CASE
+  # Estado estático de arquivo carrega `s_`: quando aparece um `s_` no
+  # meio de uma função, a pergunta "isto sobrevive à chamada?" já está
+  # respondida (s_fft_re, s_fft_im, s_retained).
+  - key: readability-identifier-naming.StaticVariablePrefix
+    value: 's_'
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+
+  # Estreitamento: todo o do firmware é explícito (static_cast).
+  - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
+    value: 'true'
+  - key: cppcoreguidelines-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
+    value: 'true'

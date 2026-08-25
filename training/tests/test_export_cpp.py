@@ -16,6 +16,9 @@ from kaelix_ml import export_cpp
 
 FIRMWARE_ROOT = Path(__file__).resolve().parents[2]
 LIB_ISOLATION_FOREST = FIRMWARE_ROOT / "lib" / "isolation_forest"
+# isolation_forest.h inclui kaelix_status.h; fora do PlatformIO o caminho
+# precisa ser passado à mão (o LDF do pio resolve isso sozinho no build real).
+LIB_KAELIX_STATUS = FIRMWARE_ROOT / "lib" / "kaelix_status"
 
 MAIN_CPP_TEMPLATE = """
 #include <cstdio>
@@ -33,7 +36,10 @@ int main() {
             filled = i + 1;
         }
         if (filled != N_FEATURES) break;
-        float s = isolation_forest_score(x, isolation_forest_trees, N_TREES, SUBSAMPLE_SIZE);
+        float s = 0.0f;
+        const kaelix::Status st = isolation_forest_score(
+            x, N_FEATURES, isolation_forest_trees, N_TREES, SUBSAMPLE_SIZE, &s);
+        if (st != kaelix::Status::Ok) { fprintf(stderr, "score falhou\\n"); return 1; }
         printf("%.8f\\n", s);
     }
     return 0;
@@ -66,6 +72,7 @@ def test_cpp_score_matches_sklearn_score(tmp_path):
         [
             compiler, "-std=c++17", "-O2",
             "-I", str(LIB_ISOLATION_FOREST),
+            "-I", str(LIB_KAELIX_STATUS),
             "-I", str(tmp_path),
             str(main_cpp), str(LIB_ISOLATION_FOREST / "isolation_forest.cpp"),
             "-o", str(binary),
