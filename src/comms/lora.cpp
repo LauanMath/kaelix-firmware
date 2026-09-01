@@ -24,6 +24,47 @@ constexpr int8_t LORA_RST_PIN = 21;  // RESET — não usar 8/9 (I2C do MPU6050)
 constexpr float LORA_FREQUENCY_MHZ = 433.0f;
 constexpr int8_t LORA_TX_POWER_DBM = 17;
 
+// ---------------------------------------------------------------------
+// Parâmetros do enlace, fixados explicitamente.
+//
+// Antes o código chamava begin() só com a frequência, e SF, largura de
+// banda, coding rate, syncWord e preâmbulo ficavam nos defaults do
+// RadioLib. Isso é ruim por dois motivos: o tempo no ar entra direto no
+// orçamento de energia, e uma atualização da biblioteca mudaria o
+// consumo do produto em silêncio.
+//
+// Alcance e autonomia são o mesmo botão. Para o pacote de 20 bytes,
+// BW 125 kHz, CR 4/5, com LiPo de 2000 mAh:
+//
+//   SF7    57 ms no ar   256 dias    alcance de referência
+//   SF8   103 ms         249 dias    +2,5 dB
+//   SF9   185 ms         236 dias    +5,0 dB
+//   SF10  371 ms         211 dias    +7,5 dB
+//   SF12 1319 ms         138 dias    +12,5 dB
+//
+// SF9 é o meio-termo: 5 dB de margem sobre SF7 custando 20 dias de
+// autonomia. A escolha definitiva depende da distância real entre os
+// motores da Skala e o gateway, que ainda não foi medida — quando for,
+// reveja esta tabela em vez de aceitar o default.
+//
+// CR 4/5 em vez do 4/7 default: menos redundância de canal, 18% menos
+// tempo no ar. O pacote já tem CRC-16 próprio, então erro de bit é
+// detectado na aplicação; gastar bateria com correção de canal para um
+// payload de 20 bytes que pode ser reenviado no ciclo seguinte é troca
+// ruim.
+//
+// syncWord separa esta rede de outras que compartilhem a frequência. O
+// valor 0x12 é o de rede privada; 0x34 é reservado para LoRaWAN.
+constexpr uint8_t LORA_SPREADING_FACTOR = 9U;
+constexpr float LORA_BANDWIDTH_KHZ = 125.0f;
+constexpr uint8_t LORA_CODING_RATE = 5U;    // 4/5
+constexpr uint8_t LORA_SYNC_WORD = 0x12U;   // rede privada
+constexpr uint16_t LORA_PREAMBLE_SYMBOLS = 8U;
+
+// Tempo no ar calculado para os parâmetros acima, usado no orçamento de
+// energia (ver README). Se qualquer parâmetro mudar, este número muda.
+constexpr uint32_t LORA_AIRTIME_MS = 185U;
+
 // Pulso de reset do SX1278: o datasheet pede RST em nível baixo por mais
 // de 100 µs e 5 ms de espera antes do primeiro acesso.
 constexpr uint32_t LORA_RESET_PULSE_MS = 1;
@@ -153,6 +194,35 @@ kaelix::Status lora_init() {
     const int16_t power_state = radio.setOutputPower(LORA_TX_POWER_DBM);
     if (power_state != RADIOLIB_ERR_NONE) {
         return from_radiolib(power_state, kaelix::Status::RadioConfigRejected);
+    }
+
+    // Cada parâmetro é conferido: um enlace configurado pela metade
+    // transmite, mas para um receptor que não vai estar escutando com os
+    // mesmos parâmetros — falha que só aparece em campo, como ausência
+    // total de pacotes, e é cara de diagnosticar de longe.
+    const int16_t sf_state = radio.setSpreadingFactor(LORA_SPREADING_FACTOR);
+    if (sf_state != RADIOLIB_ERR_NONE) {
+        return from_radiolib(sf_state, kaelix::Status::RadioConfigRejected);
+    }
+
+    const int16_t bw_state = radio.setBandwidth(LORA_BANDWIDTH_KHZ);
+    if (bw_state != RADIOLIB_ERR_NONE) {
+        return from_radiolib(bw_state, kaelix::Status::RadioConfigRejected);
+    }
+
+    const int16_t cr_state = radio.setCodingRate(LORA_CODING_RATE);
+    if (cr_state != RADIOLIB_ERR_NONE) {
+        return from_radiolib(cr_state, kaelix::Status::RadioConfigRejected);
+    }
+
+    const int16_t sync_state = radio.setSyncWord(LORA_SYNC_WORD);
+    if (sync_state != RADIOLIB_ERR_NONE) {
+        return from_radiolib(sync_state, kaelix::Status::RadioConfigRejected);
+    }
+
+    const int16_t preamble_state = radio.setPreambleLength(LORA_PREAMBLE_SYMBOLS);
+    if (preamble_state != RADIOLIB_ERR_NONE) {
+        return from_radiolib(preamble_state, kaelix::Status::RadioConfigRejected);
     }
 
     s_initialized = true;
