@@ -222,6 +222,52 @@ que chegue ao gateway como leitura válida é pior que um pacote perdido.
 Um `static_assert` trava o tamanho do struct, para que uma mudança de layout
 não passe despercebida sem bump de `PACKET_VERSION`.
 
+### Topologia de rede e o elo que falta
+
+O dispositivo transmite. Do outro lado, **não há nada** — nem código, nem
+especificação de gateway. Isso é defensável num trabalho focado no dispositivo, mas
+precisa estar dito, porque cria uma circularidade: o formato do pacote foi projetado
+para um gateway que não existe, e `packet_is_valid()` é exportado para um consumidor
+que ninguém escreveu.
+
+**LoRa cru, não LoRaWAN.** `radio.transmit()` direto: sem endereçamento de rede, sem
+join, sem criptografia, sem confirmação. Qualquer receptor na mesma frequência, SF e
+syncWord recebe o pacote. É escolha, não esquecimento — LoRaWAN exigiria um
+concentrador multicanal em vez de um SX1278 e traria complexidade que um protótipo não
+paga. Mas o custo aparece nos itens abaixo.
+
+**Sem confirmação, sem retransmissão.** `lora_send()` informa se a transmissão saiu,
+não se chegou. Um pacote perdido some em silêncio. O `boot_count` existe para que o
+gateway detecte o buraco na sequência — sem gateway, isso é teoria.
+
+**Colisão.** ALOHA puro. Com 185 ms no ar e ciclo de 600 s, a probabilidade de colisão
+é 1,5% para 20 dispositivos e 3,7% para 50. Aceitável. Mas essa conta pressupõe fases
+aleatórias, e uma instalação em que os aparelhos são ligados juntos não tem fase
+aleatória: eles acordariam no mesmo instante e colidiriam de forma sistemática. É o que
+o deslocamento anticolisão em `transmission_jitter_seconds()` resolve.
+
+**Sem downlink.** O dispositivo nunca escuta. Intervalo de sono, limiar de anomalia e
+modelo são fixos no flash. Atualizar qualquer um exige regravar cada aparelho
+fisicamente. A base magnética facilita a remoção, mas continua sendo trabalho manual
+por unidade. Downlink exigiria janela de recepção após a transmissão, com custo de
+energia a orçar.
+
+**Risco regulatório: 433 MHz não é faixa ISM no Brasil.** A Resolução 680 da Anatel
+define 902–907,5 MHz e 915–928 MHz para radiação restrita. Para protótipo acadêmico é
+irrelevante; para qualquer intenção de produto, é bloqueante — o dispositivo não
+passaria em homologação. A migração para 915 MHz (RA-01H, SX1276) é praticamente
+drop-in em firmware, então o custo de errar é baixo. O risco precisa estar registrado,
+e é este o registro.
+
+**O que existe depois do gateway.** Nada definido: banco de dados, painel, alerta ao
+manutentor. E o `device_id` é um número do eFuse — alguém precisa mapeá-lo para
+"compressor 3". Esse cadastro não existe.
+
+Um gateway mínimo — ESP32 ou Raspberry Pi com SX1278, validando o CRC com a mesma
+lógica de `packet_is_valid()` e publicando o resultado — é o que transformaria
+"transmite" em "sistema funciona de ponta a ponta". Fica como trabalho futuro,
+registrado aqui para não ser confundido com esquecimento.
+
 ## Deep sleep e orçamento de energia
 
 Ciclo: acordar → ler e processar (3s) → transmitir (~150ms) → deep sleep
@@ -255,19 +301,38 @@ Sozinha, essa diferença é 5,5× maior que o orçamento inteiro do ciclo.
 ```
 Fase ativa (3,0s):   (40 + 3,9 + 1,5 + 0,008) mA × 3,0s   = 136,22 mA·s
                      (o rádio fica em standby depois do begin())
-Fase TX (0,15s):     (40 + 3,9 + 90 + 0,008) mA × 0,15s   =  20,09 mA·s
+Fase TX (0,185s):    (40 + 3,9 + 90 + 0,008) mA × 0,185s  =  24,77 mA·s
 Fase sleep (600s):   (0,0002 + 0,010 + 0,008) mA × 600s   =  10,92 mA·s
-                                                   Total  = 167,23 mA·s
+                                                   Total  = 171,91 mA·s
 ```
 
-Corrente média do circuito: `167,23 ÷ 603,15 ≈ 277 µA`.
+Corrente média do circuito: `171,91 ÷ 603,19 ≈ 285 µA`.
+
+O tempo de transmissão não é estimativa: sai do cálculo de tempo no ar para os
+parâmetros fixados em `src/comms/lora.cpp` (SF9, BW 125 kHz, CR 4/5, preâmbulo de 8
+símbolos, 20 bytes de payload). Antes o orçamento assumia 150 ms, número que não vinha
+de cálculo nenhum, e os parâmetros do enlace ficavam nos defaults do RadioLib — de modo
+que uma atualização da biblioteca mudaria o consumo do produto em silêncio.
+
+Alcance e autonomia são o mesmo botão:
+
+| SF | Tempo no ar | Autonomia | Ganho de enlace |
+|---|---|---|---|
+| 7 | 57 ms | 256 dias | referência |
+| 8 | 103 ms | 249 dias | +2,5 dB |
+| **9 (atual)** | **185 ms** | **236 dias** | **+5,0 dB** |
+| 10 | 371 ms | 211 dias | +7,5 dB |
+| 12 | 1319 ms | 138 dias | +12,5 dB |
+
+A escolha definitiva depende da distância entre os motores e o gateway, que ainda não
+foi medida.
 
 Somando a autodescarga da LiPo (~2,5%/mês sobre 2000 mAh ≈ **68,5 µA**, 25%
 do orçamento):
 
 ```
-Consumo efetivo: ~346 µA            → dentro da meta de <1mA, margem ~2,9×
-Autonomia (LiPo 2000mAh): ~241 dias (~8 meses)
+Consumo efetivo: ~354 µA            → dentro da meta de <1mA, margem ~2,8×
+Autonomia (LiPo 2000mAh): ~236 dias (~7,8 meses)
 ```
 
 Para comparação, sem `lora_sleep()` o consumo seria ~1,84 mA e a autonomia
@@ -355,6 +420,7 @@ kaelix-firmware/
 ├── training/           # pipeline Python de treino do modelo
 │   ├── kaelix_ml/        # ingestão, features, rotulagem, treino, export C++
 │   └── tests/            # testes do pipeline (pytest)
+├── tools/              # verificação reproduzível e análise estática
 ├── data/               # datasets — brutos ignorados, cache derivado versionado
 │
 ├── docs/
@@ -365,9 +431,12 @@ kaelix-firmware/
 ├── experiments/        # notebooks de validação numérica (fonte da verdade)
 └── figures/            # figuras em padrão de submissão
     ├── scripts/          # exportadores Python + plot em R (ggplot2)
-    ├── data/             # CSVs rastreáveis, gerados dos notebooks
+    ├── data/             # CSVs rastreáveis
     └── output/           # SVG/PDF vetoriais, TIFF 600 dpi
 ```
+
+`docs/relatorio/` contém três documentos: o relatório de simulação da cadeia de
+medição, a revisão de literatura, e a análise de comunicação e topologia.
 
 Histórico de mudanças em [CHANGELOG.md](CHANGELOG.md).
 
@@ -382,11 +451,20 @@ pio run -e esp32-s3
 ## Testes do firmware (sem hardware, roda no host)
 
 ```bash
-pio test -e native
+./tools/run-all-tests.sh      # as três suítes de uma vez
 ```
 
-26 testes cobrindo `lib/signal_processing`, `lib/thermistor`,
-`lib/isolation_forest` e `lib/crc16`.
+São três, em duas linguagens, e rodá-las separadamente é como quebra de
+integração passa: um refactor em `lib/` que muda assinatura aparece no teste C++,
+mas o gerador Python que consome a mesma struct só quebra na suíte de treino.
+
+| Suíte | Casos | Cobre |
+|---|---|---|
+| `tools/run-native-tests.sh` | 146 | `lib/`, nos dois modos de build |
+| `training/tests/` | 35 | pipeline de treino, paridade C++↔Python |
+| `experiments/gateway/tests/` | 19 | pacote, receptor, cadeia simulada |
+
+Nenhuma cobre a camada `src/`, que depende de `pio run -e esp32-s3`.
 
 ## Pipeline de treino
 
