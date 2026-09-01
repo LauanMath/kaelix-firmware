@@ -39,7 +39,7 @@
 \setlist{itemsep=2pt, topsep=4pt, parsep=0pt}
 \titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.7em}{}
 \titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.7em}{}
-\graphicspath{{../../figures/output/}{../img/}}
+\graphicspath{{../../experiments/figures/output/}{../img/}}
 
 \newcommand{\pt}{\,p.p.}
 
@@ -499,13 +499,13 @@ $\num{63,2} \pm \num{19,2}\,\si{\percent}$ com divisão por ensaio. A inflação
 
 A distribuição entre as partições revela o mecanismo. Três dos cinco grupos ficaram
 próximos de \num{0,50}, o nível do acerto ao acaso, enquanto um alcançou \num{1,00}. O
-desvio elevado evidencia ausência de generalização, informação que a média única do
+desvio entre folds indica ausência de generalização, informação que a média única do
 protocolo incorreto suprime.
 
 \subsection{O limiar padrão do detector produz falso alarme incompatível com operação}
 \label{ssec:limiar}
 
-O Isolation Forest é adequado ao cenário de manutenção preditiva, no qual se coleta
+O Isolation Forest corresponde ao cenário de manutenção preditiva, no qual se coleta
 abundante dado de operação normal e quase nenhum de falha. O parâmetro
 \texttt{contamination} informa ao modelo a fração esperada de anomalias no conjunto de
 treino, e determina apenas a posição do limiar de decisão.
@@ -584,7 +584,7 @@ corresponderia a \SI{3}{\kilo\hertz} para a banda normativa.
 
 A decomposição da flexibilidade localiza o problema. A base responde por
 \SI{51,1}{\percent} e o corpo por \SI{48,5}{\percent}, enquanto o ressalto contribui com
-\SI{0,4}{\percent}. O resultado é robusto à incerteza da espessura da base: dobrando esse
+\SI{0,4}{\percent}. O resultado é pouco sensível à incerteza da espessura da base: dobrando esse
 valor, a frequência sobe apenas para \SI{750}{\hertz}. A mesma geometria em alumínio
 alcançaria \SI{3273}{\hertz}.
 
@@ -616,7 +616,7 @@ A resistência térmica do caminho condutivo em ASA (Figura~\ref{fig:termica}) �
 \SI{80}{\celsius}, a temperatura interna estabiliza em \SI{44,8}{\celsius} com base em
 ASA, e alcançaria \SI{79,0}{\celsius} com base em alumínio. O autoaquecimento é
 irrelevante, pois a potência média de \SI{2,0}{\milli\watt} eleva a temperatura interna em
-\SI{0,01}{\celsius}. Todo o calor relevante provém do exterior.
+\SI{0,01}{\celsius}. Todo o calor provém do exterior.
 
 O componente que atinge primeiro seu limite é a bateria de polímero de lítio, pela
 restrição de carga em \SI{45}{\celsius}. Essa temperatura interna é alcançada com carcaça
