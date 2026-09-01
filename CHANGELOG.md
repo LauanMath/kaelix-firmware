@@ -5,6 +5,47 @@ Registro das mudanças do projeto Kaelix. Formato baseado em
 
 ## [Não publicado]
 
+## Reorganização: análise e simulação sob `experiments/`
+
+`figures/` e `gateway/` passaram a viver sob `experiments/`, ao lado de
+`notebooks/`. A raiz do repositório fica com o que é firmware (`src/`, `lib/`,
+`test/`), o pipeline de treino (`training/`), o ferramental (`tools/`) e a
+documentação.
+
+Caminhos reapontados: `\graphicspath` dos três documentos LaTeX, a profundidade
+de `parents[]` em `export_gateway_data.py` e em `test_paridade_crc.py`, o runner
+de testes, e as árvores de projeto nos READMEs.
+
+**Entradas anteriores deste changelog citam os caminhos antigos** (`figures/scripts/`,
+`figures/data/`). Elas descrevem o estado da época e não foram reescritas: um
+changelog que reescreve o próprio passado para casar com o presente deixa de
+servir como registro.
+
+### Corrigido durante a arrumação
+
+- **Crédito de fotografia sem fotografia.** As legendas da Figura 5, no
+  `comunicacao-topologia.tex` e no README de figuras, creditavam imagens de
+  componente do Wikimedia Commons. A figura deixou de usá-las quando o painel
+  (a) foi refeito como grafo de estrela, e os arquivos não estão mais no
+  repositório. Atribuir imagem ausente é erro factual; os créditos saíram.
+- **`sys.path.insert` nos testes do gateway.** O `training/` já resolvia o
+  import por `conftest.py`; o gateway não seguia o padrão. Passou a seguir, e
+  com isso saíram os `# noqa: E402` que existiam só para silenciar o import
+  fora de ordem.
+
+### Adicionado
+
+- `experiments/gateway/README.md` — o componente não tinha explicação: por que
+  existe separado do nó, o acoplamento com `src/comms/lora.h`, e o que a
+  simulação não cobre.
+- `tools/run-all-tests.sh` — ponto de entrada único para as três suítes. Havia
+  146 casos C++, 35 de treino e 19 de gateway sem forma de rodar juntos, e é
+  assim que quebra de integração passa: um refactor em `lib/` que muda
+  assinatura aparece no teste C++, mas o gerador Python que consome a mesma
+  struct só quebra na suíte de treino. O script termina listando o que não
+  cobre — a camada `src/` e qualquer comportamento em hardware.
+
+
 ## Conformidade com práticas de software industrial/aeroespacial
 
 Rodada de reorganização do firmware segundo MISRA C++, JSF++ e os princípios de

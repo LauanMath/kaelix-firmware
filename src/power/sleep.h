@@ -12,6 +12,12 @@ namespace kaelix::power {
 inline constexpr uint32_t SLEEP_MIN_MINUTES = 1U;
 inline constexpr uint32_t SLEEP_MAX_MINUTES = 120U;
 
+// Teto do deslocamento anticolisão. 60 s sobre um período de 600 s é
+// ~10% de dispersão: suficiente para descorrelacionar dezenas de
+// dispositivos com 185 ms de tempo no ar, e pequeno o bastante para não
+// atrapalhar a leitura de tendência do lado do gateway.
+inline constexpr uint32_t JITTER_MAX_SECONDS = 60U;
+
 // Corta a alimentação do MPU6050/periféricos via transistor BC337 (GPIO).
 //
 // Devolve Status porque o `hold` do GPIO pode ser recusado pelo pino, e
@@ -33,7 +39,11 @@ inline constexpr uint32_t SLEEP_MAX_MINUTES = 120U;
 // `minutes` fora da faixa é SATURADO e relatado como InvalidArgument, não
 // recusado: recusar deixaria o dispositivo sem timer de despertar armado,
 // que é o pior desfecho possível desta função.
-[[nodiscard]] kaelix::Status sleep_prepare(uint32_t minutes);
+// `jitter_seconds` desloca o despertar dentro do período, para quebrar a
+// sincronização entre dispositivos. Não altera o período médio: o
+// deslocamento é somado uma vez e o ciclo seguinte recalcula o seu.
+// Limitado a JITTER_MAX_SECONDS para não distorcer a cadência.
+[[nodiscard]] kaelix::Status sleep_prepare(uint32_t minutes, uint32_t jitter_seconds = 0U);
 
 // Entra em deep sleep e não retorna. Pressupõe `sleep_prepare()` chamado.
 [[noreturn]] void deep_sleep_now();

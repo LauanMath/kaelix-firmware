@@ -39,7 +39,7 @@
 \setlist{itemsep=2pt, topsep=4pt, parsep=0pt}
 \titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.7em}{}
 \titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.7em}{}
-\graphicspath{{../../figures/output/}{../img/}}
+\graphicspath{{../../experiments/figures/output/}{../img/}}
 
 \newcommand{\pt}{\,p.p.}
 \newcommand{\mgf}{\ensuremath{\mathrm{m}g}}
@@ -146,12 +146,12 @@ engenharia, mas o deslocamento é condicional, e a condição precisa ficar à v
 \emph{dada banda de medição suficiente}, o que decide o desempenho não é qual detector se
 escolhe, e sim como o limiar é calibrado, com que métrica o resultado é lido e quanto do
 orçamento de um microcontrolador o modelo consome. Sem banda, nada disso importa. Os
-Eixos~3 e~4 mostram que essa é exatamente a situação do Kaelix para a falha de rolamento,
+Eixos~3 e~4 mostram que essa é a situação do Kaelix para a falha de rolamento,
 onde nenhum corte de escore transforma contraste ausente em detecção. Os grandes
 comparativos invocados a seguir são de \emph{benchmark tabular} \emph{offline}, não de
 desempenho em campo, e a transferência de um para o outro é hipótese, não resultado.
 
-\subsubsection{A escolha do detector é menos decisiva do que parece --- e não há consenso}
+\subsubsection{Escolha do detector e ausência de consenso na literatura}
 
 Dois comparativos de grande porte discordam, e a discordância é informativa porque eles
 medem coisas diferentes. O ADBench é o maior em número de experimentos e em cobertura de
@@ -251,7 +251,7 @@ não resultado herdado da literatura.
 Contra tudo isto pode-se invocar o estudo de seleção de modelos \emph{label-free}, que
 mostra que nenhuma estratégia interna é praticamente útil: as isoladas não diferem de
 sorteio, e as por consenso não superam o iForest com hiperparâmetros padrão e ainda custam
-mais~\cite{ma2023}. Poder-se-ia concluir daí que o padrão é tão bom quanto qualquer coisa.
+mais~\cite{ma2023}. Poder-se-ia concluir daí que o valor padrão equivale a qualquer outra escolha.
 Não se pode: o registro verificado descreve \num{297} modelos candidatos formados por
 \num{8} detectores e várias configurações de hiperparâmetros, sem enumerá-las, e não
 reporta \texttt{contamination} entre os hiperparâmetros varridos. Como o parâmetro não
@@ -415,7 +415,7 @@ A mesma geometria explica por que descritores estatísticos calculados na banda 
 falham. A curtose não é um número global útil, e sim uma \emph{função} da frequência, que
 indica em qual banda os transientes do defeito são impulsivos~\cite{antoni2006}; o
 kurtograma rápido formaliza a busca da díade ótima --- frequência central e largura de
-banda --- que maximiza essa impulsividade, justamente para escolher o passa-banda da
+banda --- que maximiza essa impulsividade, para escolher o passa-banda da
 demodulação~\cite{antoni2007}. Um dispositivo cujo Nyquist é \SI{500}{\hertz} não tem
 díade a escolher: mede a impulsividade de uma banda onde o defeito quase não deposita
 energia.
@@ -462,7 +462,7 @@ efeito estava sendo atribuído a uma. Não é ``a mesma métrica'', e dois ponto
 
 \subsubsection{Quão estreita pode ser a banda de um MEMS}
 
-Os estudos de adequação convergem para o limite superior de banda como variável crítica,
+Os estudos de adequação convergem para o limite superior de banda como variável determinante,
 mas nenhum chega perto de \SI{500}{\hertz}. Albarbar \emph{et al.} compararam três MEMS
 capacitivos (\SIrange{1}{6000}{\hertz}, \SIrange{1}{10000}{\hertz} e \SI{1500}{\hertz}) a
 um piezo ICP de \SIrange{1}{2000}{\hertz} e \SI{100}{\milli\volt\per\gram}: o de banda
@@ -540,8 +540,7 @@ FFT do espectro \emph{direto} com acelerômetro MEMS, sob condições forçadas 
 --- sem carga, monofasamento e tensão desbalanceada ---, com bandas laterais em torno da
 fundamental indicando modulação do entreferro e frequências experimentais próximas das
 analíticas~\cite{maruthi2016}. Aqui não há classificador treinado, e portanto a crítica de
-vazamento por ensaio é categoria inaplicável. O que cabe registrar é outra coisa: são
-falhas semeadas, de severidade não incipiente, sob condições elétricas que amplificam a
+vazamento por ensaio é categoria inaplicável. São falhas semeadas, de severidade não incipiente, sob condições elétricas que amplificam a
 assinatura.
 
 O caso mais próximo do Kaelix \emph{em hardware e em modo de falha} é o mais sóbrio. Kolok
@@ -645,7 +644,7 @@ medido~\cite{iso2954_2012}. Para um MPU6050 a \SI{1}{\kilo\hertz}, com Nyquist e
 exigido. A leitura honesta é $v_{\mathrm{rms}}$ declarado em
 \SIrange{10}{500}{\hertz}, jamais ``conforme ISO 20816-3''.
 
-Este documento omitia um requisito normativo mais severo, e a omissão convém ser desfeita
+Este documento omitia um requisito normativo mais severo, e convém desfazer a omissão
 mesmo sem fonte primária para citar. O levantamento do projeto registra que a ISO 13373-1
 e -2, que tratam de monitoramento de condição por vibração e cobrem especificamente
 rolamentos e engrenagens, recomendam \emph{aceleração} como grandeza para esse tipo de
