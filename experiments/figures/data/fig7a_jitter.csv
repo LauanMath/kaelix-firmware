@@ -1,0 +1,13 @@
+n_dispositivos,modo,p_colisao,entregues
+2,sem deslocamento,1.0,0
+2,com deslocamento,0.0,200
+5,sem deslocamento,1.0,0
+5,com deslocamento,0.0,500
+10,sem deslocamento,1.0,0
+10,com deslocamento,0.0,1000
+20,sem deslocamento,1.0,0
+20,com deslocamento,0.0,2000
+35,sem deslocamento,1.0,0
+35,com deslocamento,0.0,3500
+50,sem deslocamento,1.0,0
+50,com deslocamento,0.0,5000
