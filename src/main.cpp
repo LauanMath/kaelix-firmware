@@ -68,6 +68,7 @@ constexpr uint32_t SLEEP_MINUTES = 10U;
 
 // Período estendido do estado seguro por escalada. Ver ESCALADA, abaixo.
 constexpr uint32_t QUARANTINE_SLEEP_MINUTES = 60U;
+
 constexpr uint16_t MAX_ABNORMAL_RESETS = 4U;
 
 // O MPU6050 precisa estabilizar depois de energizado pelos BC337.
@@ -121,6 +122,23 @@ static_assert(offsetof(RetainedState, crc) == 12U,
               "a região coberta pelo CRC mudou — o estado retido de campo deixaria de conferir");
 
 RTC_NOINIT_ATTR RetainedState s_retained;
+
+// Deslocamento anticolisão do despertar.
+//
+// Sem ele, dispositivos energizados juntos — o que acontece numa
+// instalação — acordam no mesmo instante a cada 10 minutos e colidem de
+// forma SISTEMÁTICA, não estatística. O cálculo de probabilidade de
+// colisão em ALOHA (1,5% para 20 dispositivos com 185 ms no ar) pressupõe
+// fases aleatórias, e uma instalação simultânea não tem fase aleatória.
+//
+// device_id separa dispositivos entre si; boot_count faz o deslocamento
+// variar a cada ciclo, para que dois aparelhos que caiam no mesmo resto
+// não fiquem colidindo para sempre. Determinístico e sem estado extra:
+// os dois valores já existem e já vão dentro do pacote.
+uint32_t transmission_jitter_seconds() {
+    return (kcomms::device_id() + s_retained.boot_count) % kpower::JITTER_MAX_SECONDS;
+}
+
 
 uint16_t retained_crc() {
     return kcomms::crc16_ccitt(reinterpret_cast<const uint8_t*>(&s_retained),
@@ -214,7 +232,7 @@ Status feed_watchdog(Status accumulated) {
     status = kaelix::status_first_error(status, peripherals);
 
     // ESK passo 3: hold do GPIO, WDT-1 cobrindo o sono, timer armado.
-    const Status prepared = kpower::sleep_prepare(sleep_minutes);
+    const Status prepared = kpower::sleep_prepare(sleep_minutes, transmission_jitter_seconds());
     log_phase("sleep", prepared);
     status = kaelix::status_first_error(status, prepared);
 

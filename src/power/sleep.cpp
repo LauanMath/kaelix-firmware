@@ -79,7 +79,7 @@ kaelix::Status peripherals_power(bool on) {
     return kaelix::Status::Ok;
 }
 
-kaelix::Status sleep_prepare(uint32_t minutes) {
+kaelix::Status sleep_prepare(uint32_t minutes, uint32_t jitter_seconds) {
     kaelix::Status result = kaelix::Status::Ok;
 
     uint32_t sleep_minutes = minutes;
@@ -103,7 +103,16 @@ kaelix::Status sleep_prepare(uint32_t minutes) {
     // O WDT-1 passa a cobrir o sono como despertador de último recurso.
     result = kaelix::status_first_error(result, watchdog_arm_for_sleep(sleep_minutes));
 
-    if (esp_sleep_enable_timer_wakeup(static_cast<uint64_t>(sleep_minutes) * 60ULL * 1000000ULL) != ESP_OK) {
+    uint32_t jitter = jitter_seconds;
+    if (jitter > JITTER_MAX_SECONDS) {
+        jitter = JITTER_MAX_SECONDS;
+        result = kaelix::status_first_error(result, kaelix::Status::InvalidArgument);
+    }
+
+    const uint64_t sleep_us =
+        (static_cast<uint64_t>(sleep_minutes) * 60ULL + static_cast<uint64_t>(jitter)) * 1000000ULL;
+
+    if (esp_sleep_enable_timer_wakeup(sleep_us) != ESP_OK) {
         // Sem fonte de despertar, quem traz o dispositivo de volta é o
         // WDT-1, ~2 min depois do previsto. É por isso que ele é
         // reprogramado em vez de desligado antes do sono.
