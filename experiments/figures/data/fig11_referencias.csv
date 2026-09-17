@@ -1,0 +1,2 @@
+t_motor,t_amb,lipo_carga,lipo_descarga,t_int_v1,t_int_v2,tau_min,t90_min
+90.0,30.0,45.0,60.0,34.30,35.14,23,50
