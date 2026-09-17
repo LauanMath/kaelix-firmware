@@ -97,8 +97,8 @@ static_assert(offsetof(LoraPacket, crc) == sizeof(LoraPacket) - sizeof(uint16_t)
 
 // Coloca o SX1278 em sleep (~0,2 µA contra ~1,5 mA em standby).
 //
-// OBRIGATÓRIO antes do deep sleep: o rádio não está no barramento cortado
-// pelos BC337, então sem esta chamada ele fica em standby durante os 10
+// OBRIGATÓRIO antes do deep sleep: o rádio não está no rail comutado
+// (+3V3_SW), então sem esta chamada ele fica em standby durante os 10
 // minutos de sleep, consumindo 900 mA·s por ciclo — 5,5x o orçamento
 // inteiro do dispositivo. Ver o orçamento de energia no README.
 //
