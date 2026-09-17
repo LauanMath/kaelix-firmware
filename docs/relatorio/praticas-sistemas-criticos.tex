@@ -1,0 +1,269 @@
+% Kaelix — práticas de sistemas embarcados críticos e redundância aviônica
+% Compilar:  latexmk -pdf praticas-sistemas-criticos.tex
+%
+% Documento de referência. Formato tabular deliberado: cada linha é um
+% mecanismo, e as colunas fixam origem normativa, falha coberta, custo,
+% limite conhecido e situação no Kaelix.
+
+\documentclass[10pt,a4paper,landscape]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage[landscape,top=1.6cm,bottom=1.7cm,left=1.5cm,right=1.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{siunitx}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{float}
+
+\sisetup{output-decimal-marker={,}, group-separator={.}, per-mode=symbol}
+\captionsetup{font=footnotesize, labelfont=bf}
+\setlist{itemsep=1pt, topsep=3pt, parsep=0pt, leftmargin=*}
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.7em}{}
+\titlespacing{\section}{0pt}{10pt}{5pt}
+\pagestyle{plain}
+
+% Colunas proporcionais: os pesos somam o número de colunas da tabela.
+\newcolumntype{Y}[1]{>{\raggedright\arraybackslash\hsize=#1\hsize}X}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Práticas de tolerância a falhas em sistemas embarcados críticos}\\[2pt]
+{\large Redundância aviônica, normas de garantia e aplicabilidade ao Kaelix}\\[4pt]
+{\footnotesize Documento de referência --- projeto Kaelix, Engenharia de Software (ICEV)}
+\end{center}
+
+\vspace{2pt}
+
+\section{Escopo e critério de leitura}
+
+\begin{itemize}
+\item Unidade da tabela: \emph{mecanismo}, não norma. Uma norma aparece como origem de vários mecanismos.
+\item A coluna \textbf{Limite conhecido} registra o que o mecanismo comprovadamente \emph{não} cobre. Sem ela, a tabela viraria lista de recomendações.
+\item A coluna \textbf{Situação no Kaelix} admite quatro valores: \textsf{adotado}, \textsf{parcial}, \textsf{ausente}, \textsf{n/a} (não aplicável à classe do sistema).
+\item Aviônica civil e automotivo entram como origem documentada de prática, não como alvo de certificação. O Kaelix é protótipo acadêmico; nenhum processo de certificação é reivindicado.
+\end{itemize}
+
+\section{Verificação das fontes}
+
+\begin{itemize}
+\item Conferidos em fonte primária: Knight e Leveson~\cite{knight1986} (cabeçalho, resumo, 27 versões, \num{1000000} testes); relatório da Comissão de Inquérito do Ariane 501~\cite{esa1996} (datas e causa).
+\item Conferidos em registro de editor: Yeh~\cite{yeh1996} (veículo, volume, páginas); Brière e Traverse~\cite{briere1993} (veículo, páginas, DOI).
+\item Normas (\cite{do178c,iec61508,iso26262,arinc653,misra2008,jsf2005}) citadas por edição e ano; texto integral não consultado. Numeração de regra conferida contra o uso no código do projeto.
+\end{itemize}
+
+\begin{table}[!p]
+\centering
+\caption{Mecanismos de tolerância a falhas em sistemas embarcados críticos. Origem, cobertura, custo, limite e situação no Kaelix.}
+\label{tab:praticas}
+\scriptsize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{@{}Y{0.80}Y{0.80}Y{1.10}Y{0.82}Y{1.26}Y{1.22}@{}}
+\toprule
+\textbf{Mecanismo} & \textbf{Origem} & \textbf{Falha coberta} & \textbf{Custo} & \textbf{Limite conhecido} & \textbf{Situação no Kaelix} \\
+\midrule
+
+Redundância modular tripla com votação &
+Boeing 777, três canais de mesmo número de peça~\cite{yeh1996} &
+Falha aleatória de hardware; transiente em um canal &
+3$\times$ canais; sincronização de quadro &
+Nula contra defeito de projeto replicado nos três canais &
+\textsf{ausente} --- nó único \\
+
+Dissimilaridade de projeto ($N$-versões) &
+777: 3 microprocessadores e 3 compiladores Ada~\cite{yeh1996}; A320: ELAC/SEC de fabricantes distintos~\cite{briere1993}; Shuttle: PASS e BFS por empresas distintas~\cite{nasa2011} &
+Modo comum de projeto, de compilador e de cadeia de ferramentas &
+2--3$\times$ esforço de desenvolvimento &
+Independência não se confirma: 27 versões da mesma especificação, \num{1000000} testes, falhas correlacionadas acima do esperado~\cite{knight1986} &
+\textsf{parcial} --- paridade numérica C++\,$\leftrightarrow$\,Python (\emph{Isolation Forest}, CRC-16) em teste; sem votação em operação \\
+
+Par comando/monitor &
+A320, canal duplo dissimilar por computador~\cite{briere1993} &
+Saída errada aceita como válida (\emph{runaway} de superfície) &
+2$\times$ canal por unidade &
+Monitor herda a especificação do comando: erro de especificação passa nos dois &
+\textsf{ausente} --- veredito de anomalia sem segunda opinião \\
+
+Votação por valor mediano &
+777, seleção entre três pistas~\cite{yeh1996} &
+Divergência numérica entre réplicas &
+Seleção por quadro de dados &
+Exige três fontes ou mais; mediana de duas é indefinida &
+\textsf{ausente} \\
+
+Watchdog independente, em janela ou externo &
+IEC 61508~\cite{iec61508}; ISO 26262~\cite{iso26262} &
+Travamento; laço de realimentação curto demais; base de tempo parada &
+Temporizador dedicado; pino e circuito integrado externo &
+Não detecta resultado errado produzido no prazo certo; watchdog que compartilha relógio com o núcleo compartilha a falha &
+\textsf{parcial} --- WDT de tarefa e cota de software ativos; WDT de domínio RTC não armável no ESP32-S3 (\texttt{soc/rtc\_wdt.h} referencia registradores inexistentes no alvo); sem watchdog externo \\
+
+Partição temporal e espacial &
+ARINC 653, APEX~\cite{arinc653} &
+Propagação de falha entre funções de criticidade distinta no mesmo processador &
+RTOS particionado; orçamento fixo de tempo e memória por partição &
+Não se aplica a executivo de função única &
+\textsf{n/a} --- \emph{superloop} de um disparo, uma função \\
+
+\emph{Lockstep} de núcleo duplo com comparador &
+ISO 26262, mecanismo dominante para ASIL D~\cite{iso26262} &
+Falha transiente de núcleo, detectada ciclo a ciclo &
+2$\times$ área de núcleo; sem ganho de desempenho &
+Réplicas idênticas executam o mesmo defeito de software simultaneamente &
+\textsf{ausente} --- ESP32-S3 não oferece \emph{lockstep} \\
+
+Estado seguro definido e alcançável &
+IEC 61508~\cite{iec61508} &
+Comportamento indefinido após detecção de falha &
+Projeto do caminho de saída; verificação de que é alcançável de qualquer ponto &
+Pressupõe que exista estado seguro; sistemas \emph{fail-operational} não podem apenas desligar &
+\textsf{adotado} --- sequência de três passos (rádio dormindo, periféricos cortados, sono armado) com escalada de período após resets anormais consecutivos \\
+
+Memória estática, sem alocação dinâmica &
+JSF++ AV-206~\cite{jsf2005}; MISRA C++ 18-4-1~\cite{misra2008} &
+Exaustão e fragmentação de \emph{heap}; falha de alocação não tratada &
+Pico de RAM dimensionado em tempo de compilação &
+Desloca o limite para o projeto: dimensionamento errado falha no build, não em campo &
+\textsf{adotado} --- buffers de amostras e de FFT em \texttt{.bss} \\
+
+Norma de codificação com verificação automática &
+MISRA C++:2008~\cite{misra2008}; JSF++~\cite{jsf2005} &
+Construção ambígua; comportamento indefinido; conversão implícita &
+Analisador estático integrado ao build &
+Conformidade não implica ausência de defeito nem correção funcional &
+\textsf{adotado} --- norma própria derivada, \texttt{clang-tidy}, \texttt{clang-format}, \texttt{-Werror} \\
+
+Verificação de invariante em tempo de compilação &
+Prática geral de sistemas críticos; coerente com MISRA C++~\cite{misra2008} &
+Divergência silenciosa de layout, tamanho ou contrato entre módulos &
+Nulo em tempo de execução &
+Só alcança o que é constante em compilação; exige que o build do alvo seja executado &
+\textsf{adotado} --- asserções de tamanho de quadro, deslocamento de campo e prazo do ciclo, avaliadas pela primeira vez em build de alvo \\
+
+Rastreabilidade requisito $\rightarrow$ código $\rightarrow$ teste &
+DO-178C, tabelas do Anexo A~\cite{do178c} &
+Requisito implementado sem verificação correspondente &
+Documental e contínuo &
+Rastreia cobertura, não correção; matriz desatualizada descreve sistema que não existe &
+\textsf{adotado} --- matriz declara explicitamente o não verificado e o motivo \\
+
+Verificação com independência &
+DO-178C: objetivos a cumprir com independência nos níveis mais altos~\cite{do178c} &
+Viés do autor ao verificar o próprio artefato &
+Pessoal distinto de quem produziu o item; DAL A estimado em cerca de 3$\times$ o custo de DAL B/C &
+Independência organizacional não elimina erro de especificação compartilhada &
+\textsf{ausente} --- autor único \\
+
+Detecção de erro fim a fim por código detector &
+Prática geral em enlaces sem confirmação &
+Corrupção silenciosa em canal de rádio e em memória retida &
+2 bytes por quadro; ciclos de cálculo &
+Detecta, não corrige; não cobre erro cometido antes do cálculo do código &
+\textsf{adotado} --- CRC-16/CCITT no quadro de rádio e no bloco retido em memória RTC \\
+
+Reanálise de envelope em reuso de software &
+Ariane 501: unidade inercial herdada do Ariane 4~\cite{esa1996} &
+Premissa de faixa numérica válida no sistema de origem e inválida no novo &
+Reanálise por item reusado &
+As duas unidades redundantes falharam pela mesma causa em segundos: redundância por réplica não cobre premissa herdada &
+\textsf{risco aberto} --- limiares de norma de vibração e correntes de folha de dados adotados sem reanálise no envelope do projeto \\
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\section{Escalas de criticidade}
+
+\begin{table}[H]
+\centering
+\caption{Escalas de criticidade por setor. Não há equivalência normativa entre elas; a correspondência citada na literatura é informal.}
+\label{tab:escalas}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}Y{0.72}Y{0.55}Y{1.25}Y{1.48}@{}}
+\toprule
+\textbf{Norma (setor)} & \textbf{Níveis} & \textbf{Base de atribuição} & \textbf{Observação} \\
+\midrule
+DO-178C (aviônica, software)~\cite{do178c} & A--E & Severidade da condição de falha, de catastrófica a sem efeito de segurança & Não atribui taxa de falha a software; as probabilidades vêm da avaliação de segurança do sistema, não deste documento \\
+IEC 61508 (genérica)~\cite{iec61508} & SIL 1--4 & Medida de falha alvo, por hora ou por demanda & Única das três com faixa numérica direta (Tab.~\ref{tab:sil}) \\
+ISO 26262 (automotivo)~\cite{iso26262} & QM, ASIL A--D & Severidade $\times$ exposição $\times$ controlabilidade & QM indica ausência de requisito de segurança funcional \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{IEC 61508: medida de falha alvo por nível de integridade~\cite{iec61508}.}
+\label{tab:sil}
+\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Nível} & \textbf{Alta demanda ou contínuo (por hora)} & \textbf{Baixa demanda (por demanda)} \\
+\midrule
+SIL 4 & $\geq \num{1e-9}$ a $< \num{1e-8}$ & $\geq \num{1e-5}$ a $< \num{1e-4}$ \\
+SIL 3 & $\geq \num{1e-8}$ a $< \num{1e-7}$ & $\geq \num{1e-4}$ a $< \num{1e-3}$ \\
+SIL 2 & $\geq \num{1e-7}$ a $< \num{1e-6}$ & $\geq \num{1e-3}$ a $< \num{1e-2}$ \\
+SIL 1 & $\geq \num{1e-6}$ a $< \num{1e-5}$ & $\geq \num{1e-2}$ a $< \num{1e-1}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Leitura da coluna de situação}
+
+\begin{itemize}
+\item Sete mecanismos \textsf{adotados} concentram-se em disciplina de codificação, detecção de erro e definição de estado seguro --- categorias cujo custo é de projeto, não de replicação de hardware.
+\item Os mecanismos \textsf{ausentes} são, sem exceção, os que exigem canal, núcleo ou unidade redundante. A ausência é consequência direta da topologia de nó único alimentado a bateria, não de omissão de projeto.
+\item Dois itens exigem ação: o watchdog de domínio RTC, indisponível no alvo pela via de API adotada; e o reuso de limiares e de valores de folha de dados sem reanálise de envelope, cuja consequência histórica está documentada em~\cite{esa1996}.
+\item A dissimilaridade parcial do Kaelix é de \emph{verificação}, não de \emph{operação}: duas implementações independentes são comparadas em teste, e apenas uma executa em campo. O ganho é contra erro de transcrição entre treino e inferência, não contra defeito de especificação --- distinção que~\cite{knight1986} torna obrigatória.
+\end{itemize}
+
+\begin{thebibliography}{99}
+\footnotesize
+
+\bibitem{arinc653}
+AERONAUTICAL RADIO, INC. \emph{ARINC Specification 653: Avionics Application Software Standard Interface}. Annapolis: ARINC, 1996. Suplemento 1 (1997) introduz o APEX e o particionamento temporal e espacial.
+
+\bibitem{briere1993}
+BRIÈRE, D.; TRAVERSE, P. AIRBUS A320/A330/A340 electrical flight controls --- a family of fault-tolerant systems. In: \emph{FTCS-23: The Twenty-Third International Symposium on Fault-Tolerant Computing}. Toulouse, 22--24 jun. 1993. p.~616--623. DOI: 10.1109/FTCS.1993.627364.
+
+\bibitem{esa1996}
+AGÊNCIA ESPACIAL EUROPEIA. \emph{Ariane 501 --- Presentation of Inquiry Board report}. Paris, 23 jul. 1996. Falha em 4 jun. 1996: perda completa de informação de guiagem e atitude 37\,s após o início da sequência de ignição, com as duas unidades inerciais perdidas pela mesma causa. Disponível em: \url{https://www.esa.int/Newsroom/Press_Releases/Ariane_501_-_Presentation_of_Inquiry_Board_report}.
+
+\bibitem{iec61508}
+INTERNATIONAL ELECTROTECHNICAL COMMISSION. \emph{IEC 61508: Functional safety of electrical/electronic/programmable electronic safety-related systems}. 2.~ed. Genebra: IEC, 2010.
+
+\bibitem{iso26262}
+INTERNATIONAL ORGANIZATION FOR STANDARDIZATION. \emph{ISO 26262: Road vehicles --- Functional safety}. 2.~ed. Genebra: ISO, 2018.
+
+\bibitem{jsf2005}
+LOCKHEED MARTIN CORPORATION. \emph{Joint Strike Fighter Air Vehicle C++ Coding Standards for the System Development and Demonstration Program}. Doc. 2RDU00001 Rev.~C, dez. 2005.
+
+\bibitem{knight1986}
+KNIGHT, J. C.; LEVESON, N. G. An experimental evaluation of the assumption of independence in multiversion programming. \emph{IEEE Transactions on Software Engineering}, v.~SE-12, n.~1, p.~96--109, jan. 1986. DOI: 10.1109/TSE.1986.6312924.
+
+\bibitem{misra2008}
+MIRA LIMITED. \emph{MISRA C++:2008 --- Guidelines for the use of the C++ language in critical systems}. Nuneaton: MIRA, 2008.
+
+\bibitem{nasa2011}
+NATIONAL AERONAUTICS AND SPACE ADMINISTRATION. \emph{Space Shuttle GN\&C Development History and Evolution}. NTRS 20110014833. Houston: NASA, 2011. Sistema primário com quatro computadores em conjunto redundante e um quinto executando software de reserva desenvolvido separadamente.
+
+\bibitem{do178c}
+RTCA, INC. \emph{DO-178C: Software Considerations in Airborne Systems and Equipment Certification}. Washington: RTCA, dez. 2011.
+
+\bibitem{yeh1996}
+YEH, Y. C. Triple-triple redundant 777 primary flight computer. In: \emph{Proceedings of the 1996 IEEE Aerospace Applications Conference}. IEEE, 1996. v.~1, p.~293--307.
+
+\end{thebibliography}
+
+\end{document}
