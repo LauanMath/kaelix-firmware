@@ -22,9 +22,16 @@ if ! (cd training && py -m pytest tests/ -q); then falhas=$((falhas+1)); fi
 secao "gateway"
 if ! py -m pytest experiments/gateway/tests/ -q; then falhas=$((falhas+1)); fi
 
+secao "hardware — esquemático e placa (KiCad)"
+if command -v kicad-cli >/dev/null 2>&1 || [ -x /Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli ]; then
+  if ! ./tools/build-hardware.sh; then falhas=$((falhas+1)); fi
+else
+  printf 'pulado: kicad-cli não encontrado\n'
+fi
+
 printf '\n%s\n' "-----------------------------------------------------------------"
 if [ "$falhas" -eq 0 ]; then
-  printf '\033[32mTUDO PASSOU\033[0m  3 suítes\n'
+  printf '\033[32mTUDO PASSOU\033[0m  4 suítes\n'
 else
   printf '\033[31m%d SUÍTE(S) FALHARAM\033[0m\n' "$falhas"
 fi
