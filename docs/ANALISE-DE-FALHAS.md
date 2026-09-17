@@ -2,7 +2,8 @@
 
 Documento de segurança funcional do firmware Kaelix.
 Base de código analisada: `src/` e `lib/` na revisão atual (superloop de um disparo,
-modelo ainda não treinado, pinos ainda marcados como `TODO`).
+modelo treinado e embarcado — `N_TREES = 100` —, leitura I2C do MPU6050 ainda
+`NotImplemented`, pinos ainda marcados como `TODO`).
 
 Método: FMEA de projeto enxuta, no espírito da IEC 60812:2018 (priorização por matriz
 severidade × detectabilidade, **sem** RPN — números de ocorrência inventados não se
@@ -14,9 +15,9 @@ decisão de projeto tenha uma razão escrita e rastreável.
 
 ## 1. Função, falha e classes de severidade
 
-**Função do Kaelix (FUNC-1):** a cada 10 minutos, produzir uma caracterização confiável
+**Função do Kaelix (FUNC-1):** a cada 12 minutos, produzir uma caracterização confiável
 do estado de vibração e temperatura de uma máquina e entregá-la ao gateway, dentro de um
-orçamento de ~346 µA médio, por ~8 meses sem intervenção humana.
+orçamento de ~309 µA médio, por ~8,8 meses sem intervenção humana.
 
 Falha é qualquer desvio dessa função. Para este dispositivo a falha mais grave **não** é
 parar de funcionar — é continuar funcionando de forma aparentemente correta enquanto
@@ -83,8 +84,8 @@ detectada".
 | FM-23 | Inferência | Feature NaN — comparação falha para o lado "Normal" | S3 | D-C | **Crítica** |
 | FM-24 | Deep sleep | Não desperta — silêncio permanente | S2 | D-B | **Alta** |
 | FM-25 | Deep sleep | `minutes == 0` ou wakeup mal configurado — acorda de imediato | S2 | D-C | **Alta** |
-| FM-26 | Corte de energia | BC337 não corta — periféricos alimentados durante o sleep | S2 | D-C | **Alta** |
-| FM-27 | Corte de energia | Pull-ups do I2C alimentam o MPU6050 pelos pinos de sinal | S2 | D-C | Média |
+| FM-26 | Corte de energia | Load switch não corta — periféricos alimentados durante o sleep | S2 | D-C | **Alta** |
+| FM-27 | Corte de energia | Pull-ups do I2C alimentam o MPU6050 pelos pinos de sinal | S2 | D-C | ~~Média~~ eliminada por projeto |
 | FM-28 | Temperatura | Ambiente acima de +85 °C — fora da faixa do SoC e da célula | S2 | D-B | Média |
 | FM-29 | Temperatura | Ambiente abaixo de 0 °C — resistência interna da célula sobe | S2 | D-C | Média |
 | FM-30 | Processamento | FFT com `n` que não é potência de 2 — espectro silenciosamente errado | S3 | D-C | Média |
@@ -108,7 +109,7 @@ rastreabilidade da seção 9.
 
 #### FM-01 — MPU6050 ausente: não responde ao endereço 0x68
 
-- **Causa:** conector solto, solda fria, sensor não populado, alimentação cortada pelo BC337 que não voltou, pull-ups do I2C ausentes.
+- **Causa:** conector solto, solda fria, sensor não populado, rail +3V3_SW que não voltou depois do sono, pull-ups do I2C ausentes.
 - **Efeito local:** `sensors::vibration_init()` devolve `false`. Hoje isso está sempre acontecendo: `src/sensors/vibration.cpp:17` retorna `false` incondicionalmente, e `vibration_read_features()` produz features sobre um buffer de zeros (`src/sensors/vibration.cpp:21`).
 - **Efeito no sistema:** **este é o modo de falha mais grave do projeto.** `src/main.cpp:33-35` apenas imprime no `Serial` — que em campo não vai a lugar nenhum — e segue adiante. O ciclo transmite `rms = 0.0`, `status = Normal`, CRC íntegro. O gateway recebe um pacote perfeitamente formado dizendo que a máquina está sadia e parada. Não há como distinguir isso de uma máquina realmente desligada. **Dado fabricado apresentado como medição.** S3.
 - **Como é detectado hoje:** não é. O retorno de `vibration_init()` não altera nenhum comportamento observável de fora do dispositivo.
@@ -136,7 +137,7 @@ rastreabilidade da seção 9.
 - **Como é detectado hoje:** não é.
 - **Mitigação:**
   - **REQ-SEG-07** — Antes de `Wire.begin()`, o barramento é destravado: até 9 pulsos manuais em SCL com SDA em entrada, seguidos de uma condição de STOP. Cota fixa de 9 pulsos, nunca "até destravar".
-  - **REQ-SEG-08** — O corte de energia dos periféricos entre ciclos já dá um ciclo de energia a cada 10 min; isso deve ser registrado como argumento de projeto — o `peripherals_power(false)` é também uma mitigação de travamento de barramento, não só de economia.
+  - **REQ-SEG-08** — O corte de energia dos periféricos entre ciclos já dá um ciclo de energia a cada 12 min; isso deve ser registrado como argumento de projeto — o `peripherals_power(false)` é também uma mitigação de travamento de barramento, não só de economia.
 
 #### FM-04 — MPU6050 responde, mas devolve valor constante ou saturado
 
@@ -182,7 +183,7 @@ rastreabilidade da seção 9.
 
 #### FM-08 — Leitura feita antes de o divisor estabilizar
 
-- **Causa:** o divisor do NTC é cortado pelo mesmo BC337 do MPU6050 (`src/power/sleep.cpp:6-10`). `PERIPHERAL_SETTLE_MS = 100` (`src/main.cpp:18`) é uma estimativa, não uma medição. Se a constante de tempo do nó (capacitância de filtro × 10 k) for maior, a leitura pega o transitório.
+- **Causa:** o divisor do NTC é alimentado pelo mesmo rail +3V3_SW do MPU6050 (`src/power/sleep.cpp:14-32`). `PERIPHERAL_SETTLE_MS = 100` (`src/main.cpp:18`) é uma estimativa, não uma medição. Se a constante de tempo do nó (capacitância de filtro × 10 k) for maior, a leitura pega o transitório.
 - **Efeito local:** temperatura enviesada para baixo (nó ainda subindo).
 - **Efeito no sistema:** deriva sistemática em todas as leituras, invisível porque é consistente. S3 por ser um erro sistemático não detectável.
 - **Como é detectado hoje:** não é.
@@ -198,7 +199,7 @@ rastreabilidade da seção 9.
 
 - **Causa:** módulo não populado, CS/RST/DIO0 nos pinos errados (ainda `TODO` em `src/comms/lora.cpp:10-13`), SPI sem clock, cristal de 32 MHz fora de especificação fazendo `begin(433.0)` devolver `RADIOLIB_ERR_INVALID_FREQUENCY`.
 - **Efeito local:** `lora_init()` devolve `false` (`src/comms/lora.cpp:45-51`), colapsando três causas distintas — versão de chip errada (`RADIOLIB_ERR_CHIP_NOT_FOUND`, −2), SPI mudo, e frequência rejeitada (−12) — em um único bit. É exatamente a violação nº 3 do levantamento: o valor de `state` existe, tem a informação, e é jogado fora na linha seguinte.
-- **Efeito no sistema:** `src/main.cpp:51` pula a transmissão. O ciclo é medido e descartado; 10 minutos de dados perdidos por ciclo. Se a causa for permanente, o dispositivo fica **completamente mudo para sempre** e a manutenção não tem informação alguma para diagnosticar sem ir até a máquina. S1 por ciclo, S2 se persistente.
+- **Efeito no sistema:** `src/main.cpp:51` pula a transmissão. O ciclo é medido e descartado; 12 minutos de dados perdidos por ciclo. Se a causa for permanente, o dispositivo fica **completamente mudo para sempre** e a manutenção não tem informação alguma para diagnosticar sem ir até a máquina. S1 por ciclo, S2 se persistente.
 - **Como é detectado hoje:** D-B — o gateway percebe o silêncio, mas não sabe a causa nem se o dispositivo está vivo.
 - **Mitigação:**
   - **REQ-SEG-16** — Modelo de erro tipado substituindo `bool`: um `enum class Error : uint8_t` por subsistema, propagado até o topo e **transmitido** no campo `fault_code` (seção 6). "Rádio ausente", "SPI mudo" e "frequência rejeitada" precisam ser distinguíveis do lado do gateway.
@@ -209,7 +210,7 @@ rastreabilidade da seção 9.
 
 - **Causa:** rádio em estado inconsistente, SPI intermitente, `lora_init()` falhou e `main.cpp:61` chama `lora_sleep()` sobre um rádio que nunca respondeu.
 - **Efeito local:** `bool lora_sleep()` devolve `false` e **`src/main.cpp:61` ignora o retorno**. O SX1278 permanece em standby.
-- **Efeito no sistema:** o próprio código documenta a conta (`src/comms/lora.h:51-56` e `src/power/sleep.cpp:32-33`): standby custa 1,5 mA durante 600 s = 900 mA·s por ciclo, contra 167 mA·s do ciclo inteiro. O consumo efetivo sobe de 346 µA para ~1,84 mA e a autonomia cai de ~241 dias para **~45 dias**. O dispositivo morre em campo seis meses antes do previsto, e nada indica o porquê. S2, e é a maior ameaça isolada ao orçamento de energia.
+- **Efeito no sistema:** o próprio código documenta a conta (`src/comms/lora.h:51-56` e `src/power/sleep.cpp:32-33`): standby custa 1,5 mA durante 720 s = 1080 mA·s por ciclo, contra 174 mA·s do ciclo inteiro. O consumo efetivo sobe de 309 µA para ~1,83 mA e a autonomia cai de ~269 dias para **~48 dias**. O dispositivo morre em campo seis meses antes do previsto, e nada indica o porquê. S2, e é a maior ameaça isolada ao orçamento de energia.
 - **Como é detectado hoje:** não é. Não há medição de bateria; a única evidência seria o dispositivo morrer cedo.
 - **Mitigação:**
   - **REQ-SEG-19** — O retorno de `lora_sleep()` é obrigatoriamente verificado. `[[nodiscard]]` em todas as funções que reportam falha.
@@ -228,7 +229,7 @@ rastreabilidade da seção 9.
 
 #### FM-12 — Colisão sistemática entre dois Kaelix na mesma planta
 
-- **Causa:** `lora_init()` não configura sync word, spreading factor, largura de banda, coding rate nem preâmbulo — todos ficam nos padrões do RadioLib. Dois dispositivos acordam por timers independentes de 10 min; se as janelas se aproximarem, a deriva relativa dos osciladores é pequena e elas podem ficar sobrepostas por dezenas de ciclos seguidos.
+- **Causa:** `lora_init()` não configura sync word, spreading factor, largura de banda, coding rate nem preâmbulo — todos ficam nos padrões do RadioLib. Dois dispositivos acordam por timers independentes de 12 min; se as janelas se aproximarem, a deriva relativa dos osciladores é pequena e elas podem ficar sobrepostas por dezenas de ciclos seguidos.
 - **Efeito local:** ambos transmitem, nenhum é decodificado.
 - **Efeito no sistema:** dois dispositivos ficam mudos simultaneamente e de forma persistente. S2.
 - **Como é detectado hoje:** D-B, e apenas se alguém correlacionar os silêncios.
@@ -263,7 +264,7 @@ rastreabilidade da seção 9.
 
 - **Causa:** o TX a 17 dBm puxa ~90-120 mA. Com a célula perto do fim, resistência interna alta e o dropout do HT7333, o trilho afunda no instante do pulso de transmissão. O detector de brownout do ESP32-S3 dispara reset.
 - **Efeito local:** reset no meio da transmissão. O ciclo recomeça, energiza os periféricos, amostra, e transmite de novo — provocando outro brownout.
-- **Efeito no sistema:** **laço de brownout**: o dispositivo passa a operar em fase ativa quase contínua a ~40 mA em vez de 346 µA, queimando a carga residual em horas e destruindo qualquer chance de a última mensagem sair. S2.
+- **Efeito no sistema:** **laço de brownout**: o dispositivo passa a operar em fase ativa quase contínua a ~40 mA em vez de 309 µA, queimando a carga residual em horas e destruindo qualquer chance de a última mensagem sair. S2.
 - **Como é detectado hoje:** não é. `esp_reset_reason()` nunca é chamado; não há medição de tensão.
 - **Mitigação:**
   - **REQ-SEG-28** — `esp_reset_reason()` é lido nas primeiras linhas de `setup()`. Reset por brownout ou por pânico **não** repete o ciclo normal: entra na escalada de falhas da seção 5.
@@ -333,16 +334,17 @@ rastreabilidade da seção 9.
 - **Local:** `lib/isolation_forest/isolation_forest.cpp:29` — `total_path / float(n_trees)`; e `src/ml/isolation_forest_data.h` declara `isolation_forest_trees = nullptr`.
 - **Causa:** chamar `isolation_forest_score()` no estado atual do repositório.
 - **Efeito local:** divisão de 0,0 por 0,0 = NaN, e `trees[i]` desreferencia o ponteiro nulo antes disso.
-- **Efeito no sistema:** `src/ml/model.cpp:14` protege com `if (N_TREES == 0) return Status::Normal;` — mas essa guarda está no **chamador**, é uma convenção documentada em comentário (`isolation_forest_data.h:6-8`), não uma propriedade da função. Qualquer outro chamador (um teste, um refactor futuro) quebra. S2.
-- **Como é detectado hoje:** não é — o compilador não impede a chamada.
+- **Efeito no sistema (análise original):** `model.cpp` protegia com uma guarda no **chamador** — convenção documentada em comentário, não propriedade da função. Qualquer outro chamador (um teste, um refactor futuro) quebrava. S2.
+- **Como é detectado hoje:** **mitigado.** `isolation_forest_score` valida as próprias pré-condições (`isolation_forest.cpp:129-139`): ponteiros nulos ⇒ `NullPointer`, `subsample_size <= 1` ⇒ `InvalidArgument`, `n_trees <= 0` ⇒ `ModelAbsent`. A guarda passou para o provedor do serviço, e `model.cpp:35` a complementa com `isolation_forest_validate`.
 - **Mitigação:**
   - **REQ-SEG-38** — Validação de pré-condição dentro da própria função: `trees != nullptr && n_trees > 0 && subsample_size > 1`, devolvendo erro tipado. A guarda pertence ao provedor do serviço, não ao consumidor (princípio de contrato defensivo em fronteira de módulo).
 
-#### FM-22 — Modelo placeholder: veredito sempre `Normal`
+#### FM-22 — Modelo ausente confundido com veredito `Normal` — **mitigado**
 
-- **Local:** `src/ml/model.cpp:14` e `src/ml/isolation_forest_data.h:14` (`N_TREES = 0`).
-- **Causa:** estado atual do projeto — o treino ainda não gerou as árvores.
-- **Efeito local:** `model_init()` devolve `false` e `model_infer()` devolve `Status::Normal` sempre.
+- **Local:** `src/ml/model.cpp:35` e `:59` (guarda `N_TREES <= 0`); `src/ml/isolation_forest_data.h:12` (hoje `N_TREES = 100`).
+- **Causa (original):** o treino ainda não havia gerado as árvores, e a guarda devolvia `Normal`.
+- **Efeito local (original):** `model_init()` devolvia falso e `model_infer()` devolvia `Normal` sempre.
+- **Estado atual:** as duas metades foram fechadas. A guarda devolve `Status::ModelAbsent` (`0x30`, `"NO_MODEL"`) e deixa o veredito em `MachineState::Unknown` — nunca `Normal`. E o modelo treinado no MAFAULDA está embarcado, então o caminho da guarda deixou de ser o normal. O `diag` do pacote carrega o código ao gateway.
 - **Efeito no sistema:** todo pacote sai com `status = Normal`. O gateway não tem como saber que **não há modelo embarcado**: um "Normal" sem modelo é byte a byte idêntico a um "Normal" com modelo. Um dispositivo com firmware de desenvolvimento instalado por engano em uma máquina real declara-a sadia para sempre. S3, e a mesma classe de FM-01: **dado fabricado com aparência de medição**.
 - **Como é detectado hoje:** não é. A mensagem existe, mas só no `Serial` (`src/main.cpp:40`).
 - **Mitigação:**
@@ -409,7 +411,7 @@ rastreabilidade da seção 9.
 - **Como é detectado hoje:** D-B, apenas pelo silêncio.
 - **Mitigação:**
   - **REQ-SEG-48** — Fonte de despertar redundante: além do timer, habilitar despertar por GPIO (um botão de manutenção já resolve a intervenção em campo sem abrir o equipamento).
-  - **REQ-SEG-49** — O RTC WDT permanece armado durante o deep sleep com janela de aproximadamente 1,2× o período de sono, funcionando como despertador de último recurso. **Isso muda a política da seção 5**: o RTC WDT não pode ser simplesmente desabilitado antes de dormir; a janela precisa ser reprogramada. Se for deixada em 20 s, o watchdog reinicia o chip 20 s depois de dormir e o período de 10 min nunca acontece.
+  - **REQ-SEG-49** — O RTC WDT permanece armado durante o deep sleep com janela de aproximadamente 1,2× o período de sono, funcionando como despertador de último recurso. **Isso muda a política da seção 5**: o RTC WDT não pode ser simplesmente desabilitado antes de dormir; a janela precisa ser reprogramada. Se for deixada em 20 s, o watchdog reinicia o chip 20 s depois de dormir e o período de 12 min nunca acontece.
 
 #### FM-25 — `minutes == 0` ou wakeup mal configurado
 
@@ -424,9 +426,9 @@ rastreabilidade da seção 9.
 #### FM-26 — Corte de energia não atua: periféricos alimentados durante o sono
 
 - **Local:** `src/power/sleep.cpp:57-70`. O código já trata corretamente o caso mais sutil (`gpio_hold_dis` no boot, `gpio_hold_en` + `gpio_deep_sleep_hold_en` antes de dormir, com o raciocínio escrito nos comentários — é um dos pontos fortes do código atual).
-- **Causa residual:** pino e polaridade ainda são `TODO` (`sleep.cpp:9`); BC337 com base mal polarizada não saturando; o `hold` falhando silenciosamente porque o retorno de `gpio_hold_en()` não é verificado.
-- **Efeito local:** o MPU6050 (~3,9 mA) e o divisor do NTC (~0,33 mA em 3,3 V sobre 10 k) permanecem energizados durante 600 s.
-- **Efeito no sistema:** ~2,5 A·s adicionais por ciclo; o consumo médio salta de 346 µA para vários mA e a autonomia cai de 241 dias para poucos dias. Nada indica a falha, porque a leitura funciona normalmente. S2.
+- **Causa residual:** o `hold` falhando silenciosamente porque o retorno de `gpio_hold_en()` não é verificado; Q1 (SI2301) com Vgs(th) fora da faixa de nível lógico não fechando o canal em 3,3 V. O pino e a polaridade deixaram de ser `TODO`: GPIO5 ativo-alto, conferido contra `hardware/gen_schematic.py`.
+- **Efeito local:** o MPU6050 (~3,9 mA) e o divisor do NTC (~0,33 mA em 3,3 V sobre 10 k) permanecem energizados durante 720 s.
+- **Efeito no sistema:** ~2,5 A·s adicionais por ciclo; o consumo médio salta de 309 µA para vários mA e a autonomia cai de 269 dias para poucos dias. Nada indica a falha, porque a leitura funciona normalmente. S2.
 - **Como é detectado hoje:** não é. Sem medição de tensão da bateria, a única evidência é o dispositivo morrer antes da hora.
 - **Mitigação:**
   - **REQ-SEG-51** — Verificar o retorno de `gpio_hold_en()`.
@@ -435,13 +437,16 @@ rastreabilidade da seção 9.
 
 #### FM-27 — Pull-ups do I2C alimentando o MPU6050 pelos pinos de sinal
 
-- **Causa:** o BC337 é chave low-side: corta o retorno a GND, mas SDA/SCL continuam presos ao Vcc do ESP32 pelos resistores de pull-up. A corrente entra pelos diodos de proteção dos pinos do MPU6050 e o alimenta parasitariamente.
-- **Efeito local:** o sensor pode permanecer parcialmente energizado, com corrente de fuga pelos pull-ups (2 × 3,3 V / 4,7 kΩ ≈ 1,4 mA no pior caso, se os pinos do sensor puxarem para baixo).
-- **Efeito no sistema:** mesmo efeito de FM-26 em escala menor, e o corte de energia deixa de ser garantia de reset do sensor (o que enfraquece a mitigação REQ-SEG-08). S2 no pior caso.
-- **Como é detectado hoje:** não é.
-- **Mitigação:**
-  - **REQ-SEG-54** — Antes do sono, colocar SDA/SCL em entrada sem pull-up interno e em nível baixo pelo lado do ESP32, eliminando o caminho parasita.
-  - **REQ-SEG-55** — Medir a corrente em sono com o sensor populado (é o mesmo ensaio de REQ-SEG-52; o número medido é que decide se o problema existe nesta placa).
+**Estado: eliminada por mudança de topologia.** Fica registrada porque é a
+razão de o circuito ser o que é hoje — e porque a mitigação por software que
+estava proposta (REQ-SEG-54) resolvia o sintoma, não a causa.
+
+- **Causa (topologia antiga):** o BC337 era chave low-side — cortava o retorno a GND, mas SDA/SCL continuavam presos a +3V3 pelos resistores de pull-up. A corrente entrava pelos diodos de proteção dos pinos do MPU6050 e o alimentava parasitariamente.
+- **Efeito local:** o sensor podia permanecer parcialmente energizado, com corrente de fuga pelos pull-ups (2 × 3,3 V / 4,7 kΩ ≈ 1,4 mA no pior caso, se os pinos do sensor puxassem para baixo).
+- **Efeito no sistema:** mesmo efeito de FM-26 em escala menor, e o corte de energia deixava de ser garantia de reset do sensor (o que enfraquecia a mitigação REQ-SEG-08). S2 no pior caso.
+- **Correção aplicada:** o corte passou a ser high-side (Q1 SI2301 comandado por Q2 BC847B), e os pull-ups R2/R3 foram movidos do rail fixo +3V3 para o rail comutado +3V3_SW. Com o rail em zero não existe fonte para o caminho parasita: os pull-ups estão do lado cortado. Ver `hardware/gen_schematic.py`, bloco "Corte de energia dos periféricos".
+- **O que resta verificar:** REQ-SEG-55 continua valendo — medir a corrente em sono com o sensor populado. A topologia elimina o caminho conhecido; o ensaio é o que responde se existe outro.
+- **REQ-SEG-54 fica sem objeto:** colocar SDA/SCL em nível baixo antes do sono era contornar o efeito. Com os pull-ups no rail cortado, não há o que contornar.
 
 #### FM-28 — Temperatura ambiente acima de +85 °C
 
@@ -510,7 +515,7 @@ rastreabilidade da seção 9.
 | 2 | Laço sem cota | Sim | `isolation_forest.cpp:17`. Além do laço, **o índice é irrestrito nos dois sentidos** (FM-20) e a `struct IsolationTree` **não carrega o tamanho dos arrays**, tornando a validação estruturalmente impossível (REQ-SEG-37). Laços futuros na rajada I2C têm o mesmo problema (FM-02). |
 | 3 | Sem modelo de erro | Sim | `lora_init()` colapsa `CHIP_NOT_FOUND` (−2), SPI mudo e `INVALID_FREQUENCY` (−12) em um `bool`: a informação existe em `state` e é descartada na linha seguinte. Pior: **`lora_sleep()` devolve `bool` e `main.cpp:61` nem lê o retorno** (FM-10), o modo de falha que sozinho custa 80 % da autonomia. |
 | 4 | Sem validação e sem asserção | Sim | Acrescente: `deep_sleep(minutes)` sem faixa (FM-25); `fft_radix2` documenta "potência de 2" e não verifica (FM-30); `isolation_forest_score` sem checar `nullptr`/`n_trees` (FM-21); o clamp de `thermistor.cpp:10-12` **transforma falha de hardware em número plausível** em vez de sinalizá-la (FM-06/FM-07). |
-| 5 | Sem watchdog e sem estado seguro | Sim | Acrescente: **o reset sozinho não é estado seguro** — 50 h de bateria em laço de reset (FM-18); e o RTC WDT continua contando durante o deep sleep, então uma política ingênua de watchdog **quebra o ciclo de 10 minutos** (FM-24, REQ-SEG-49). |
+| 5 | Sem watchdog e sem estado seguro | Sim | Acrescente: **o reset sozinho não é estado seguro** — 50 h de bateria em laço de reset (FM-18); e o RTC WDT continua contando durante o deep sleep, então uma política ingênua de watchdog **quebra o ciclo de 12 minutos** (FM-24, REQ-SEG-49). |
 | 6 | Sem análise estática | Sim | Regras com efeito direto sobre esta análise: `cppcoreguidelines-no-malloc`, `bugprone-*`, `cert-flp30-c`, `-Wfloat-equal` (pegaria `m2 == 0.0` de FM-04), `[[nodiscard]]` obrigatório (pegaria FM-10). |
 | 7 | Sem ponto de entrada reprodutível | Sim | Consequência de segurança: sem `make verify` determinístico, nenhuma evidência de verificação de REQ é reproduzível numa defesa. |
 | 8 | Sem rastreabilidade | Sim | Seção 9 abre a matriz. Nota: os 4 módulos de `lib/` têm teste no host; **`src/` inteiro não tem nenhum**, e é onde estão FM-01, FM-10, FM-22, FM-25 e FM-26. |
@@ -563,10 +568,10 @@ stateDiagram-v2
 
 | Estado | Quando entra | O que o dispositivo faz | Período | Como sai |
 |---|---|---|---|---|
-| **NOMINAL** | Reset por timer, contador de falhas zerado, bateria acima do limiar operacional | Ciclo completo: amostra, extrai features, infere, transmite | 10 min | — |
-| **DEGRADADO-DADO** | Qualquer sensor inválido (FM-01, FM-02, FM-04, FM-06, FM-07) | Transmite o que **é** válido, com máscara de validade e `fault_code`. **Não executa a inferência** — sem features confiáveis não há veredito, e `Status = Degraded`. Sensor bom continua sendo reportado | 10 min | 1 ciclo com todos os sensores válidos |
-| **DEGRADADO-ENLACE** | `lora_init()` ou `transmit()` falha (FM-09) | Mede normalmente, grava o resumo no buffer circular da RTC memory, tenta o rádio a cada ciclo com reset por hardware entre tentativas | 10 min | Enlace restabelecido: envia o backlog e volta a NOMINAL. Após 6 ciclos sem enlace → QUARENTENA |
-| **RECUPERAÇÃO** | Boot com `esp_reset_reason()` anormal (WDT, brownout, pânico) | Não repete cegamente o ciclo. Lê a "migalha" (último checkpoint alcançado) da RTC memory, **pula a fase que causou a falha**, e transmite um pacote de falha com a causa do reset e o checkpoint | 10 min | Ciclo completo bem-sucedido → NOMINAL. 4 falhas consecutivas → QUARENTENA |
+| **NOMINAL** | Reset por timer, contador de falhas zerado, bateria acima do limiar operacional | Ciclo completo: amostra, extrai features, infere, transmite | 12 min | — |
+| **DEGRADADO-DADO** | Qualquer sensor inválido (FM-01, FM-02, FM-04, FM-06, FM-07) | Transmite o que **é** válido, com máscara de validade e `fault_code`. **Não executa a inferência** — sem features confiáveis não há veredito, e `Status = Degraded`. Sensor bom continua sendo reportado | 12 min | 1 ciclo com todos os sensores válidos |
+| **DEGRADADO-ENLACE** | `lora_init()` ou `transmit()` falha (FM-09) | Mede normalmente, grava o resumo no buffer circular da RTC memory, tenta o rádio a cada ciclo com reset por hardware entre tentativas | 12 min | Enlace restabelecido: envia o backlog e volta a NOMINAL. Após 6 ciclos sem enlace → QUARENTENA |
+| **RECUPERAÇÃO** | Boot com `esp_reset_reason()` anormal (WDT, brownout, pânico) | Não repete cegamente o ciclo. Lê a "migalha" (último checkpoint alcançado) da RTC memory, **pula a fase que causou a falha**, e transmite um pacote de falha com a causa do reset e o checkpoint | 12 min | Ciclo completo bem-sucedido → NOMINAL. 4 falhas consecutivas → QUARENTENA |
 | **QUARENTENA** *(estado seguro por excelência)* | 4 falhas consecutivas, ou 6 ciclos sem enlace | Periféricos sem energia, rádio forçado a sleep por RST, **sem amostragem e sem inferência**. Acorda apenas para emitir um heartbeat: `Status = Fault`, `fault_code`, contagem de resets, tensão da bateria | **60 min** | 2 heartbeats bem-sucedidos seguidos de uma tentativa de reinicialização completa bem-sucedida → NOMINAL |
 | **DORMENTE-BATERIA** | Tensão abaixo do limiar crítico (FM-16) | Emite um último pacote anunciando o desligamento, e entra em deep sleep **sem fonte de despertar por timer** (só por GPIO de manutenção) | ∞ | Intervenção humana |
 
@@ -594,7 +599,7 @@ que é exatamente o que se quer de um estado seguro: durar até que alguém cheg
 
 | Nível | Mecanismo | Janela | Ação | Papel |
 |---|---|---|---|---|
-| **WDT-1** | **RTC WDT** (`rtc_wdt_*`), independente da CPU e do relógio principal, sobrevive a pânico | **20 s** durante a fase ativa | `RTC_WDT_STAGE_ACTION_RESET_SYSTEM` (reset completo, inclusive domínio digital) | Rede de segurança absoluta. Cobre travamentos que o Task WDT não pega: interrupções desabilitadas, laço em código de biblioteca, `abort` que não completa |
+| **WDT-1** | **RTC WDT** (RWDT, via `hal/wdt_hal.h`), independente da CPU e do relógio principal, sobrevive a pânico | **20 s** durante a fase ativa | `WDT_STAGE_ACTION_RESET_SYSTEM` (reset de CPU e periféricos, preservando o domínio RTC e o estado retido) | Rede de segurança absoluta. Cobre travamentos que o Task WDT não pega: interrupções desabilitadas, laço em código de biblioteca, `abort` que não completa |
 | **WDT-2** | **Task WDT** (`esp_task_wdt`) inscrito na `loopTask` | **6 s** | Panic → reset | Prazo por fase; falha antes do WDT-1 e permite registrar a migalha de diagnóstico |
 | **WDT-3** | **Prazos em software** por fase (`esp_timer_get_time()`) | ver tabela abaixo | Erro tipado, aborto da fase, ciclo continua degradado | Primeira linha. **O caminho normal nunca deve chegar a acionar um watchdog** — se chegou, é falha de projeto do prazo, não do watchdog |
 
@@ -650,7 +655,7 @@ acorda **sabendo onde travou** e reporta isso (campo `last_checkpoint`, seção 
 Ponto que uma política ingênua erra e que quebraria o produto (FM-24):
 
 - O **RTC WDT continua contando em deep sleep**. Uma janela de 20 s deixada armada
-  reiniciaria o chip 20 s depois de dormir, e o período de 10 min nunca aconteceria.
+  reiniciaria o chip 20 s depois de dormir, e o período de 12 min nunca aconteceria.
 - **REQ-SEG-49:** antes de `esp_deep_sleep_start()`, a janela do RTC WDT é **reprogramada
   para ~1,2× o período de sono (12 min)**, e não desabilitada. Assim ele passa a funcionar
   como **despertador de último recurso**: se o timer de despertar falhar, o WDT reinicia o
@@ -701,7 +706,7 @@ confirmado. É o mecanismo que impede o laço de reset de FM-18.
 
 ### 7.1 O pacote de hoje
 
-`version`, `device_id`, `boot_count`, `status`, `rms`, `temperature_c`, `crc` — 20 bytes.
+`version`, `device_id`, `boot_count`, `state`, `diag`, `rms`, `temperature_c`, `crc` — 21 bytes (v2).
 
 O que ele já resolve, e resolve bem: identidade (`device_id` do eFuse MAC), versionamento
 de formato (`version`), sequência (`boot_count` em vez do `millis()` que zerava), e
@@ -718,12 +723,12 @@ pacote atual não converte **nenhum** D-C em D-A.
 |---|---|---|---|---|
 | 1 | **`valid_mask`** — bit por campo de medição | 1 | FM-01, FM-02, FM-04, FM-06, FM-07, FM-08 | É o campo mais importante que falta. Sem ele, `rms = 0` de sensor ausente é byte a byte idêntico a `rms = 0` de máquina parada. Converte a categoria inteira "dado fabricado" de D-C para D-A |
 | 2 | **`fault_code`** — erro tipado + subsistema | 1 | FM-01, FM-06, FM-09, FM-10, FM-19, FM-21 | É a violação nº 3 aparecendo no ar: sem ele, "rádio ausente", "SPI mudo" e "frequência rejeitada" são o mesmo silêncio. Com ele, a manutenção sai de casa já sabendo qual peça levar |
-| 3 | **`battery_mv`** — tensão sob carga | 2 | FM-10, FM-15, FM-16, FM-26, FM-27 | Todo o orçamento de 346 µA é hoje **indemonstrável em campo**. As fugas de corrente (rádio em standby, periféricos não cortados) não têm nenhum outro sintoma além de morte prematura. Com a série de tensão, a inclinação de descarga denuncia a fuga em dias, e ainda dá previsão de fim de vida |
+| 3 | **`battery_mv`** — tensão sob carga | 2 | FM-10, FM-15, FM-16, FM-26, FM-27 | Todo o orçamento de 309 µA é hoje **indemonstrável em campo**. As fugas de corrente (rádio em standby, periféricos não cortados) não têm nenhum outro sintoma além de morte prematura. Com a série de tensão, a inclinação de descarga denuncia a fuga em dias, e ainda dá previsão de fim de vida |
 | 4 | **`reset_reason` + `abnormal_reset_count`** | 1+2 | FM-15, FM-17, FM-18, FM-24, FM-25, FM-34 | Sem isso, um dispositivo em laço de watchdog é indistinguível de um saudável até morrer. É a diferença entre descobrir a falha em uma hora e descobrir em oito meses |
 | 5 | **`last_checkpoint`** | (com o anterior) | FM-02, FM-17, FM-19 | Diz **onde** travou. Sem ele, um travamento reportado é um bilhete sem endereço |
 | 6 | **`kurtosis`, `crest_factor`, `dominant_freq_hz`** | 4 (ponto fixo) | FM-04, FM-05, FM-35 | Hoje o gateway recebe o **veredito** e não pode auditá-lo, recalibrar o limiar, nem reprocessar o histórico quando o modelo for retreinado. Transmitir só `rms` e `status` significa que todo dado de campo é descartável para fins de ML. Cabem em 4 bytes: curtose e crista em `uint8` de ponto fixo, frequência dominante em `uint16` Hz |
 | 7 | **`anomaly_score`** — quantizado 0..255 | 1 | FM-22, FM-23 | Permite mover o limiar no gateway sem reflashar 40 dispositivos em campo, e ver deriva do score muito antes de ele cruzar o limiar. Um `status` binário só avisa depois que já cruzou |
-| 8 | **`model_id`** — hash do modelo | 2 | FM-22, FM-35 | Rastreabilidade veredito → modelo. Sem ele, nenhuma análise post-mortem sobrevive a um retreino, e um firmware sem modelo (`N_TREES = 0`) é indistinguível de um com modelo |
+| 8 | **`model_id`** — hash do modelo | 2 | FM-22, FM-35 | Rastreabilidade veredito → modelo. Sem ele, nenhuma análise post-mortem sobrevive a um retreino, e um firmware sem modelo é indistinguível de um com modelo — hoje `diag` distingue a ausência, mas não distingue *qual* modelo respondeu |
 | 9 | **`active_time_ms`** | 2 | FM-02, FM-03, FM-35 | Degradação aparece primeiro como lentidão. I2C acumulando timeouts estica a fase ativa muito antes de travar. É o indicador precoce mais barato do pacote |
 | 10 | **`dropped_samples`** | 1 | FM-02, FM-35 | Qualifica a FFT: 3 amostras perdidas de 512 é aceitável, 200 não — e as duas produzem features de aparência idêntica |
 
@@ -755,26 +760,40 @@ pacote atual não converte **nenhum** D-C em D-A.
 | 33 | *(reservado)* | `uint8` | alinhamento e crescimento futuro |
 | 34 | `crc` | `uint16` | CRC-16/CCITT sobre os 34 bytes anteriores |
 
-**36 bytes.** `PACKET_VERSION` vai a 2 e o `static_assert` de tamanho acompanha — o
-mecanismo que o projeto já tem (`src/comms/lora.h:33`) faz exatamente o trabalho que se
-espera dele aqui.
+**36 bytes.** `PACKET_VERSION` vai a 3 — a v2, de 21 bytes, é a que está no ar hoje — e o
+`static_assert` de tamanho acompanha: o mecanismo que o projeto já tem
+(`src/comms/lora.h:56`) faz exatamente o trabalho que se espera dele aqui.
 
 ### 7.4 O custo, e por que ele se paga
 
-A 36 bytes com SF9/BW125/CR4/7, o tempo no ar sobe de ~226 ms para ~340 ms. Isso são cerca
-de +10 mA·s por ciclo sobre os 167 mA·s do orçamento: o consumo médio vai de ~346 µA para
-**~363 µA**, e a autonomia cai de ~241 para **~230 dias**.
+A linha de base é o que o firmware transmite hoje: 21 bytes em SF9/BW125/**CR 4/5**,
+185 ms no ar, 174,14 mA·s por ciclo de 12 min, ~309 µA médios, ~269 dias de autonomia.
 
-**Onze dias de autonomia em troca de tornar detectáveis quase todas as falhas silenciosas
-desta análise.** É a melhor troca do documento, e o argumento é direto: um dispositivo que
-dura 241 dias e passa 200 deles transmitindo dado fabricado sem ninguém saber vale menos
-que um que dura 230 e avisa no primeiro ciclo em que algo quebrou.
+| Pacote | Tempo no ar | Ciclo | Consumo médio | Autonomia | REQ-PWR-06 |
+|---|---|---|---|---|---|
+| 21 B, CR 4/5 (hoje) | 185 ms | 174,14 mA·s | ~309 µA | ~269 d | ✅ |
+| 36 B, CR 4/5 | 267 ms | 185,12 mA·s | ~324 µA | **~257 d** | ✅ |
+| 36 B, CR 4/7 | 341 ms | 194,99 mA·s | ~338 µA | ~246 d | ✅ |
 
-Se os 11 dias forem inaceitáveis, há compensação quase gratuita: `CR 4/5` em vez de `4/7`
-derruba o tempo no ar dos 36 bytes de 341 ms para **267 ms**, o que devolve a autonomia
-para ~237 dias — 36 bytes por praticamente o mesmo custo dos 20 bytes de hoje, ao preço de
-menos redundância de correção de erro. Aceitável, porque existe CRC fim a fim e o pacote
-perdido é recuperado pelo backlog de REQ-SEG-18.
+Mantendo o `CR 4/5` que o firmware já usa, os 36 bytes custam **12 dias de autonomia** —
+e, com o período de 12 min, **as três linhas continuam acima dos 8 meses**. O custo deixou
+de competir com o requisito de autonomia; virou apenas margem consumida.
+
+**Doze dias em troca de tornar detectáveis quase todas as falhas silenciosas desta
+análise.** É a melhor troca do documento, e o argumento é direto: um dispositivo que dura
+269 dias e passa 200 deles transmitindo dado fabricado sem ninguém saber vale menos que um
+que dura 257 e avisa no primeiro ciclo em que algo quebrou.
+
+Passar também para `CR 4/7` custaria 23 dias em vez de 12, em troca de mais redundância de
+correção de erro. Não se justifica aqui: existe CRC fim a fim, e o pacote perdido é
+recuperado pelo backlog de REQ-SEG-18 — o enlace não precisa de FEC mais forte, precisa de
+que a perda seja detectável.
+
+> **Correção.** A revisão anterior desta seção dava ~363 µA e ~230 dias para os 36 bytes,
+> e apresentava `CR 4/5` como devolvendo ~237 dias. Os dois números pertenciam de fato ao
+> pacote de **21 bytes em CR 4/7** — as linhas da conta foram trocadas —, e a base de
+> comparação (~346 µA, ~241 dias) era anterior ao cálculo de tempo no ar em SF9, que
+> substituiu os 150 ms estimados por 185 ms calculados.
 
 ### 7.5 Do lado do gateway (fora do escopo do firmware, dentro do escopo da segurança)
 
@@ -855,9 +874,9 @@ Fecha a violação nº 8. A coluna de teste indica onde a evidência **deve** ex
 Registrar o que **não** se sabe é parte da análise; omitir isso é que seria indefensável.
 
 1. **Pinos e topologia ainda são `TODO`** (`lora.cpp:10`, `temperature.cpp:7-8`, `sleep.cpp:9`). A análise assume o esquemático descrito nos comentários. Um pino errado transforma vários S1 em S2.
-2. **Nenhuma corrente foi medida.** Todo o orçamento (`sleep.cpp:12-53`) vem de datasheet. Os números de autonomia — 241 dias, 45 dias com o rádio em standby, 50 h em laço de reset — são consequências aritméticas de premissas não verificadas, não medições.
+2. **Nenhuma corrente foi medida.** Todo o orçamento (`sleep.cpp:12-53`) vem de datasheet. Os números de autonomia — 269 dias, 48 dias com o rádio em standby, 50 h em laço de reset — são consequências aritméticas de premissas não verificadas, não medições.
 3. **A leitura do MPU6050 não existe** (`vibration.cpp:6-10`). Os modos FM-02, FM-03 e FM-35 são análise antecipada de código que ainda será escrito; devem ser revisitados quando existir.
-4. **O modelo não foi treinado** (`N_TREES = 0`). O limiar de 0,5 é placeholder; a análise de FM-22 e FM-23 vale para a estrutura, não para o desempenho de detecção.
+4. **O modelo está treinado e embarcado** (`N_TREES = 100`, limiar 0,55719777 por quantil de calibração), mas **nunca emitiu veredito em hardware**. A análise de FM-22 e FM-23 vale para a estrutura; o desempenho de detecção é o medido offline no MAFAULDA, não em máquina real.
 5. **A fase ativa de 3,0 s do orçamento não foi cronometrada.** A soma das fases sugere ~1,6 s, e o TX a SF9/CR4/7 leva ~226 ms contra os 150 ms orçados. Conservador no total, otimista no TX.
 6. **Não foram analisados:** integridade da atualização de firmware (não há OTA), segurança da informação (o pacote trafega em claro e sem autenticação — um transmissor hostil em 433 MHz pode injetar leituras com CRC válido, o que é um modo de falha S3 fora do escopo de *safety* e dentro do de *security*), e comportamento térmico do invólucro.
 7. **Esta é uma FMEA de projeto, não de processo.** Falhas de fabricação, montagem e instalação (solda fria, torque de fixação, orientação do sensor) aparecem apenas como causas, não como modos analisados em si.

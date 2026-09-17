@@ -18,7 +18,9 @@ a integração com o hardware real seja só calibração quando ele chegar.
 | Temperatura | Termistor NTC 10K (beta 3950) | ADC analógico |
 | Rádio | RA-02 (SX1278) LoRa 433MHz | SPI |
 | Regulador | HT7333 (LDO 3,3V ultra baixo consumo) | — |
-| Corte de energia | BC337 ×2 (desligam MPU6050/periféricos no sleep) | GPIO |
+| Corte de energia | Load switch high-side: SI2301 (P-MOSFET) + BC847B (inversor) | GPIO |
+| Proteção de entrada | SI2301 em série (polaridade invertida) | — |
+| Medição da bateria | Divisor 1M/1M + 100n | ADC analógico |
 
 ### Pinagem
 
@@ -29,10 +31,17 @@ a integração com o hardware real seja só calibração quando ele chegar.
 | LoRa DIO0 | 14 | escolhido para não colidir com I2C |
 | LoRa RESET | 21 | escolhido para não colidir com I2C |
 | NTC (ADC) | 4 | placeholder |
-| Corte de energia (BC337) | 5 | placeholder — precisa ser RTC-capable, ver *deep sleep* |
+| Corte de energia (+3V3_SW) | 5 | ativo-alto; RTC-capable, ver *deep sleep* |
+| Tensão da bateria (ADC) | 6 | divisor 1M/1M; 4,2 V → 2,10 V, 3,0 V → 1,50 V |
 
 Conferidos sem conflito entre si e contra o `pins_arduino.h` real da variante
 `esp32s3`, mas ainda não contra um esquemático físico definitivo.
+
+**Microcontrolador conferido contra a peça real.** Um ESP32-S3 foi lido com
+`esptool`: QFN56 revisão v0.2, 16 MB de flash, 8 MB de PSRAM embarcada. Confirma a
+variante N16R8 que o `platformio.ini` declara — e portanto a necessidade de
+sobrescrever o perfil da `devkitc-1`, que declara 8 MB de flash e nenhuma PSRAM.
+Os demais componentes (MPU6050, NTC, SX1278) continuam não montados.
 
 ## O ciclo
 
@@ -41,8 +50,8 @@ acordar → energizar periféricos (100ms de estabilização)
         → ler 512 amostras a 1 kHz + NTC
         → extrair RMS, curtose, fator de crista, frequência dominante
         → inferir Isolation Forest embarcado
-        → transmitir 20 bytes via LoRa
-        → dormir o rádio, cortar periféricos, deep sleep (10 min)
+        → transmitir 21 bytes via LoRa
+        → dormir o rádio, cortar periféricos, deep sleep (12 min)
 ```
 
 Todo o trabalho acontece em `setup()`; `loop()` nunca executa, porque o
@@ -144,10 +153,17 @@ vetor.
 
 ### Estado do modelo embarcado
 
-`src/ml/isolation_forest_data.h` é um placeholder com `N_TREES = 0`, e
-`model_infer` tem guarda explícita que devolve `Normal` sem percorrer árvore
-nenhuma. O arquivo é sobrescrito quando `python -m kaelix_ml.train` roda —
-use `--out` para exportar a outro caminho e preservar o placeholder.
+`src/ml/isolation_forest_data.h` traz o modelo treinado nos dados reais do
+MAFAULDA: `N_TREES = 100`, `N_FEATURES = 4`, `ANOMALY_THRESHOLD = 0,55719777`
+(quantil de calibração, não 0,5). O arquivo é gerado por
+`python -m kaelix_ml.train` — use `--out` para exportar a outro caminho e
+preservar o que está versionado.
+
+`model_init` e `model_infer` mantêm a guarda `N_TREES <= 0`, que devolve
+`Status::ModelAbsent` e deixa o veredito em `Unknown`. Ela deixou de ser o
+caminho normal quando o modelo foi embarcado, mas continua sendo o
+comportamento correto para um build sem modelo — e é o que impede que a
+ausência de árvores vire "máquina sadia".
 
 ## Protocolo de treino e calibração
 
@@ -199,17 +215,22 @@ o hardware não tem e enviesa a temperatura.
 RadioLib, SX1278, 433 MHz, TX a 17 dBm. API conferida contra o código-fonte
 da versão instalada.
 
-### Pacote — 20 bytes
+### Pacote — 21 bytes, versão 2
 
 | Campo | Bytes | Por quê |
 |---|---|---|
 | `version` | 1 | o gateway precisa saber interpretar o layout; sem isso, mudar o formato vira leitura silenciosamente errada do outro lado |
 | `device_id` | 4 | do eFuse MAC. Com mais de um Kaelix na planta, sem ele o gateway não sabe de quem é a leitura |
 | `boot_count` | 4 | contador em RTC memory, sobrevive ao deep sleep. Dá sequência e detecção de pacote perdido |
-| `status` | 1 | normal/anômalo |
-| `rms` | 4 | |
-| `temperature_c` | 4 | |
-| `crc` | 2 | CRC-16/CCITT sobre os 18 bytes anteriores |
+| `state` | 1 | `kaelix::MachineState` — normal, anômalo ou **desconhecido** |
+| `diag` | 1 | `kaelix::status_code()` do primeiro erro do ciclo (0 = Ok). É o canal de diagnóstico de produção: sem ele, `state = Unknown` chega ao gateway sem dizer por quê |
+| `rms` | 4 | NaN = não medido |
+| `temperature_c` | 4 | NaN = não medido |
+| `crc` | 2 | CRC-16/CCITT sobre os 19 bytes anteriores |
+
+A v1 tinha 20 bytes e um campo `status` binário. O `state` ternário e o `diag`
+entraram juntos: um veredito que pode ser "não sei" é inútil se o outro lado
+não recebe a causa.
 
 O campo `timestamp` que existia antes era `millis()`, que zera a cada deep
 sleep — todo pacote chegava com ~3000 ms. Não era um relógio. O tempo de
@@ -224,11 +245,22 @@ não passe despercebida sem bump de `PACKET_VERSION`.
 
 ### Topologia de rede e o elo que falta
 
-O dispositivo transmite. Do outro lado, **não há nada** — nem código, nem
-especificação de gateway. Isso é defensável num trabalho focado no dispositivo, mas
-precisa estar dito, porque cria uma circularidade: o formato do pacote foi projetado
-para um gateway que não existe, e `packet_is_valid()` é exportado para um consumidor
-que ninguém escreveu.
+O dispositivo transmite. Do outro lado existe um receptor **em simulação**, em
+`experiments/gateway/` — decodificação do quadro, estado por dispositivo, detecção de
+lacuna na sequência e regra de alerta, com 19 testes. Não existe receptor em rádio
+real: nada nunca recebeu um pacote pelo ar.
+
+**E o gateway está uma versão atrás.** `packet.py` fixa `PACKET_VERSION = 1` e
+`PACKET_SIZE = 20`; o firmware emite v2 com 21 bytes. A guarda de versão faria o
+gateway recusar **todos** os pacotes do firmware atual — falha segura, e a defesa
+funcionando como projetada, mas a cadeia ponta-a-ponta simulada não corresponde ao
+dispositivo. Os 19 testes passam porque o gateway é exercitado contra o próprio
+`codificar()`, um laço fechado em v1: o teste de paridade cruza a **função** CRC com
+`lib/crc16`, não o **layout** da struct. O byte `diag`, que o firmware trata como
+canal de diagnóstico de produção, não tem leitor nenhum.
+
+Fechar isso é subir o gateway para v2 e criar um teste que gere o quadro a partir do
+layout de `src/comms/lora.h`, em vez do próprio codificador.
 
 **LoRa cru, não LoRaWAN.** `radio.transmit()` direto: sem endereçamento de rede, sem
 join, sem criptografia, sem confirmação. Qualquer receptor na mesma frequência, SF e
@@ -240,8 +272,10 @@ paga. Mas o custo aparece nos itens abaixo.
 não se chegou. Um pacote perdido some em silêncio. O `boot_count` existe para que o
 gateway detecte o buraco na sequência — sem gateway, isso é teoria.
 
-**Colisão.** ALOHA puro. Com 185 ms no ar e ciclo de 600 s, a probabilidade de colisão
-é 1,5% para 20 dispositivos e 3,7% para 50. Aceitável. Mas essa conta pressupõe fases
+**Colisão.** ALOHA puro. Com 185 ms no ar e ciclo de 720 s, a probabilidade de colisão
+é 1,0% para 20 dispositivos e 2,5% para 50. Aceitável.
+(Uma revisão anterior dava 1,5% e 3,7%: aqueles valores correspondem a 226 ms, o tempo
+no ar em `CR 4/7`, que não é o que o firmware usa — ele fixa `CR 4/5`.) Mas essa conta pressupõe fases
 aleatórias, e uma instalação em que os aparelhos são ligados juntos não tem fase
 aleatória: eles acordariam no mesmo instante e colidiriam de forma sistemática. É o que
 o deslocamento anticolisão em `transmission_jitter_seconds()` resolve.
@@ -285,12 +319,12 @@ Ciclo: acordar → ler e processar (3s) → transmitir (~150ms) → deep sleep
 
 ### A linha que decide o orçamento
 
-O rádio **não** está no barramento cortado pelos BC337, então o estado em que
-ele passa os 10 minutos de sleep é decidido por software:
+O rádio **não** está no rail comutado (+3V3_SW), então o estado em que
+ele passa os 12 minutos de sleep é decidido por software:
 
 ```
-sem lora_sleep():  (1,5 + 0,018) mA × 600s = 910,8 mA·s
-com lora_sleep():  (0,0002 + 0,018) mA × 600s = 10,9 mA·s
+sem lora_sleep():  (1,5 + 0,018) mA × 720s = 1093,0 mA·s
+com lora_sleep():  (0,0002 + 0,018) mA × 720s = 13,1 mA·s
 ```
 
 Sozinha, essa diferença é 5,5× maior que o orçamento inteiro do ciclo.
@@ -302,7 +336,7 @@ Sozinha, essa diferença é 5,5× maior que o orçamento inteiro do ciclo.
 Fase ativa (3,0s):   (40 + 3,9 + 1,5 + 0,008) mA × 3,0s   = 136,22 mA·s
                      (o rádio fica em standby depois do begin())
 Fase TX (0,185s):    (40 + 3,9 + 90 + 0,008) mA × 0,185s  =  24,77 mA·s
-Fase sleep (600s):   (0,0002 + 0,010 + 0,008) mA × 600s   =  10,92 mA·s
+Fase sleep (720s):   (0,0002 + 0,010 + 0,008) mA × 720s   =  13,10 mA·s
                                                    Total  = 171,91 mA·s
 ```
 
@@ -310,38 +344,47 @@ Corrente média do circuito: `171,91 ÷ 603,19 ≈ 285 µA`.
 
 O tempo de transmissão não é estimativa: sai do cálculo de tempo no ar para os
 parâmetros fixados em `src/comms/lora.cpp` (SF9, BW 125 kHz, CR 4/5, preâmbulo de 8
-símbolos, 20 bytes de payload). Antes o orçamento assumia 150 ms, número que não vinha
+símbolos, 21 bytes de payload). Antes o orçamento assumia 150 ms, número que não vinha
 de cálculo nenhum, e os parâmetros do enlace ficavam nos defaults do RadioLib — de modo
 que uma atualização da biblioteca mudaria o consumo do produto em silêncio.
 
 Alcance e autonomia são o mesmo botão:
 
-| SF | Tempo no ar | Autonomia | Ganho de enlace |
-|---|---|---|---|
-| 7 | 57 ms | 256 dias | referência |
-| 8 | 103 ms | 249 dias | +2,5 dB |
-| **9 (atual)** | **185 ms** | **236 dias** | **+5,0 dB** |
-| 10 | 371 ms | 211 dias | +7,5 dB |
-| 12 | 1319 ms | 138 dias | +12,5 dB |
+| SF | Tempo no ar | Autonomia | Ganho de enlace | REQ-PWR-06 (≥ 8 meses) |
+|---|---|---|---|---|
+| 7 | 57 ms | 292 dias | referência | ✅ |
+| 8 | 103 ms | 283 dias | +2,5 dB | ✅ |
+| **9 (atual)** | **185 ms** | **269 dias** | **+5,0 dB** | ✅ |
+| 10 | 371 ms | 243 dias | +7,5 dB | ✅ (no limite) |
+| 11 | 741 ms | 202 dias | +10,0 dB | ❌ |
+| 12 | 1483 ms | 152 dias | +12,5 dB | ❌ |
+
+Tempo no ar para 21 bytes em `CR 4/5`; autonomia para o ciclo de 12 min. A tabela
+anterior era de 20 bytes e do ciclo de 10 min.
 
 A escolha definitiva depende da distância entre os motores e o gateway, que ainda não
-foi medida.
+foi medida. O período de 12 min é o que mantém **SF10 dentro do orçamento** — a 10 min
+ele dava 211 dias e a decisão de alcance ficava travada pela energia.
 
-Somando a autodescarga da LiPo (~2,5%/mês sobre 2000 mAh ≈ **68,5 µA**, 25%
+Somando a autodescarga da LiPo (~2,5%/mês sobre 2000 mAh ≈ **68,5 µA**, 28%
 do orçamento):
 
 ```
-Consumo efetivo: ~354 µA            → dentro da meta de <1mA, margem ~2,8×
-Autonomia (LiPo 2000mAh): ~236 dias (~7,8 meses)
+Consumo efetivo: ~309 µA            → dentro da meta de <1mA, margem ~3,2×
+Autonomia (LiPo 2000mAh): ~269 dias (~8,8 meses)
 ```
 
-Para comparação, sem `lora_sleep()` o consumo seria ~1,84 mA e a autonomia
-cairia para ~45 dias.
+REQ-PWR-06 (autonomia ≥ 8 meses) fica atendido com ~26 dias de margem. A 10 min o
+projeto entregava 236 dias (7,7 meses) e o requisito não era atendido — não por
+medição, mas desde que os 150 ms estimados de tempo no ar viraram 185 ms calculados.
+
+Para comparação, sem `lora_sleep()` o consumo seria ~1,83 mA e a autonomia
+cairia para ~48 dias.
 
 ### Retenção do GPIO
 
 GPIOs não-RTC vão para alta impedância ao entrar em deep sleep, o que
-deixaria a base dos BC337 flutuando justamente durante os 10 minutos em que
+deixaria a base de Q2 flutuando justamente durante os 12 minutos em que
 o corte de energia precisa valer. `deep_sleep()` chama `gpio_hold_en()` +
 `gpio_deep_sleep_hold_en()`; `peripherals_power()` chama `gpio_hold_dis()` no
 boot seguinte, porque o hold sobrevive ao reset e travaria o pino.
@@ -356,13 +399,16 @@ boot seguinte, porque o hold sobrevive ao reset e travaria o pino.
 | Processamento de vibração (RMS, curtose, fator de crista, FFT) | ✅ Implementado e testado |
 | Frequência dominante na velocidade band-limitada | ✅ Paridade C++/Python verificada numericamente |
 | Temperatura (NTC + Steinhart-Hart, ADC calibrado) | ✅ Implementado e testado |
-| Deep sleep, corte de energia, retenção de GPIO | ✅ ~346 µA médio, autonomia ~241 dias |
+| Deep sleep, corte de energia, retenção de GPIO | ✅ ~309 µA médio, autonomia ~269 dias (ciclo de 12 min) |
 | LoRa (RadioLib) com device id, sequência e CRC-16 | ✅ Implementado; transmissão real não testada |
 | Pipeline de treino (Isolation Forest) | ✅ Validado ponta-a-ponta |
 | Split por ensaio + limiar por falso alarme alvo | ✅ `GroupKFold` + calibração por quantil |
 | Alinhamento treino ↔ inferência (1 kHz, 512 amostras) | ✅ `dataset.to_device_windows` |
 | Treino com dados reais (MAFAULDA) | ✅ 1951 arquivos, 17.559 janelas |
-| Build do firmware para ESP32-S3 | 🟡 Não compilado desde as últimas mudanças |
+| Modelo embarcado no firmware | ✅ 100 árvores, limiar 0,55719777 |
+| Build do firmware para ESP32-S3 | ✅ `pio run -e esp32-s3` limpo — RAM 8,5%, Flash 9,0% de 6,25 MB |
+| Watchdog RTC (WDT-1) no ESP32-S3 | ✅ Via `hal/wdt_hal.h`; armado e linkado, comportamento não medido |
+| Gateway ↔ firmware na mesma versão de pacote | ❌ Gateway em v1/20 B, firmware em v2/21 B |
 | Simulação Wokwi | 🟡 Arquivo pronto; só ESP32+MPU6050, sem NTC nem rádio |
 | Leitura I2C real do MPU6050 + DLPF | ⬜ Bloqueado — precisa do hardware físico |
 | Calibração física, consumo real, alcance LoRa | ⬜ Bloqueado — precisa do hardware físico |
@@ -429,14 +475,17 @@ kaelix-firmware/
 │   ├── device/           # desenho técnico do invólucro
 │   └── img/
 ├── experiments/        # notebooks de validação numérica (fonte da verdade)
-└── figures/            # figuras em padrão de submissão
+└── experiments/figures/  # figuras em padrão de submissão
     ├── scripts/          # exportadores Python + plot em R (ggplot2)
     ├── data/             # CSVs rastreáveis
     └── output/           # SVG/PDF vetoriais, TIFF 600 dpi
 ```
 
-`docs/relatorio/` contém três documentos: o relatório de simulação da cadeia de
-medição, a revisão de literatura, e a análise de comunicação e topologia.
+`docs/relatorio/` contém quatro documentos: o relatório de simulação da cadeia de
+medição, a revisão de literatura, a análise de comunicação e topologia, e a tabela
+de práticas de tolerância a falhas em sistemas embarcados críticos
+(`praticas-sistemas-criticos.tex` — redundância aviônica, normas de garantia e o que
+o Kaelix adota, não adota e por quê).
 
 Histórico de mudanças em [CHANGELOG.md](CHANGELOG.md).
 
@@ -497,9 +546,18 @@ pouco além do boot.
 
 # Pendências conhecidas
 
-- **Build não verificado.** As últimas mudanças em `src/` não passaram por
-  `pio run -e esp32-s3`. A lógica pura de `lib/` está testada, mas as
-  chamadas de API do ESP-IDF/RadioLib só são provadas pelo build.
+- **Gateway uma versão atrás do firmware.** `experiments/gateway/packet.py` fixa
+  `PACKET_VERSION = 1` e 20 bytes; o firmware emite v2 com 21 bytes. O gateway
+  recusaria todo pacote real. Os 19 testes passam porque exercitam o gateway
+  contra o próprio codificador — nenhum teste cruza a fronteira firmware↔gateway.
+  O caso `test_crc16_valores_de_referencia_do_pacote_de_20_bytes` também congela o
+  tamanho da v1.
+- **Comportamento do WDT-1 não medido.** O build prova que a API do RWDT é usada
+  corretamente e que resolve em link; não prova que o contador sobrevive ao deep
+  sleep, premissa em que se apoiam o `watchdog_arm_for_sleep` e o despertador de
+  último recurso. Medir com o timer de despertar desabilitado.
+- **Nada foi transmitido pelo ar.** `lora_init()` e `lora_send()` compilam contra a
+  RadioLib instalada, mas nenhum pacote saiu de um SX1278 real.
 - **Pinos GPIO** são placeholders sem conflito entre si, mas não conferidos
   contra um esquemático final. O pino de corte de energia precisa ser
   RTC-capable para que `gpio_hold_en` funcione.

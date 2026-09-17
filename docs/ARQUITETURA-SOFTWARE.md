@@ -8,15 +8,15 @@ O alvo não é certificação DO-178C. O alvo é adotar — e conseguir justific
 numa defesa — as práticas de organização, determinismo e rastreabilidade que
 projetos industriais e aeroespaciais usam, aplicadas a um dispositivo real:
 ESP32-S3-WROOM-1 N16R8, MPU6050 no I2C, NTC 10k no ADC, SX1278 no SPI,
-alimentado por LiPo com orçamento de ~346 µA médios e autonomia alvo de ~8
+alimentado por LiPo com orçamento de ~309 µA médios e autonomia alvo de ~8
 meses.
 
 O ciclo do dispositivo é um superloop de um disparo:
 
 ```
 acordar -> energizar periféricos (100 ms) -> 512 amostras a 1 kHz (0,512 s)
-        -> 4 features -> Isolation Forest -> 20 bytes por LoRa (~150 ms)
-        -> rádio em sleep -> cortar periféricos -> deep sleep (10 min)
+        -> 4 features -> Isolation Forest -> 21 bytes por LoRa (185 ms)
+        -> rádio em sleep -> cortar periféricos -> deep sleep (12 min)
 ```
 
 Todo o trabalho acontece em `setup()`. `loop()` nunca executa. Isso não é um
@@ -288,7 +288,7 @@ Consequências que decorrem diretamente da tabela, e não de preferência:
   acima usa ~6 KB dos 512 KB internos. PSRAM octal habilitada custa
   inicialização e corrente na janela ativa em troca de memória que o projeto
   decidiu não usar. Recomenda-se medir com e sem o flag na Fase 3 e, se a
-  diferença aparecer no orçamento de 346 µA, removê-lo.
+  diferença aparecer no orçamento de 309 µA, removê-lo.
 - **Recursão é proibida** (JSF++ AV-119): sem recursão, o pico de pilha é
   estático e analisável. A travessia da árvore do Isolation Forest já é
   iterativa; deve continuar.
@@ -331,7 +331,7 @@ diferentes para o técnico.
 As funções que retornam `Status` devem ser marcadas `[[nodiscard]]` para que o
 compilador cobre isso — hoje `main.cpp:61` chama `comms::lora_sleep()` e
 descarta o retorno, e é o descarte mais caro do firmware: se o rádio não
-adormecer, ele passa 10 minutos em standby a 1,5 mA, 910 mA·s por ciclo,
+adormecer, ele passa 12 minutos em standby a 1,5 mA, 1093 mA·s por ciclo,
 5,5× o orçamento inteiro do dispositivo, e ninguém fica sabendo.
 `Status::RadioSleepFailed` existe exatamente para esse caso.
 
@@ -409,22 +409,22 @@ produção é o byte de status no pacote LoRa, não o UART.
 O **Estado Seguro do Kaelix (ESK)** é:
 
 1. SX1278 em `SLEEP` (~0,2 µA), confirmado pelo retorno de `lora_sleep()`;
-2. trilha dos periféricos cortada pelos BC337, com `gpio_hold_en()` +
+2. rail +3V3_SW cortado pelo load switch, com `gpio_hold_en()` +
    `gpio_deep_sleep_hold_en()` aplicados (sem o hold, a base flutua durante os
-   10 minutos em que o corte precisa valer);
+   12 minutos em que o corte precisa valer);
 3. deep sleep com wakeup por timer armado;
 4. nenhum pacote com veredito fabricado emitido neste ciclo.
 
 Repare que o estado seguro **não** é "desligado". Um dispositivo que se desliga
 para de monitorar a máquina — e a máquina continua girando. Estado seguro aqui
 é *quieto, de baixíssimo consumo e reagendado*: ele preserva a bateria, preserva
-a capacidade de tentar de novo em 10 minutos, e não mente enquanto isso.
+a capacidade de tentar de novo em 12 minutos, e não mente enquanto isso.
 
 ### O que leva a ele
 
 | Gatilho | Caminho |
 |---|---|
-| Fim normal do ciclo | ESK com o período nominal de 10 min |
+| Fim normal do ciclo | ESK com o período nominal de 12 min |
 | Rádio ausente ou mudo (`0x40`, `0x41`, `0x42`) | ESK imediato, sem tentar transmitir |
 | Qualquer status fatal após a tentativa de TX | ESK com o período nominal |
 | `CycleDeadlineExceeded` | ESK imediato; a fase ativa é cortada onde estiver |
@@ -543,7 +543,7 @@ Semente da matriz, com o que já existe hoje:
 | REQ-ML-002 | Travessia da árvore tem cota de profundidade provável | `isolation_forest.cpp:17` | — | **lacuna** |
 | REQ-COM-001 | Pacote protegido por CRC-16/CCITT-FALSE | `lib/crc16/`, `src/comms/lora.cpp` | `test/test_crc16/` | verificado |
 | REQ-COM-002 | Formato do pacote é versionado | `lora.h:12,33` | — | **lacuna** |
-| REQ-PWR-001 | Rádio em sleep antes do deep sleep (orçamento de 346 µA) | `src/comms/lora.cpp:58`, `main.cpp:61` | — | **lacuna** (e o retorno é descartado) |
+| REQ-PWR-001 | Rádio em sleep antes do deep sleep (orçamento de 309 µA) | `src/comms/lora.cpp:58`, `main.cpp:61` | — | **lacuna** (e o retorno é descartado) |
 | REQ-PWR-002 | Dispositivo nunca acordado por mais de 8 s consecutivos | — | — | **não implementado** |
 | REQ-SYS-001 | Nenhuma alocação dinâmica após inicialização | `lib/`, `src/` | análise estática | **em violação** (§4) |
 | REQ-SYS-002 | Toda falha carrega causa diagnosticável até o gateway | `lib/kaelix_status/` | — | parcial (L0 pronto) |
