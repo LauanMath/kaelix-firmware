@@ -5,6 +5,136 @@ Registro das mudanças do projeto Kaelix. Formato baseado em
 
 ## [Não publicado]
 
+## Período do ciclo para 12 minutos: REQ-PWR-06 atendido
+
+`SLEEP_MINUTES` passou de 10 para 12 (`src/main.cpp:83`).
+
+**Por quê.** `REQ-PWR-06` pede autonomia ≥ 8 meses. A 10 min o projeto entregava
+~236 dias (7,7 meses) e o requisito estava em falha — não por medição, mas desde
+que os 150 ms estimados de tempo no ar viraram 185 ms calculados para SF9. Das
+três saídas possíveis (baixar o alvo, descer para SF8, alongar o período), o
+período é a única que fecha o requisito **sem tocar no enlace**.
+
+| | 10 min | 12 min |
+|---|---|---|
+| Carga por ciclo | 171,96 mA·s | 174,14 mA·s |
+| Consumo médio | ~354 µA | **~309 µA** |
+| Autonomia | ~236 d (7,7 m) | **~269 d (8,8 m)** |
+| REQ-PWR-06 | ❌ | ✅ com ~26 dias de margem |
+
+**Custo:** latência de detecção — uma falha que comece logo após uma transmissão
+demora até um período para ser vista. Irrelevante para vibração em motor
+industrial, cuja evolução se mede em dias.
+
+**Efeito colateral que vale mais que a economia:** a folga torna **SF10 viável**
+(~243 dias, ainda ≥ 8 meses). A 10 min, SF10 dava ~211 dias e a escolha de
+alcance ficava travada pelo orçamento de energia — o levantamento de RSSI em
+planta agora pode pedir os 2,5 dB extras sem reabrir o requisito. Pelo mesmo
+motivo, as três linhas do §7.4 da análise de falhas (pacote de diagnóstico de
+36 bytes) passaram a caber no requisito: o custo virou margem consumida, não
+conflito.
+
+### Corrigido junto
+
+- **Probabilidade de colisão.** README e `main.cpp` davam 1,5% para 20
+  dispositivos e 3,7% para 50. Esses valores correspondem a **226 ms**, o tempo
+  no ar em `CR 4/7` — o firmware fixa `CR 4/5`. É a mesma troca de linha já
+  encontrada no §7.4. Com 185 ms reais e período de 720 s: **1,0% e 2,5%**.
+- **Tabela de SF do README.** Era de 20 bytes e do ciclo de 10 min. Refeita para
+  21 bytes, `CR 4/5` e 12 min, com coluna dizendo quais SF atendem REQ-PWR-06.
+  SF12 a 21 bytes são 1483 ms, não os 1319 ms da v1.
+- **Bloco de orçamento em `src/power/sleep.cpp`.** Ainda descrevia 150 ms de TX,
+  600 s de sono e ~346 µA. Reescrito.
+
+## Primeiro build do alvo: WDT-1 corrigido e documentação sincronizada
+
+O `pio run -e esp32-s3` passou a rodar. Ele reprovou de imediato, e o que ele
+encontrou motivou esta rodada.
+
+### Corrigido
+
+- **WDT-1 não compilava no ESP32-S3.** `src/power/watchdog.cpp` incluía
+  `<soc/rtc_wdt.h>` sob uma guarda `__has_include`. A guarda testava a
+  **existência** do cabeçalho, não sua **usabilidade**: no S3 o arquivo está
+  presente e referencia `RTC_WDT_STG_SEL_*`, definidos apenas na árvore do ESP32
+  original — símbolo nenhum deles existe no SDK do S3. O build do alvo falhava
+  com 5 erros, em vez de degradar para `NotImplemented` como a guarda pretendia.
+  A proteção falhou exatamente no cenário para o qual foi escrita.
+
+  A implementação passou a usar `hal/wdt_hal.h` (RWDT), portátil entre ESP32, S2,
+  S3 e C3 e a mesma via que o ESP-IDF usa no bootloader — o que eliminou o
+  condicional por família em vez de acrescentar mais um. A janela é convertida em
+  ticks a partir de `rtc_clk_slow_freq_get_hz()`, e não de constante: o
+  `RTC_SLOW_CLK` é RC de ~136 kHz ou cristal de 32768 Hz conforme a placa, e uma
+  constante fixa faria a janela de 20 s virar 4,8 s ou 83 s sem nenhum sintoma
+  além do watchdog agindo na hora errada. `WDT_STAGE_ACTION_RESET_SYSTEM`
+  preserva o domínio RTC, onde vive o estado retido — `RESET_RTC` apagaria a
+  evidência de instabilidade que o FM-33 existe para preservar.
+
+- **Cabeçalho da imagem declarava 8 MB de flash.** `board_build.flash_size`
+  governa só o lado do build; o `elf2image` lê `upload.flash_size`, que o perfil
+  da `devkitc-1` fixa em 8 MB. A tabela de partições vai até 16 MB (`app1`
+  termina em 12,6 MB; `spiffs`, em 15,6 MB). O app cabe nos primeiros 8 MB, então
+  nada quebra hoje; OTA, SPIFFS e coredump quebrariam. Corrigido com
+  `board_upload.flash_size`, deliberadamente sem tocar em `maximum_size` — a
+  checagem de tamanho tem de continuar valendo contra a partição app0 de 6,25 MB.
+
+- **Erro de conta no §7.4 da análise de falhas.** Os ~363 µA e ~230 dias
+  atribuídos ao pacote de 36 bytes pertenciam ao de **21 bytes em CR 4/7**: as
+  linhas do cálculo foram trocadas. E a base de comparação (~346 µA, ~241 dias)
+  era anterior ao cálculo de tempo no ar em SF9. Recalculado a partir do que o
+  firmware transmite (21 B, CR 4/5, 185 ms): 36 bytes custam **12 dias** de
+  autonomia mantendo CR 4/5, não 11 contra uma base inexistente.
+
+### Sincronizado com o código
+
+A documentação descrevia um firmware anterior a várias rodadas. Corrigido em
+`README.md`, `docs/RASTREABILIDADE.md`, `docs/ANALISE-DE-FALHAS.md` e
+`docs/ARQUITETURA-SOFTWARE.md`:
+
+- **Modelo embarcado.** Vários pontos ainda diziam `N_TREES = 0` e "limiar 0,5 é
+  placeholder". O header traz 100 árvores e limiar 0,55719777 por quantil de
+  calibração. A FMEA chegava a citar `if (N_TREES == 0) return Status::Normal;`,
+  código que não existe: a guarda devolve `ModelAbsent` e deixa o veredito em
+  `Unknown` — o firmware estava **melhor** do que a própria análise afirmava.
+- **Pacote v2.** 21 bytes com `state` ternário e `diag`, não 20 bytes com
+  `status` binário.
+- **Orçamento de energia.** ~354 µA e ~236 dias (7,8 meses) em toda parte; 346 µA
+  e 241 dias eram resíduo da estimativa de 150 ms de tempo no ar. Com isso,
+  `REQ-PWR-06` ("autonomia ≥ 8 meses") passou a **não ser atendido pelo próprio
+  cálculo de projeto**, e a matriz diz isso.
+- **Matriz de rastreabilidade.** `REQ-ML-01` e `REQ-ML-09` estavam marcados como
+  falha comprovada e já haviam sido corrigidos — o teste de paridade compila e
+  passa, e `export_cpp.py` emite os 8 inicializadores por árvore. Contagens
+  refeitas: 13 de 59 plenamente verificados (22,0%), 1 falha ativa restante
+  (`REQ-SYS-03`, includes relativos), 4 não implementados.
+
+### Registrado como pendência
+
+- **Gateway uma versão atrás.** `experiments/gateway/packet.py` fixa
+  `PACKET_VERSION = 1` e 20 bytes; o firmware emite v2 com 21. O gateway recusaria
+  todo pacote real — falha segura, e a guarda de versão funcionando, mas a cadeia
+  simulada não corresponde ao dispositivo. Os 19 testes passam porque exercitam o
+  gateway contra o próprio `codificar()`: nenhum cruza a fronteira. O byte `diag`
+  não tem leitor.
+- **Comportamento do WDT-1 não medido.** O build prova que a API é usada
+  corretamente e resolve em link; não prova que o contador do RWDT sobrevive ao
+  deep sleep, premissa do `REQ-WDT-05` e do despertador de último recurso.
+
+### Conferido contra a peça real
+
+Um ESP32-S3 foi lido com `esptool`: QFN56 rev. v0.2, 16 MB de flash, 8 MB de
+PSRAM. Confirma a variante N16R8 que o `platformio.ini` declara — a sobrescrita
+do perfil da `devkitc-1` era necessária e está correta.
+
+### Adicionado
+
+- `docs/relatorio/praticas-sistemas-criticos.tex` — tabela de práticas de
+  tolerância a falhas em sistemas embarcados críticos (redundância aviônica,
+  DO-178C, IEC 61508, ISO 26262, ARINC 653, MISRA C++, JSF++), com origem,
+  falha coberta, custo, limite conhecido e situação no Kaelix. Traz declaração de
+  nível de conferência por fonte, no espírito de `docs/referencias.md`.
+
 ## Reorganização: análise e simulação sob `experiments/`
 
 `figures/` e `gateway/` passaram a viver sob `experiments/`, ao lado de
