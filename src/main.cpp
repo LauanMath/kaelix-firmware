@@ -64,14 +64,30 @@ static_assert((VIBRATION_SAMPLES_PER_CYCLE & (VIBRATION_SAMPLES_PER_CYCLE - 1U))
 static_assert(VIBRATION_SAMPLES_PER_CYCLE <= ksens::VIBRATION_MAX_SAMPLES,
               "o bloco pedido não cabe no buffer estático de amostras");
 
-constexpr uint32_t SLEEP_MINUTES = 10U;
+// 12 e não 10 minutos. O período é o parâmetro que fecha REQ-PWR-06
+// (autonomia >= 8 meses) sem tocar no enlace: a 10 min o projeto entregava
+// ~236 dias (7,7 meses) e o requisito ficava em falha aritmética, não de
+// medição — ele passou a não ser atendido quando os 150 ms estimados de
+// tempo no ar viraram 185 ms calculados para SF9. A 12 min são ~269 dias
+// (8,8 meses).
+//
+// O custo é latência de detecção: uma falha que comece logo após uma
+// transmissão demora até um período para ser vista. Para vibração em
+// motor industrial isso é irrelevante — a evolução de desbalanceamento e
+// desalinhamento se mede em dias, não em minutos.
+//
+// A folga também é o que torna SF10 viável (~243 dias, ainda >= 8 meses)
+// se o levantamento de RSSI em planta exigir os 2,5 dB extras de ganho de
+// enlace. A 10 min, SF10 dava ~211 dias e a decisão de alcance ficava
+// travada pelo orçamento de energia.
+constexpr uint32_t SLEEP_MINUTES = 12U;
 
 // Período estendido do estado seguro por escalada. Ver ESCALADA, abaixo.
 constexpr uint32_t QUARANTINE_SLEEP_MINUTES = 60U;
 
 constexpr uint16_t MAX_ABNORMAL_RESETS = 4U;
 
-// O MPU6050 precisa estabilizar depois de energizado pelos BC337.
+// O MPU6050 precisa estabilizar depois de o rail +3V3_SW subir.
 constexpr uint32_t PERIPHERAL_SETTLE_MS = 100U;
 
 // WDT-3: cota de software da fase ativa. Fica ABAIXO da janela do Task
@@ -126,9 +142,10 @@ RTC_NOINIT_ATTR RetainedState s_retained;
 // Deslocamento anticolisão do despertar.
 //
 // Sem ele, dispositivos energizados juntos — o que acontece numa
-// instalação — acordam no mesmo instante a cada 10 minutos e colidem de
+// instalação — acordam no mesmo instante a cada 12 minutos e colidem de
 // forma SISTEMÁTICA, não estatística. O cálculo de probabilidade de
-// colisão em ALOHA (1,5% para 20 dispositivos com 185 ms no ar) pressupõe
+// colisão em ALOHA (1,0% para 20 dispositivos e 2,5% para 50, com 185 ms
+// no ar e período de 720 s) pressupõe
 // fases aleatórias, e uma instalação simultânea não tem fase aleatória.
 //
 // device_id separa dispositivos entre si; boot_count faz o deslocamento
@@ -295,7 +312,7 @@ void setup() {
     const Status carried = static_cast<Status>(s_retained.last_status);
 
     // ESCALADA (REQ-SEG-33): quatro resets anormais seguidos significam
-    // que repetir o ciclo a cada 10 min não está resolvendo. O período
+    // que repetir o ciclo a cada 12 min não está resolvendo. O período
     // estendido é o que torna o estado seguro SUSTENTÁVEL — o dispositivo
     // sobrevive semanas anunciando o próprio defeito, em vez de horas
     // tentando. Um reset em laço a ~40 mA esvazia a bateria em ~50 h:
@@ -372,7 +389,7 @@ void setup() {
     // deliberado: `lora_sleep()` fala com o SX1278 pelo SPI, e quem
     // configura o SPI é o begin() do RadioLib. Pular a inicialização para
     // "economizar tempo" deixaria o rádio em standby a 1,5 mA durante os
-    // 10 minutos de sono — 5,5x o orçamento do ciclo, para poupar ~100 ms.
+    // 12 minutos de sono — 6,3x o orçamento do ciclo, para poupar ~100 ms.
     // O que o prazo estourado corta é a TRANSMISSÃO, não o caminho que
     // leva ao estado seguro.
     Status radio = kcomms::lora_init();
