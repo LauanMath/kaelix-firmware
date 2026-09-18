@@ -295,8 +295,11 @@ termina aí: aquele é um desafio de detecção de som anômalo de máquina, com
 banda e classe de modelo distintas das deste projeto. A justificativa do pAUC não depende
 dessa aproximação, e Brito \emph{et al.} reforçam a mesma disciplina ao reportar PR-AUC
 além do F1~\cite{brito2022}. Isso ampara a decisão de reportar pAUC a FPR $\leq
-\SI{10}{\percent}$, e o resultado próprio mostra por que ela importa: a pAUC cai
-\SI{16,2}{\percent} onde a AUC global cai apenas \SI{3,7}{\percent}.
+\SI{10}{\percent}$, e um resultado próprio mostra por que ela importa: em \emph{sinal
+sintetizado}, comparando a cadeia de referência a \SI{20}{\kilo\hertz} com a do MPU6050,
+a pAUC cai \SI{16,2}{\percent} onde a AUC global cai apenas \SI{3,7}{\percent}. O número
+não é de dado medido, e não é comparável aos resultados sobre o MAFAULDA discutidos
+adiante.
 
 Sobre falso alarme, a evidência mais direta e mais desfavorável ao desenho do Kaelix é a
 de Chevtchenko \emph{et al.}: em nó IoT com ESP32 e IMU ISM330DLCTR amostrada a
@@ -326,15 +329,22 @@ sobre operação normal, e o valor próprio de cerca de \SI{42}{\percent} com
 compatibilidade \emph{não} é: Chevtchenko \emph{et al.} não declaram, no registro
 verificado, qual política de limiar usaram, de modo que a proximidade numérica entre
 \SI{38}{\percent} e \SI{42}{\percent} é compatibilidade de ordem de grandeza entre
-conjuntos, máquinas e limiares diferentes, e não um correlato empírico controlado.
+conjuntos, máquinas e limiares diferentes, e não um correlato empírico controlado. E há
+uma assimetria mais forte que essa: os três valores da literatura são medidos em máquinas
+reais, ao passo que os \SI{42}{\percent} próprios vêm de sinal sintetizado, com detecção
+de \SI{100}{\percent} e AUC unitária --- condições que nenhum conjunto real produz. A
+compatibilidade sustenta que \texttt{contamination='auto'} falha por construção, e não
+que o Kaelix reproduza, em máquina, o falso alarme dessas implementações.
 
 \begin{table}[!htb]
 \centering
 \caption{\textbf{Falso alarme de Isolation Forest em nó embarcado.} Fração da operação
 normal marcada como anomalia. O valor de Kolok \emph{et al.} é derivado neste documento
 a partir de acurácia, precisão e revocação publicadas; os demais são reportados pelas
-fontes. Os dois últimos são resultado próprio sobre o MAFAULDA, com validação
-\emph{GroupKFold} por ensaio.}
+fontes. Os dois últimos são resultado próprio, e têm procedências distintas: o valor com
+\texttt{contamination='auto'} vem de \emph{sinal sintetizado}, e o valor calibrado vem do
+MAFAULDA com validação \emph{GroupKFold} por ensaio. Apenas as três primeiras linhas e a
+última correspondem a medição sobre máquina.}
 \label{tab:fpr}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
@@ -354,7 +364,7 @@ Antonini \emph{et al.}~\cite{antonini2023}
   & ESP32-WROVER-IE + IMU a \SI{1125}{\hertz}
   & escore normalizado fixo em \num{0,75}
   & não reportado \\
-Kaelix (próprio)
+Kaelix (próprio, \emph{sinal sintetizado})
   & ESP32-S3 + MPU6050
   & \texttt{contamination} \texttt{='auto'}
   & $\approx\SI{42}{\percent}$ \\
@@ -423,9 +433,14 @@ energia.
 \subsubsection{De onde vêm os números próprios deste eixo}
 
 Antes de confrontá-los com a literatura, é preciso dizer o que os resultados de banda do
-Kaelix são e o que não são. Eles vêm de decimação controlada, em \emph{software}, dos
-sinais do MAFAULDA adquiridos a \SI{50}{\kilo\hertz}; \emph{nenhum} deles vem de medição no
-dispositivo. A distinção não é formalidade. O firmware ainda devolve
+Kaelix são e o que não são. Eles têm duas procedências distintas, e tratá-las como uma só
+seria cometer aqui o defeito que este eixo cobra da literatura. Os resultados de
+detecção vêm de decimação controlada, em \emph{software}, dos sinais do MAFAULDA
+adquiridos a \SI{50}{\kilo\hertz}. Já o par \num{413}$\times$/\num{20}$\times$ de contraste
+em BPFO não vem do MAFAULDA: vem de sinal \emph{sintetizado} a partir de modelo
+analítico --- trem de impulsos amortecidos modulando uma ressonância estrutural ---
+comparado entre a cadeia de referência a \SI{20}{\kilo\hertz} e a cadeia do MPU6050 a
+\SI{1}{\kilo\hertz}. \emph{Nenhum} dos dois vem de medição no dispositivo. A distinção não é formalidade. O firmware ainda devolve
 \texttt{Status::NotImplemented} na inicialização do acelerômetro, e o filtro passa-baixas
 interno do MPU6050 permanece como pendência declarada no código: sem antialiasing
 configurado abaixo de $f_s/2$, todo conteúdo acima de \SI{500}{\hertz} dobra para dentro
@@ -1032,7 +1047,8 @@ fração de anomalias adivinhada~\cite{siffer2017}. A decisão de reportar pAUC 
 baixa FPR, e não apenas AUC global, segue o benchmark de referência para o mesmo regime de
 treino~\cite{koizumi2020} e encontra eco em quem reporta PR-AUC~\cite{brito2022}; o
 resultado próprio de que a pAUC cai \SI{16,2}{\percent} onde a AUC cai \SI{3,7}{\percent}
-mostra por que a escolha importa.
+--- em sinal sintetizado, entre as duas cadeias de aquisição --- mostra por que a escolha
+importa.
 
 A viabilidade computacional está estabelecida: o Isolation Forest treina e executa dentro
 de um ESP32~\cite{antonini2023}, existe variante desenhada para reduzir seu custo em
