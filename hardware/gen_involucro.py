@@ -167,8 +167,17 @@ def corpo(vao, vao_alt, boss_d, recuo):
         p = p.fuse(cil(boss_d, vao_alt, x, y, FUNDO))
         p = p.cut(cil(BOSS_FURO, vao_alt + 1.0, x, y, FUNDO))
     # passagens na parede -X: USB-C e antena SMA
-    p = p.cut(cil(USB_D, PAREDE * 3, -cx, 0, FUNDO + vao_alt * 0.45, eixo=(1, 0, 0)))
-    p = p.cut(cil(SMA_D, PAREDE * 3, -cx, 0, FUNDO + vao_alt * 0.80, eixo=(1, 0, 0)))
+    #
+    # O cilindro começa FORA da parede (-cx/2 - PAREDE) e tem 3 paredes de
+    # comprimento, então atravessa a parede inteira com sobra dos dois lados.
+    # Até aqui ele começava em -cx — a largura externa inteira, não a metade —
+    # e ia de -69 a -58,5 mm num corpo que termina em -34,5: os dois furos
+    # nunca foram cortados, na v1 nem na v2. O defeito 11 do README ("furo
+    # USB-C sem conector") descrevia um furo que existia no desenho e não no
+    # modelo; só apareceu quando a v3 pôs um conector para passar por ele.
+    x0 = -cx / 2 - PAREDE
+    p = p.cut(cil(USB_D, PAREDE * 3, x0, 0, FUNDO + vao_alt * 0.45, eixo=(1, 0, 0)))
+    p = p.cut(cil(SMA_D, PAREDE * 3, x0, 0, FUNDO + vao_alt * 0.80, eixo=(1, 0, 0)))
     # face de baixo: rebaixo do spigot, furo do pino, passante corpo-base
     p = p.cut(cil(REB_SPIGOT_D, REB_SPIGOT_H, 0, 0, 0))
     p = p.cut(cil(PINO_D, PINO_H + REB_SPIGOT_H, PINO_ORI_R, 0, 0))
