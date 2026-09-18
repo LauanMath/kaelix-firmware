@@ -58,7 +58,7 @@
 \section{Escopo e critério}
 
 \begin{itemize}
-\item Cobre a cadeia esquemático $\rightarrow$ placa $\rightarrow$ sólido 3D $\rightarrow$ análise numérica, para duas versões (v1, v2) de placa e de invólucro.
+\item Cobre a cadeia esquemático $\rightarrow$ placa $\rightarrow$ sólido 3D $\rightarrow$ análise numérica, para três versões (v1, v2, v3) de placa e de invólucro. A v3 é a v2 acrescida do circuito de carga da bateria (Seção~\ref{sec:v3}); as análises modal, de PDN e de vibração cobrem v1 e v2.
 \item Nenhum resultado provém de bancada. Todos os valores são de geração, verificação geométrica ou simulação. O documento não reivindica validação experimental.
 \item A coluna \textbf{Medição} registra a grandeza que sustenta cada afirmação. Itens sem medição associada aparecem como \textsf{não verificado}.
 \item Correções a análises anteriores do projeto constam da Seção~\ref{sec:correcoes} com o valor antigo, o valor corrigido e a causa.
@@ -154,6 +154,9 @@ folga \SI{0.15}{\milli\meter}, traço \SI{0.15}{\milli\meter}.
 11 & Contorno circular de \SI{74}{\milli\meter} num vão de \SI{43}{\milli\meter}; o verificador comparava escalares & contorno contra vão do desenho & contorno retangular; módulos distribuídos um por face \\
 12 & Nenhuma pista roteada & 70 pads desconectados no DRC & roteador de labirinto de duas camadas \\
 13 & Corredor de cabo do conector de bateria não modelado & furo M2 a \SI{2.6}{\milli\meter} da boca do conector & corredor incluído como restrição de \emph{placement} \\
+22 & Pino passante de componente não contava como obstáculo na face oposta; só o furo de fixação contava & 3 \texttt{pth\_inside\_courtyard} no DRC da v3: pinos de carcaça do USB-C sob U5, R13 e C14 & regra estendida a pino com pad $\geq\SI{0.8}{\milli\meter}$; vias térmicas de \SI{0.6}{\milli\meter} do WROOM-1U continuam fora \\
+23 & O roteador contava como plano a faixa entre as fileiras de pads de um QFN de passo fino & grupo de terra solto no DRC da v3: escape do U2.1 terminado numa ilha sob o MPU6050 & plano não conta como caminho sob o corpo de peça de passo fino, na face dela; o roteamento de v1 e v2 mudou, com DRC limpo nas três \\
+24 & Furos de USB-C e SMA do invólucro nunca cortados no modelo: o cilindro começava em $-c_x$ em vez de $-c_x/2$ & interferência de \SI{0.07}{\milli\meter} entre a carcaça do USB-C da v3 e a parede & cilindro reposicionado; o corpo perde \SI{0.58}{\centi\meter\cubed} nas duas versões \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -179,7 +182,7 @@ folga \SI{0.15}{\milli\meter}, traço \SI{0.15}{\milli\meter}.
 \textbf{\#} & \textbf{Defeito} & \textbf{v1} & \textbf{v2} & \textbf{Decorrência} \\
 \midrule
 18 & Numeração de pino do HT7333 em SOT-89-3 varia por fabricante & \textsf{não verificado} & \textsf{não verificado} & conferir contra a folha de dados antes de fabricar \\
-19 & Furo USB-C Ø\SI{13.0}{\milli\meter} no invólucro sem conector correspondente & netlist: J2 é header UART de 6 vias & idem & --- \\
+19 & Furo USB-C Ø\SI{13.0}{\milli\meter} no invólucro sem conector correspondente, e nenhum caminho de carga da bateria & netlist: J2 é header UART de 6 vias; nenhum carregador & idem & fechado na placa v3 (Seção~\ref{sec:v3}) \\
 20 & Rabicho u.FL--SMA ausente da BOM & \arq{kaelix-bom.csv} & idem & a ligação do IPEX do Ra-02 ao painel não está especificada \\
 21 & Nenhum código lê a tensão da bateria & \texttt{src/} & idem & o caminho de hardware existe; os limiares de REQ-SEG-29 não estão implementados \\
 \bottomrule
@@ -196,8 +199,8 @@ folga \SI{0.15}{\milli\meter}, traço \SI{0.15}{\milli\meter}.
 Contorno / corpo & $42\times42$, 4 recortes $r=6{,}0$ & $61\times51$, 4 recortes $r=4{,}5$ & $50\times50\times62$ & $69\times59\times38$ \\
 Vão interno & --- & --- & $43\times43\times54$ & $62\times52\times30$ \\
 Área útil de cobre & \SI{1477}{\milli\meter\squared} & \SI{2962}{\milli\meter\squared} & --- & --- \\
-Segmentos (F.Cu / B.Cu) & 478 (327 / 151) & 500 (419 / 81) & --- & --- \\
-Vias de sinal / costura & 68 / 92 & 67 / 261 & --- & --- \\
+Segmentos (F.Cu / B.Cu) & 485 (327 / 159) & 501 (419 / 83) & --- & --- \\
+Vias de sinal / costura & 68 / 71 & 68 / 234 & --- & --- \\
 Triedro M2 & \SI{97}{\degree}, 89 ângulos legais & \SI{120}{\degree}, 171 ângulos legais & --- & --- \\
 Envelope montado & $42{,}00\times42{,}00\times13{,}42$ & $61{,}00\times51{,}00\times13{,}42$ & --- & --- \\
 Folga no vão & --- & --- & \SI{0.50}{\milli\meter} por lado & \SI{0.50}{\milli\meter} por lado \\
@@ -214,6 +217,58 @@ Na v1, a interferência da célula Adafruit 1578 (\SI{500}{\milli\ampere\hour}) 
 \subsection{Ausência de assento para a placa}
 
 Seccionando o corpo no plano em que a montagem posiciona a placa (\texttt{FUNDO} $+\ \SI{5.0}{\milli\meter}$), a seção contém a parede externa e os quatro bosses. Não há ressalto, nervura ou batente. A interferência de \SI{0.0}{\milli\meter\cubed} entre placa e corpo indica ausência de contato, não adequação. As condições de contorno das Seções~\ref{sec:modal} e~\ref{sec:vibra} são hipóteses sobre essa indefinição, e a dispersão entre elas quantifica seu efeito.
+
+\section{Placa v3: carga da bateria}
+\label{sec:v3}
+
+Até a v2 a placa não tinha como carregar a célula: nenhum carregador, nenhum conector de entrada. A v3 é a v2 com esse circuito acrescentado; contorno, módulos e invólucro são os da v2, exceto a altura do furo do USB-C, agora medida no conector (\SI{15.73}{\milli\meter} do fundo do corpo, contra \SI{21.50}{\milli\meter} arbitrados).
+
+\begin{figure}[H]\centering
+\begin{minipage}{0.30\textwidth}\centering
+\includegraphics[width=\linewidth]{../../hardware/pcb/v3/render_top.png}\\[1pt]
+{\footnotesize v3, face superior}
+\end{minipage}\hspace{1em}
+\begin{minipage}{0.30\textwidth}\centering
+\includegraphics[width=\linewidth]{../../hardware/pcb/v3/render_bottom.png}\\[1pt]
+{\footnotesize v3, face inferior}
+\end{minipage}
+\caption{Placa v3. USB-C na borda $-X$, alinhado ao furo do invólucro; carregador e passivos na face inferior, sob o conector.}
+\end{figure}
+
+\begin{table}[H]\footnotesize
+\begin{tabularx}{\textwidth}{@{}Y{0.7} Y{1.1} Y{1.2}@{}}
+\toprule
+\textbf{Peça} & \textbf{Função} & \textbf{Critério} \\
+\midrule
+U5 BQ21040 & carregador linear de uma célula, \SI{4.2}{\volt} & monitor de temperatura da célula pronto para NTC de \SI{10}{\kilo\ohm} \\
+RT2 NTC $\beta=3380$ & pino TS: suspende a carga acima de \SI{45}{\celsius} e abaixo de \SI{0}{\celsius} & limiares do CI calibrados para $\beta\approx3370$; o B3950 do RT1 cortaria perto de \SI{39}{\celsius} \\
+R13 \SI{2.7}{\kilo\ohm} & $I = K_\text{ISET}/R_\text{ISET} = \SI{200}{\milli\ampere}$ & escolhida pelo modelo térmico abaixo \\
+J3 USB-C, R11/R12 \SI{5.1}{\kilo\ohm} & entrada de \SI{5}{\volt} & $R_d$ em CC1 e CC2 habilita fonte C-para-C \\
+C13, C14, C15 & entrada, saída e filtro do TS & C15 é opcional na folha de dados; o RT2 fica a \SI{22}{\milli\meter} do U5 \\
+IO7 $\leftarrow$ CHG\_N & estado da carga para o firmware & GPIO de RTC; nenhum código o lê ainda \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Verificação: ERC com 0 violações; DRC com 0 violação de regra e 0 item solto; nenhuma interferência entre 116 corpos; placa contra corpo do invólucro v3 com \SI{0.0}{\milli\meter\cubed}, com o nariz do USB-C passando pelo furo. 637 segmentos (488 / 150), 108 vias de sinal e 220 de costura, triedro M2 a \SI{120}{\degree} com 181 ângulos legais. Modal, PDN e vibração não foram recalculados para a v3.
+
+O carregador é linear e dissipa $I\,(V_\text{USB}-V_\text{bat})$ dentro do invólucro fechado. \arq{hardware/termica\_carga.py} aplica essa potência ao modelo térmico da Seção~\ref{sec:termica}: a placa sobe cerca de \SI{15}{\kelvin} por watt. No pior ponto da corrente constante, a \SI{200}{\milli\ampere} e \SI{0.41}{\watt}:
+
+\begin{table}[H]\footnotesize
+\begin{tabularx}{\textwidth}{@{}Y{1.2} Y{0.9} Y{0.9}@{}}
+\toprule
+\textbf{Cenário} & \textbf{Placa} & \textbf{Folga até o corte do TS} \\
+\midrule
+fora do motor, ambiente \SI{30}{\celsius} & \SI{36.7}{\celsius} & \SI{8.3}{\kelvin} \\
+preso ao motor parado & \SI{36.6}{\celsius} & \SI{8.4}{\kelvin} \\
+preso ao motor a \SI{90}{\celsius} & \SIrange{41.1}{44.3}{\celsius} & \SIrange{0.7}{3.9}{\kelvin}, otimista \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+O intervalo do motor quente vai da média da parede ao equilíbrio radiativo da Seção~\ref{sec:termica}. A folga é otimista porque a troca da placa com o invólucro usa o coeficiente da face externa; no motor quente ela pode ser nula. Com \SI{500}{\milli\ampere} o TS cortaria nos três cenários. O procedimento recomendado é carregar fora do motor ou com ele parado.
+
+Pendências da v3: o NTC do TS lê a placa, não a célula, e o corte vem cedo, nunca tarde; célula invertida com USB ligado injeta a corrente de pré-carga na célula (falha dupla, conector polarizado); nenhum código lê o CHG\_N; não há supressor de transiente no VBUS, e o CI tolera \SI{30}{\volt} com desligamento acima de \SI{6.65}{\volt}.
 
 \section{Rede de alimentação (PDN)}
 
@@ -354,6 +409,7 @@ Sensibilidade da margem do pior caso, sem a correção do chassi (v1 / v2): $Q=1
 \end{figure}
 
 \section{Condução térmica do motor à placa}
+\label{sec:termica}
 
 Invólucro fechado (base, corpo e tampa) em ASA, $k=\SI{0.17}{\watt\per\meter\per\kelvin}$. Entrada pelos quatro bolsos de ímã presos a \SI{90}{\celsius}. Convecção natural e radiação linearizada para \SI{30}{\celsius} nas faces externas. Cavidade adiabática.
 
@@ -383,7 +439,7 @@ v2 & \SI{48.2}{\celsius} & \SI{31.7}{\celsius} & \SI{30.1}{\celsius} & \SI{35.1}
 \end{tabularx}
 \end{table}
 
-Margem para o limite de carga da célula de lítio-polímero (\SI{45}{\celsius}): \SI{6.5}{\kelvin} com a carcaça a \SI{90}{\celsius}. Transiente após degrau de 30 para \SI{90}{\celsius}: $\tau=\SI{23}{\minute}$ (v1) e \SI{24}{\minute} (v2); \SI{90}{\percent} do salto em 50 e \SI{53}{\minute}; \SI{99}{\percent} em 113 e \SI{120}{\minute}. A massa térmica interna (20 e \SI{50}{\joule\per\kelvin}) contribui com 4 e \SI{7}{\minute} próprios.
+Margem para o limite de carga da célula de lítio-polímero (\SI{45}{\celsius}): \SI{6.5}{\kelvin} com a carcaça a \SI{90}{\celsius}, sem carga em curso. Durante a carga a placa v3 acrescenta a dissipação do carregador, e a margem cai para \SIrange{0.7}{3.9}{\kelvin} (Seção~\ref{sec:v3}). Transiente após degrau de 30 para \SI{90}{\celsius}: $\tau=\SI{23}{\minute}$ (v1) e \SI{24}{\minute} (v2); \SI{90}{\percent} do salto em 50 e \SI{53}{\minute}; \SI{99}{\percent} em 113 e \SI{120}{\minute}. A massa térmica interna (20 e \SI{50}{\joule\per\kelvin}) contribui com 4 e \SI{7}{\minute} próprios.
 
 \begin{figure}[H]\centering
 \includegraphics[width=0.94\textwidth]{../../experiments/figures/output/fig11_termica3d.pdf}
@@ -430,6 +486,9 @@ Vibração & $c=2{,}25$ para módulos e QFN & classe sem terminal, a mais restri
 Térmica & face do bolso de ímã presa a \SI{90}{\celsius} & otimista: ímã real apresenta cola e resistência de contato \\
 Térmica & cavidade adiabática na condução & condução pelo ar excede \SI{1000}{\kelvin\per\watt} contra poucos \si{\kelvin\per\watt} da parede \\
 Térmica & equilíbrio da placa por média ponderada por fator de forma, $\epsilon\to1$ & ignora a mistura do ar; o valor real situa-se entre 35 e \SI{38.5}{\celsius} \\
+Térmica, carga & dissipação do carregador como fluxo uniforme nas faces da cavidade & a média da parede não muda; a distribuição real concentra-se perto do U5 \\
+Térmica, carga & troca da placa com o invólucro estimada com o coeficiente da face externa & otimista: a convecção interna é mais fraca, e a placa real fica mais quente \\
+Modal e térmica & corpo sem os furos de USB-C e SMA (defeito 24) & abertura de $\approx$\SI{1.7}{\percent} da parede; não recalculado \\
 PDN & impedância de saída do HT7333 estimada em \SI{0.2}{\ohm} até \SI{50}{\kilo\hertz} & ordem de grandeza; a folha de dados não publica curva de $Z_\text{out}$ \\
 PDN & modelo válido até $\approx\SI{50}{\mega\hertz}$ & acima disso responde o encapsulamento, ausente do modelo \\
 \bottomrule

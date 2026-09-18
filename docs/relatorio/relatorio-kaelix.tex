@@ -325,7 +325,9 @@ R_{\mathrm{cond}} = \sum_i \frac{L_i}{k_i A_i},
 com $T_c$ a temperatura da carcaça, $T_a$ a do ambiente, $A_e$ a área externa,
 $\varepsilon$ a emissividade e $\sigma$ a constante de Stefan-Boltzmann. O coeficiente de
 convecção natural para placa vertical foi tomado como $h = 1{,}42\,(\Delta T/L_c)^{1/4}$.
-A equação~\eqref{eq:termico} foi resolvida numericamente por iteração. A constante de
+A equação~\eqref{eq:termico} foi resolvida numericamente por iteração de ganho fixo, com
+500 passos; no ramo de base em ASA essa iteração não convergiu, e os valores corrigidos
+são os da subseção~\ref{ssec:termica}. A constante de
 tempo de resfriamento decorre de $\tau = C_{\mathrm{th}} R_{\mathrm{amb}}$, com
 $C_{\mathrm{th}} = \sum_i m_i c_{p,i}$.
 
@@ -611,7 +613,7 @@ fundamental dos painéis, todos acima da banda normativa. Os painéis \textbf{d}
 \label{fig:involucro}
 \end{figure}
 
-\subsection{A bateria, e não o invólucro, define a margem térmica}
+\subsection{A carga da bateria, e não o invólucro, define a margem térmica}
 \label{ssec:termica}
 
 A hipótese inicial atribuía ao ASA o papel de elo térmico mais fraco, pela proximidade
@@ -619,33 +621,50 @@ entre sua temperatura de transição vítrea e a temperatura de uma carcaça em 
 análise inverteu essa leitura.
 
 A resistência térmica do caminho condutivo em ASA (Figura~\ref{fig:termica}) é de \SI{88,8}{\kelvin\per\watt}, contra
-\SI{0,074}{\kelvin\per\watt} em alumínio, uma razão de \num{1206} vezes. Com a carcaça a
-\SI{80}{\celsius}, a temperatura interna estabiliza em \SI{44,8}{\celsius} com base em
-ASA, e alcançaria \SI{79,0}{\celsius} com base em alumínio. O autoaquecimento é
-irrelevante, pois a potência média de \SI{2,0}{\milli\watt} eleva a temperatura interna em
-\SI{0,01}{\celsius}. Todo o calor provém do exterior.
+\SI{0,074}{\kelvin\per\watt} em alumínio, uma razão de \num{1206} vezes. Com base em
+alumínio, a temperatura interna alcançaria \SI{79,0}{\celsius} com a carcaça a
+\SI{80}{\celsius}. Com base em ASA, o modelo concentrado desta seção indicava
+\SI{44,8}{\celsius}, valor que não convergiu: resolvido até a raiz, o mesmo balanço dá
+\SI{33,0}{\celsius}, e o modelo tridimensional do invólucro situa a placa entre
+\SI{35,1}{\celsius} e \SI{38,3}{\celsius} com a carcaça a \SI{90}{\celsius}. A correção e
+a sua causa constam do relatório de verificação de hardware. Os painéis \textbf{a} e
+\textbf{b} da Figura~\ref{fig:termica} ainda apresentam o valor não convergido.
+
+Em operação, o autoaquecimento é irrelevante: a potência média de \SI{2,0}{\milli\watt}
+eleva a temperatura interna em \SI{0,01}{\celsius}, e todo o calor provém do exterior.
+Durante a carga da bateria, não. O carregador linear da placa v3 dissipa cerca de
+\SI{0,4}{\watt} no pior ponto de uma carga a \SI{200}{\milli\ampere}, dentro do invólucro
+fechado, e o modelo tridimensional eleva a placa em cerca de \SI{15}{\kelvin} por watt.
 
 O componente que atinge primeiro seu limite é a bateria de polímero de lítio, pela
-restrição de carga em \SI{45}{\celsius}. Essa temperatura interna é alcançada com carcaça
-em torno de \SI{81}{\celsius}. Os demais limites ficam bem acima: circuitos integrados em
-\SI{85}{\celsius}, deformação térmica do ASA em \SI{98}{\celsius} e ímãs em
-\SI{150}{\celsius}.
+restrição de carga em \SI{45}{\celsius}, e somente durante a carga. Em operação, com a
+carcaça a \SI{90}{\celsius}, a placa permanece abaixo tanto desse limite quanto dos
+\SI{60}{\celsius} admitidos na descarga. Durante a carga, restam \SI{8,3}{\kelvin} com o
+dispositivo fora do motor e de \SI{0,7}{\kelvin} a \SI{3,9}{\kelvin} com o motor a
+\SI{90}{\celsius}, folga que o modelo superestima. Na placa v3, o limite é imposto pelo
+próprio carregador, que suspende a carga acima de \SI{45}{\celsius}. Os demais limites
+ficam bem acima: circuitos integrados em \SI{85}{\celsius}, deformação térmica do ASA em
+\SI{98}{\celsius} e ímãs em \SI{150}{\celsius}.
 
 Este resultado impõe uma restrição adicional ao anterior. A análise de vibração recomenda base
 metálica para elevar a frequência de montagem, e a análise térmica mostra que o metal
 conduziria calor para o interior. Uma quebra térmica de \SI{2}{\milli\meter} entre a base
 metálica e o corpo preserva o ganho de rigidez e mantém a temperatura interna em
-\SI{47}{\celsius}. Meio milímetro de espaçador já recupera a maior parte do isolamento,
+\SI{47}{\celsius}, valor do mesmo modelo concentrado e não reverificado após a correção de
+convergência. Meio milímetro de espaçador já recupera a maior parte do isolamento,
 pois a resistência em série é dominada pelo elo de menor condutividade.
 
 
 \begin{figure}[!htb]
 \centering
 \figuralarga{fig4_termica.png}
-\caption{\textbf{O ASA protege a eletrônica, e a bateria é o elo térmico mais fraco.}
+\caption{\textbf{O ASA isola a eletrônica da carcaça.}
 \textbf{a}, Temperatura interna em regime permanente em função da temperatura da carcaça,
 para três configurações de base. \textbf{b}, Limite térmico de cada componente comparado à
 temperatura interna com carcaça a \SI{80}{\celsius}; a cor indica a margem disponível.
+Os painéis \textbf{a} e \textbf{b} usam o modelo concentrado sem convergência, que indica
+\SI{44,8}{\celsius} a \SI{80}{\celsius} de carcaça; o valor convergido é
+\SI{33,0}{\celsius} (ver texto).
 \textbf{c}, As duas análises impõem requisitos opostos à base, e nenhuma das três
 configurações alcança simultaneamente a região desejável. \textbf{d}, Temperatura interna
 com base metálica em função da espessura do espaçador isolante.}
@@ -730,7 +749,9 @@ A análise mecânica emprega fórmulas fechadas com condições de contorno idea
 rigidez real depende de pré-carga dos parafusos, planicidade das faces impressas e
 orientação das camadas. A análise térmica assume regime permanente e não modela
 resistência de contato, convecção forçada pelo ventilador do motor nem radiação recebida
-de superfícies próximas.
+de superfícies próximas. O cenário de carga da bateria é modelado, não medido, e a folga
+que ele indica com o motor quente é otimista, porque a troca interna da placa com o
+invólucro foi estimada com o coeficiente da face externa.
 
 A revisão de literatura não passou por auditoria independente das citações. Duas das
 referências de maior peso apresentaram problemas quando verificadas em fonte primária, o

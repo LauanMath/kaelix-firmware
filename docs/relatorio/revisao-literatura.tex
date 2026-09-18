@@ -1227,7 +1227,12 @@ revisão térmica disponível estabelece o mecanismo mas não o limite de
 carga~\cite{ma2018}. O limite de \SI{45}{\celsius} vem da folha de dados da célula e das
 normas de segurança aplicáveis, não da literatura de manutenção preditiva. O que falta
 publicado é o orçamento térmico completo: carcaça quente, invólucro fechado, célula
-carregando. É ele que decide se a escolha de bateria do projeto sobrevive.
+carregando. É ele que decide se a escolha de bateria do projeto sobrevive. Para a placa v3,
+que acrescenta o carregador, o projeto calculou esse orçamento por modelo, e não por
+medição: com carga a \SI{200}{\milli\ampere}, a placa fica \SI{8,3}{\kelvin} abaixo do
+corte de \SI{45}{\celsius} fora do motor e de \SI{0,7}{\kelvin} a \SI{3,9}{\kelvin} abaixo
+dele com a carcaça a \SI{90}{\celsius}, folga que o modelo superestima. O número responde à
+pergunta de projeto; a lacuna da literatura, que é de orçamento medido, permanece.
 
 \paragraph{Lacuna 9 --- separar efeito de banda de efeito de montagem.} Não se localizou
 benchmark aberto com sinais gravados \emph{simultaneamente} por MEMS de banda limitada e

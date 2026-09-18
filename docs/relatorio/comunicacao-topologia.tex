@@ -100,10 +100,12 @@ desbalanceamento e desalinhamento, em múltiplos da rotação, estão dentro del
 \subsection{Fonte de energia}
 
 O Kaelix adota bateria recarregável com recarga por USB-C, e nenhum sistema revisado faz
-isso: célula primária LiSOCl$_2$ de até cinco anos no Ranger Pro~\cite{bentlynevada2025},
-CR2477 para cerca de \num{65000} medições no Phantom~\cite{erbessd2025}, lítio não
-substituível no Smart Trac~\cite{tractian2022}. A escolha diverge da prática dos sistemas
-revisados. A temperatura ambiente admissível do Ranger Pro é fixada \emph{pela célula}, não
+isso. O circuito de carga existe a partir da placa v3, com carregador linear que suspende
+a carga fora da faixa de \SIrange{0}{45}{\celsius}; até a v2 a placa não tinha como
+carregar a célula. Os sistemas revisados usam célula primária: LiSOCl$_2$ de até cinco
+anos no Ranger Pro~\cite{bentlynevada2025}, CR2477 para cerca de \num{65000} medições no
+Phantom~\cite{erbessd2025}, lítio não substituível no Smart Trac~\cite{tractian2022}. A
+temperatura ambiente admissível do Ranger Pro é fixada \emph{pela célula}, não
 pelo invólucro --- o mesmo tipo de limite identificado na análise térmica do
 Kaelix~\cite{bentlynevada2025}.
 
