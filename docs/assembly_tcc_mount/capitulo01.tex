@@ -1,25 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Capítulo 1 --- Introdução
 %%
-%% Estrutura conforme o modelo de TCC da Escola Politécnica / UFRJ
-%% (capitulo01.tex: Introdução, Objetivo, Metodologia, Estrutura do Trabalho).
-%%
-%% Classe esperada: \documentclass[tcc,alf]{tcc-poli}
-%% Citações: abntex2cite (sistema alfabético). \cite{} → (AUTOR, ano);
+%% Citações: abntex2cite (sistema autor-data). \cite{} → (AUTOR, ano);
 %%           \citeonline{} → Autor (ano).
-%% Pacotes usados neste arquivo: siunitx, hyperref (ambos já no principal.tex).
-%%
-%% DEPENDÊNCIA: as chaves citadas aqui precisam existir em referencias.bib.
-%% Elas vêm das bibliografias de docs/relatorio/revisao-literatura.tex e
-%% docs/relatorio/relatorio-kaelix.tex, hoje em \thebibliography embutido.
 %%
 %% MARCAÇÃO DE TRECHO EM ANDAMENTO --------------------------------------------
 %% \emandamento{...} destaca em vermelho os trechos cuja validade muda quando o
 %% protótipo for construído e ensaiado em ambiente real. É marcação de rascunho.
-%%
-%% Para ver o vermelho, acrescente ao principal.tex, junto dos demais pacotes:
-%%     \usepackage{xcolor}
-%% Sem esse pacote o texto compila normalmente, apenas sem cor.
 %%
 %% Para REMOVER todas as marcas na versão final, troque a definição abaixo por:
 %%     \newcommand{\emandamento}[1]{#1}
@@ -94,8 +81,8 @@ denominam o fenômeno \emph{similarity bias} e relatam que, de \num{41} estudos 
 sobre uma base de referência consolidada, \num{40} adotaram delineamento suscetível a ele.
 
 Este trabalho ocupa essa lacuna com uma tese delimitada. Uma cadeia de medição de baixo
-custo, com banda e piso de ruído declarados, sustenta a detecção de desbalanceamento e de
-desvios de condição de operação sob taxa de falso alarme fixada, mas não sustenta
+custo, com banda e piso de ruído declarados, sustenta a detecção de desbalanceamento sob taxa de falso
+alarme fixada, mas não sustenta
 diagnóstico de defeito de rolamento; e a contribuição verificável de um dispositivo dessa
 classe está no segundo elo da cadeia --- limiar calibrado por risco alvo, métrica avaliada
 no ponto de operação e protocolo de validação sem vazamento entre ensaios ---, contribuição
@@ -105,11 +92,14 @@ ESP32-S3, enlace LoRa e invólucro em ASA impresso por deposição, com detecç�
 embarcada e rotulagem de severidade pela norma.
 
 A validade dessa tese depende de que se declare a procedência de cada resultado, e ela não
-é uniforme. Os resultados de detecção provêm de dado real medido: sinais de uma bancada
-instrumentada, adquiridos a \SI{50}{\kilo\hertz}, submetidos a decimação controlada em
-\emph{software} para emular a banda do dispositivo. O que é modelado, portanto, não é o
-sinal, é a aquisição. Os resultados de análise mecânica e térmica provêm de modelagem
-computacional sobre as especificações de projeto, tomadas como dadas. \emandamento{E a cadeia física do próprio
+é uniforme. Os resultados de detecção por modo de falha provêm de dado real: sinais de uma
+bancada instrumentada, adquiridos a \SI{50}{\kilo\hertz} e submetidos a decimação
+controlada em \emph{software} para emular a banda do dispositivo. O que é modelado, nesse
+caso, não é o sinal, é a aquisição. Os resultados sobre banda, integração, limiar, métrica e
+protocolo de validação provêm de sinal sintetizado, cuja resposta correta é conhecida, e
+sustentam relações entre métodos, não desempenho em máquina. Os resultados de análise
+mecânica e térmica provêm de modelagem computacional sobre as especificações de projeto,
+tomadas como dadas. \emandamento{E a cadeia física do próprio
 dispositivo não foi verificada: nenhum ensaio físico foi conduzido e nenhuma medição de
 campo alimenta os modelos, uma vez que a construção do protótipo e seu ensaio em ambiente
 real constituem a etapa seguinte deste trabalho.} Essa distinção restringe uma afirmação
@@ -121,22 +111,22 @@ longo do texto, e cada resultado indicará de qual das três origens provém.
 \section{Objetivo}
 \label{sec:objetivo}
 
-\subsection{Objetivo Geral}
+\subsection{Objetivo geral}
 \label{ssec:objetivo-geral}
 
 Determinar o que a cadeia de medição de vibração especificada para o Kaelix permite medir,
 e calibrar o estágio de decisão do detector embarcado de modo que o desempenho reportado
 seja verificável no ponto de operação pretendido.
 
-\subsection{Objetivo Específico}
+\subsection{Objetivos específicos}
 \label{ssec:objetivo-especifico}
 
 Dentro desse objetivo geral, encontram-se como metas específicas:
 
 \begin{itemize}
     \item Quantificar a perda de contraste do indicador de defeito de rolamento entre a
-          cadeia de referência e a cadeia truncada do dispositivo, e delimitar o que esse
-          contraste atribui à banda e o que atribui ao método de demodulação;
+          cadeia de referência e a cadeia truncada do dispositivo, e verificar se o
+          delineamento permite atribuir essa perda à banda ou ao método de demodulação;
 
     \item Determinar o método de integração de aceleração para velocidade compatível com a
           norma, e quantificar o erro dos métodos alternativos contra um sinal cuja
@@ -169,9 +159,11 @@ consegue se esconder atrás de um resultado plausível.
 O trabalho se desenvolve em quatro etapas. A primeira é a revisão da literatura,
 organizada por eixos correspondentes aos elos da cadeia descrita, com verificação de cada
 referência em fonte primária e registro explícito das lacunas encontradas, incluindo
-aquelas que a própria verificação derrubou. A segunda é a caracterização da aquisição: um
-conjunto de sinais de bancada adquiridos em alta taxa é decimado de forma controlada para
-emular a banda do dispositivo, e os descritores extraídos são comparados entre as cadeias.
+aquelas que a própria verificação derrubou. A segunda é a caracterização da aquisição: um sinal
+sintetizado com resposta conhecida é submetido à cadeia de referência e à cadeia truncada, e
+os descritores extraídos são comparados entre elas; em paralelo, sinais de bancada
+adquiridos em alta taxa são decimados de forma controlada para emular a banda do
+dispositivo e medir a detecção por modo de falha.
 A terceira é a calibração do estágio de decisão, na qual a política de limiar é avaliada
 por varredura, o desempenho é reportado no ponto de operação de baixa taxa de falso alarme
 e o protocolo de validação é submetido à divisão por ensaio. A quarta é a verificação de
@@ -179,9 +171,11 @@ implantação, por modelagem mecânica e térmica do conjunto montado a partir d
 especificações de projeto.
 
 Duas decisões metodológicas atravessam as quatro etapas. A primeira é a rastreabilidade:
-cada resultado é acompanhado da indicação de sua origem --- medição em dado real,
-decimação controlada ou modelagem sobre especificação --- e os artefatos que o produzem,
-dados intermediários e código de geração, são mantidos versionados e regeneráveis. A
+cada resultado é acompanhado da indicação de sua origem --- sinal sintetizado, dado real
+decimado ou modelagem sobre especificação --- e os artefatos que o produzem, dados
+intermediários e código de geração, são mantidos versionados e regeneráveis. A exceção são
+os resultados de treino sobre dado real, que não têm artefato versionado próprio e exigem
+nova execução do treino para serem reproduzidos (Seção~\ref{sec:dev-sinal}). A
 segunda é o registro do que não foi verificado. As questões levantadas que dependem de
 ensaio físico ou de consulta regulatória são enunciadas, mantidas abertas e associadas à
 afirmação cujo alcance elas restringem, em vez de omitidas. Esse registro é parte do
@@ -190,15 +184,19 @@ método, e não uma ressalva sobre ele.
 \section{Estrutura do Trabalho}
 \label{sec:estrutura}
 
-Este trabalho está organizado em cinco capítulos. O Capítulo~\ref{cap:introducao}
+Este trabalho está organizado em seis capítulos. O Capítulo~\ref{cap:introducao}
 apresentou o contexto, a lacuna identificada, a tese defendida e a procedência dos
-resultados que a sustentam. O Capítulo~2 revisa a literatura por eixos, seguindo a ordem
+resultados que a sustentam. O Capítulo~\ref{cap:fundamentacao} apresenta os conceitos
+em que o trabalho se apoia: vibração de máquinas rotativas e suas assinaturas de falha,
+aquisição e processamento de sinais, avaliação normativa de severidade, detecção de
+anomalias e sua avaliação, e as restrições de um dispositivo embarcado. O
+Capítulo~\ref{cap:revisao} revisa a literatura por eixos, seguindo a ordem
 de precedência da cadeia de medição, e consolida o que a literatura sustenta, o que ela
-contesta e quais lacunas permanecem abertas. O Capítulo~3 descreve o desenvolvimento do
+contesta e quais lacunas permanecem abertas. O Capítulo~\ref{cap:desenvolvimento} descreve o desenvolvimento do
 dispositivo: a cadeia de aquisição, o detector embarcado, o projeto de hardware e a
-arquitetura de comunicação e recepção. O Capítulo~4 apresenta os resultados e os confronta
+arquitetura de comunicação e recepção. O Capítulo~\ref{cap:resultados} apresenta os resultados e os confronta
 com a literatura revisada, organizado pela ordem de precedência da cadeia: primeiro o que
 a aquisição permite medir, depois o que a estimação decide com a informação disponível e,
-por fim, o que a implantação impõe como limite de operação. O Capítulo~5
+por fim, o que a implantação impõe como limite de operação. O Capítulo~\ref{cap:conclusoes}
 reúne as conclusões, delimita seu alcance e enuncia o trabalho futuro decorrente das
 questões mantidas em aberto.

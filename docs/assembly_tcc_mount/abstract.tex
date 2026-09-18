@@ -16,18 +16,19 @@ intended operating point. The method builds reference conditions whose correct r
 follows from an analytical solution or from a normative definition, submits them to the
 proposed chain and measures the deviation. Results have three provenances, declared
 individually: synthesised signal, real test-rig data decimated in software, and modelling
-over design specifications. On real data, at a 2\% false alarm rate, detection reaches
+over design specifications. On real data, at a measured 2\% false alarm rate, detection reaches
 75.0\% $\pm$ 3.5\% for imbalance, between 14.8\% and 20.7\% for pure bearing faults and
-between 5.0\% and 7.2\% for misalignment. On synthesised signals, three estimation
-decisions alter the results by larger margins than the physical effect under
+between 5.0\% and 7.2\% for misalignment. On synthesised signals, three of the estimation
+decisions examined alter the results by larger margins than the physical effect under
 investigation: time-domain integration misses the normative indicator by 73\% without bias
 and by 716\% under a bias within the sensor specification, whereas frequency-domain
 integration recovers it exactly; the detector's default thresholding policy flags 42.1\% of
 normal operation as anomalous, against 1.4\% under a calibrated threshold; and random
 window partitioning inflates accuracy by roughly 36 percentage points relative to
 partitioning by test run. From modelling, the assembly mounting frequency falls at 557~Hz,
-inside the measurement band, and the thermal operating limit is imposed by the battery
-rather than by the enclosure. We conclude that the chain supports imbalance detection under
+inside the measurement band, and the enclosure keeps the electronics below every limit
+during operation; the binding thermal limit is the battery's charging limit, and only while
+charging. We conclude that the chain supports imbalance detection under
 a fixed false alarm rate and does not support bearing fault diagnosis, and that the
 verifiable contribution of a device of this class lies in the decision stage, provided the
 acquisition stage is declared. The conclusions hold for the specified chain, not for the

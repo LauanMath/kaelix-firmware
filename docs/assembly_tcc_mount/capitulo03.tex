@@ -112,20 +112,34 @@ registrados no cabeçalho do gerador.}
 \label{fig:circuito}
 \end{figure}
 
-Os descritores extraídos por janela são o valor eficaz, a curtose, o fator de crista, o
-pico e o pico a pico. A escolha desse conjunto é deliberada e tem consequência analisada no
-Capítulo~\ref{cap:resultados}: todos descrevem energia e impulsividade, e nenhum captura
-estrutura harmônica ou de fase.
+Na comparação entre cadeias, os descritores extraídos por janela são o valor eficaz, a
+curtose, o fator de crista, o pico e o pico a pico. O detector embarcado usa um conjunto
+menor, idêntico no treino e no firmware: valor eficaz, curtose, fator de crista e frequência
+dominante. A escolha tem consequência analisada no Capítulo~\ref{cap:resultados}: os
+descritores descrevem energia, impulsividade e a linha espectral mais intensa, e nenhum
+captura a relação entre harmônicas ou a fase.
 
 \subsection{Dado real decimado}
 
-Para as taxas de detecção por modo de falha, o sinal não é sintetizado. Utilizaram-se
-gravações de bancada instrumentada adquiridas em alta taxa, decimadas em \emph{software}
-para emular a banda do dispositivo. A bancada de origem está abaixo do escopo de potência e
-altura de eixo da norma, o que a torna adequada como fonte de sinal para estudar a cadeia de
-medição e inadequada como caso de aplicação normativa.
+Para as taxas de detecção por modo de falha, o sinal não é sintetizado. Utilizaram-se as
+gravações do conjunto público MAFAULDA, obtidas em bancada instrumentada a
+\SI{50}{\kilo\hertz} e decimadas em \emph{software} para \SI{1}{\kilo\hertz}, a banda do
+dispositivo. %% TODO: citar o MAFAULDA; a chave ainda não existe em referencias.bib.
+O conjunto soma \num{1951} arquivos em seis classes --- operação normal, desbalanceamento,
+desalinhamento horizontal e vertical e defeito de rolamento nas posições \emph{overhang} e
+\emph{underhang} ---, segmentados em \num{17559} janelas de \num{512} amostras. Apenas
+\num{49} arquivos são de operação normal, e é deles que sai todo o treino, já que o detector
+aprende somente a operação normal. A bancada está abaixo do escopo de potência e altura de
+eixo da norma, o que a torna adequada como fonte de sinal para estudar a cadeia de medição e
+inadequada como caso de aplicação normativa.
 
-A validação emprega partição por ensaio, e não por janela. A justificativa é o próprio
+O limiar do detector é calibrado pelo quantil do escore sobre operação normal, com falso
+alarme alvo de \SI{1}{\percent}. \emandamento{Os resultados desse treino não têm artefato
+versionado próprio --- arquivo de resultados ou registro de execução ---: estão registrados
+no histórico de alterações do repositório, e reproduzi-los exige executar o treino de novo.}
+
+A validação emprega partição por ensaio, e não por janela, em cinco partições com os
+arquivos de origem como grupos. A justificativa é o próprio
 resultado de vazamento apresentado na Seção~\ref{sec:res-estimacao}: janelas do mesmo
 ensaio compartilham a assinatura da montagem, e dividi-las aleatoriamente mede a
 capacidade de identificar o ensaio, não a falha. Nos ensaios de rolamento, os resultados
@@ -139,7 +153,8 @@ A norma define as zonas de severidade em velocidade eficaz de banda larga, e o a
 entrega aceleração \cite{iso208163_2022}. A conversão foi testada contra uma senoide cuja
 integral é conhecida analiticamente, comparando cinco variantes: integração no tempo com e
 sem filtro passa-alta, integração no domínio da frequência restrita à máscara normativa, e
-as duas primeiras sob viés contínuo contido na especificação do sensor. O método correto
+esta última e a integração no tempo sem filtro repetidas sob viés contínuo contido na
+especificação do sensor. O método correto
 está estabelecido na literatura \cite{brandt2014}; o que se mede aqui é o erro das
 alternativas sobre um valor de referência exato.
 

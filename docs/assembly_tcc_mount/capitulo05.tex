@@ -5,10 +5,6 @@
 %% A afirmação central, a ordem de precedência da cadeia e a declaração de
 %% procedência em três níveis são as mesmas do Capítulo 1, com a mesma força.
 %%
-%% Classe esperada: \documentclass[tcc,alf]{tcc-poli}
-%% Citações: abntex2cite (sistema alfabético).
-%% Pacotes usados: siunitx, hyperref (ambos já no principal.tex).
-%%
 %% MARCAÇÃO DE TRECHO EM ANDAMENTO --------------------------------------------
 %% \emandamento{...} destaca em vermelho os trechos cuja validade muda quando o
 %% protótipo for construído e ensaiado em ambiente real. Ver nota no capitulo01.
@@ -27,8 +23,7 @@
 
 Este trabalho perguntou o que a cadeia de medição especificada para o Kaelix permite
 medir, e não se um dispositivo de baixo custo pode ser construído. A resposta é que a
-cadeia sustenta a detecção de desbalanceamento e de desvios de condição de operação sob
-taxa de falso alarme fixada, e não sustenta diagnóstico de defeito de rolamento. O limite
+cadeia sustenta a detecção de desbalanceamento sob taxa de falso alarme fixada, e não sustenta diagnóstico de defeito de rolamento. O limite
 não decorre de escolha de processamento e não é removível por ajuste de \emph{software}:
 ele está na aquisição, e a ordem de precedência entre os elos da cadeia determina que
 nenhuma decisão posterior recupere a informação que o sensor não coletou.
@@ -37,9 +32,7 @@ A contribuição verificável deste trabalho está no segundo elo. As decisões 
 métrica e de protocolo de validação alteraram os resultados por margens maiores que o
 efeito físico sob investigação, e é sobre elas que os experimentos produziram números
 novos. Essa contribuição depende de que o primeiro elo esteja declarado: um desempenho de
-detecção reportado sem a banda e o piso de ruído que o produziram não é verificável, e a
-prática de omiti-los é o que a revisão encontrou de mais frágil na literatura de vibração
-embarcada.
+detecção reportado sem a banda e o piso de ruído que o produziram não é verificável.
 
 \section{O que a aquisição permite medir}
 \label{sec:conc-aquisicao}
@@ -51,13 +44,13 @@ estrutural de \SI{3,5}{\kilo\hertz} que carrega a informação diagnóstica não
 separação é o resultado central do primeiro elo: a taxa de repetição do defeito estar
 dentro da banda não significa que a evidência do defeito esteja.
 
-Sobre o sinal simulado, o contraste entre as condições com e sem defeito foi de
+Sobre o sinal sintetizado, o contraste entre as condições com e sem defeito foi de
 \num{413} vezes por análise de envelope na banda de ressonância, amostrada a
 \SI{20}{\kilo\hertz}, contra \num{20} vezes por espectro direto a \SI{1}{\kilo\hertz}.
 Cabe a qualificação que a revisão já impõe a esse par: entre as duas medidas mudam duas
 variáveis, a banda e o método de demodulação, e dois pontos não constituem uma função da
 banda. O par sustenta a afirmação de que a cadeia truncada perde contraste; não sustenta a
-atribuição quantitativa desse ganho à banda isoladamente. Separá-los exige varredura com
+atribuição quantitativa dessa perda à banda isoladamente. Separá-los exige varredura com
 método fixo, e é trabalho futuro (Seção~\ref{sec:conc-futuro}).
 
 Um segundo efeito é de natureza distinta e merece registro por ser, ele próprio, um
@@ -82,8 +75,8 @@ de \SI{1300}{\hertz}.
 \section{O que a estimação decide}
 \label{sec:conc-estimacao}
 
-Três decisões do segundo elo alteraram os resultados por margens maiores que o efeito
-medido.
+Quatro decisões do segundo elo alteraram os resultados por margens maiores que o efeito
+medido. Todos os valores desta seção provêm de sinal sintetizado.
 
 A primeira é o método de integração. A norma define as zonas de severidade em velocidade
 eficaz, e o acelerômetro entrega aceleração. Contra um sinal cuja integral é conhecida
@@ -93,7 +86,7 @@ frequência, restrita à máscara normativa, recuperou o valor exato. O filtro p
 corrige a integração no tempo e chega a piorá-la. Sob viés de
 \SI{0,02}{\meter\per\second\squared}, valor contido na especificação do sensor, a
 integração no tempo produziu \SI{55,08}{\milli\meter\per\second} onde o correto é
-\num{6,75}: um sinal da zona A da norma seria classificado além da zona D. A integração na
+\num{6,75}: o sinal seria classificado na zona D qualquer que fosse a máquina. A integração na
 frequência permanece exata sob o mesmo viés, porque o termo contínuo cai fora da máscara
 imposta pela própria norma.
 
@@ -109,10 +102,10 @@ A terceira é a métrica. Sobre defeito incipiente, com descritores e modelo id�
 área sob a curva completa caiu \SI{3,7}{\percent} entre a cadeia de referência e a do
 dispositivo, enquanto a área parcial restrita à região de falso alarme baixo caiu
 \SI{16,2}{\percent} a \SI{10}{\percent} de falso alarme e \SI{20,3}{\percent} a
-\SI{5}{\percent}. A perda na região em que um dispositivo de campo precisa operar é quatro
-a cinco vezes maior do que a área global indica.
+\SI{5}{\percent}. A perda na região em que um dispositivo de campo precisa operar é de
+\num{4,4} a \num{5,5} vezes a que a área global indica.
 
-A essas três soma-se o protocolo de validação. Janelas consecutivas de um mesmo ensaio
+A quarta é o protocolo de validação. Janelas consecutivas de um mesmo ensaio
 compartilham a assinatura da montagem, e sua divisão aleatória entre treino e teste permite
 que o modelo identifique o ensaio em vez da falha. O mesmo modelo, sobre os mesmos dados e
 os mesmos descritores, atingiu \SI{99,0}{\percent} de acurácia sob divisão aleatória por
@@ -126,15 +119,20 @@ incorreto suprime.
 
 A hipótese inicial atribuía ao material do invólucro o papel de elo térmico mais frágil. A
 análise inverteu essa leitura. A resistência térmica do caminho condutivo em ASA é de
-\SI{88,8}{\kelvin\per\watt}, contra \SI{0,074}{\kelvin\per\watt} em alumínio, e com a
-carcaça a \SI{80}{\celsius} a temperatura interna estabiliza em \SI{44,8}{\celsius}. O
-autoaquecimento é irrelevante: a potência média de \SI{2,0}{\milli\watt} eleva a
-temperatura interna em \SI{0,01}{\celsius}, de modo que todo o calor provém do exterior.
+\SI{88,8}{\kelvin\per\watt}, contra \SI{0,074}{\kelvin\per\watt} em alumínio. Em operação,
+o invólucro mantém a eletrônica abaixo de todos os limites até \SI{90}{\celsius} de
+carcaça: o modelo tridimensional situa a placa entre \SI{35,1}{\celsius} e
+\SI{38,3}{\celsius}, e o autoaquecimento é irrelevante, pois a potência média de
+\SI{2,0}{\milli\watt} eleva a temperatura interna em \SI{0,01}{\celsius}.
 
-O componente que atinge primeiro seu limite é a bateria, pela restrição de carga em
-\SI{45}{\celsius}, temperatura interna alcançada com carcaça em torno de
-\SI{81}{\celsius}. O limite de operação do dispositivo é imposto pela célula, e não pelo
-invólucro. A consequência de projeto é que substituir o material do invólucro por alumínio,
+\emandamento{O limite que restringe é o de carga da célula, \SI{45}{\celsius}, e somente
+durante a carga. Com o carregador linear da placa v3 a \SI{200}{\milli\ampere}, sobram
+\SI{8,3}{\kelvin} com o dispositivo fora do motor; com o motor a \SI{90}{\celsius}, a
+folga, de no máximo \SI{3,9}{\kelvin} no modelo, pode ser nula. O próprio carregador
+suspende a carga acima de \SI{45}{\celsius}, e o procedimento recomendado é carregar o
+dispositivo fora do motor ou com o motor parado.}
+
+A consequência de projeto é que substituir o material do invólucro por alumínio,
 que resolveria a limitação mecânica da Seção~\ref{sec:conc-aquisicao}, agravaria a
 limitação térmica, porque elevaria a temperatura interna a \SI{79,0}{\celsius} sob a mesma
 carcaça. Os dois elos impõem requisitos opostos sobre a mesma peça.
@@ -147,24 +145,29 @@ uniforme, e enunciá-las sem essa distinção seria atribuir a todas a força da
 
 Os resultados de detecção em modos de falha provêm de dado real medido em bancada
 instrumentada, submetido a decimação controlada em \emph{software} para emular a banda do
-dispositivo: a \SI{2}{\percent} de falso alarme, \SI{75,0}{\percent} de detecção em
-desbalanceamento, entre \num{15} e \SI{21}{\percent} em defeito de rolamento puro e entre
-\num{5} e \SI{7}{\percent} em desalinhamento. O que é modelado nesses resultados é a
-aquisição, não o sinal.
+dispositivo: a $\num{2,0} \pm \num{1,3}\,\si{\percent}$ de falso alarme medido,
+$\num{75,0} \pm \num{3,5}\,\si{\percent}$ de detecção em desbalanceamento,
+\SI{14,8}{\percent} e \SI{20,7}{\percent} em defeito de rolamento puro, sem dispersão
+registrada, e $\num{5,0} \pm \num{3,1}\,\si{\percent}$ e
+$\num{7,2} \pm \num{4,3}\,\si{\percent}$ em desalinhamento horizontal e vertical. O que é
+modelado nesses resultados é a aquisição, não o sinal. O treino dispõe de apenas \num{49}
+arquivos de operação normal, o que limita a precisão com que o limiar é estimado.
 
-Os resultados de banda, de integração, de limiar e de protocolo provêm de sinais
+Os resultados de banda, de integração, de limiar, de métrica e de protocolo provêm de sinais
 sintetizados a partir de um modelo de dois mecanismos, e valem para a cadeia de
 processamento, não para o desempenho em campo. Seus valores absolutos dependem dos
 parâmetros de simulação --- amplitude do defeito, frequência de ressonância e nível de
 ruído --- e devem ser lidos como ordens de grandeza. As relações entre métodos, que são o
 objeto deste trabalho, não dependem desses parâmetros.
 
-Os resultados mecânicos e térmicos provêm de modelagem analítica sobre as especificações
-de projeto, tomadas como dadas. A análise mecânica emprega fórmulas fechadas com condições
-de contorno idealizadas, e a rigidez real depende de pré-carga de parafusos, planicidade
-das faces impressas e orientação das camadas. A análise térmica assume regime permanente e
-não modela resistência de contato, convecção forçada pelo ventilador do motor nem radiação
-de superfícies próximas.
+Os resultados mecânicos e térmicos provêm de modelagem analítica e por elementos finitos
+sobre as especificações de projeto, tomadas como dadas. A análise mecânica emprega
+fórmulas fechadas com condições de contorno idealizadas, e a rigidez real depende de
+pré-carga de parafusos, planicidade das faces impressas e orientação das camadas. A análise
+térmica não modela resistência de contato, convecção forçada pelo ventilador do motor nem
+radiação de superfícies próximas, e aplica à troca entre a placa e a cavidade o coeficiente
+de convecção da face externa, o que torna otimista a folga calculada para a carga com o
+motor quente.
 
 \emandamento{A cadeia física do próprio dispositivo não foi verificada. Nenhum ensaio
 físico foi conduzido e nenhuma medição de campo alimenta os modelos; a inicialização do
@@ -178,7 +181,7 @@ sinal para estudar a cadeia de medição e inadequada como caso de aplicação n
 
 \emandamento{Três dados externos permanecem pendentes e limitam o alcance das conclusões:
 a temperatura real de carcaça dos equipamentos-alvo, a classe normativa dos motores a
-monitorar e a validação dos carregadores dos conjuntos de dados públicos utilizados.}
+monitorar e a validação do carregador do conjunto de dados público utilizado, o MAFAULDA.}
 
 \section{Trabalho futuro}
 \label{sec:conc-futuro}
@@ -216,7 +219,8 @@ lista de desejos.
           valor publicado foi localizado para ele.
 
     \item \textbf{Descritores de razão harmônica para desalinhamento.} O desempenho em
-          desalinhamento, entre \num{5} e \SI{7}{\percent}, é o pior dos três modos
+          desalinhamento, de $\num{5,0} \pm \num{3,1}\,\si{\percent}$ e
+          $\num{7,2} \pm \num{4,3}\,\si{\percent}$, é o pior dos três modos
           medidos e não é explicável por banda: o modo se manifesta em harmônicas da
           rotação, muito abaixo de \SI{500}{\hertz}. A causa provável está nos descritores
           adotados, que capturam energia e impulsividade e não estrutura harmônica e de

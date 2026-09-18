@@ -24,7 +24,7 @@
 }{}
 \makeatother
 
-\chapter{Fundamentação e revisão da literatura}
+\chapter{Trabalhos relacionados}
 \label{cap:revisao}
 
 \section{Método da revisão}
@@ -178,9 +178,9 @@ corte da razão de contaminação conhecida \cite{brito2022}. A alternativa prin
 dispensa hipótese sobre a distribuição do corpo dos dados e fixa o limiar a partir de um
 risco alvo, que controla diretamente o número de falsos positivos \cite{siffer2017}.
 
-O problema não é teórico. Três implementações independentes com o mesmo detector em nó
-embarcado situam-se entre \num{22} e \SI{38}{\percent} de falso alarme sobre operação
-normal \cite{chevtchenko2023,kolok2025}. Um dispositivo que marca um terço da operação
+O problema não é teórico. As duas implementações do mesmo detector em nó embarcado que
+reportam falso alarme, ou permitem derivá-lo, situam-se entre \num{22} e
+\SI{38}{\percent} sobre operação normal \cite{chevtchenko2023,kolok2025}. Um dispositivo que marca um terço da operação
 normal como anomalia não é utilizável em manutenção.
 
 \subsection{A métrica e o protocolo de validação}
@@ -190,7 +190,8 @@ campo, que precisa operar em falso alarme baixo. O benchmark de referência para
 regime de treino reporta área parcial restrita a essa faixa \cite{koizumi2020}, e a mesma
 disciplina aparece em quem reporta PR-AUC além do F1 \cite{brito2022}.
 
-Sobre o protocolo, a objeção é a mais séria e não foi identificada por este trabalho.
+Sobre o protocolo, a objeção é a mais séria, e sua identificação não é contribuição deste
+trabalho: ela está publicada.
 Janelas consecutivas de um mesmo ensaio compartilham a assinatura da montagem, e sua
 divisão aleatória entre treino e teste permite que o modelo identifique o ensaio em vez da
 falha. O fenômeno tem nome e quantificação: de \num{41} estudos revisados sobre uma base de
@@ -277,8 +278,8 @@ O problema do limiar é real e não é preciosismo, e a alternativa principiada 
 disciplina de reportar a métrica no ponto de operação, e não apenas de forma agregada, tem
 respaldo em benchmark de referência. A viabilidade computacional da arquitetura está
 estabelecida, e a exigência de integrar aceleração para velocidade é normativa, com método
-correto estabelecido. A forma do limite térmico --- margem imposta pela célula e não pelo
-invólucro --- tem precedente comercial direto.
+correto estabelecido. A forma do limite térmico durante a carga --- margem imposta pela
+célula e não pelo invólucro --- tem precedente comercial direto.
 
 \subsection{O que a literatura contesta}
 
@@ -334,6 +335,7 @@ operação normal marcada pela política de limiar padrão também é falsa, pel
         qualquer medição de campo, inclusive nas deste projeto.
 \end{enumerate}
 
-As lacunas 1, 3 e 5 são as que o Capítulo~\ref{cap:resultados} aborda diretamente. As
-demais permanecem abertas e reaparecem como trabalho futuro no
+O Capítulo~\ref{cap:resultados} aborda a lacuna 1, em sinal sintetizado, e oferece à
+lacuna 3 apenas um par de pontos, insuficiente para constituir uma função da banda. As
+demais, incluindo a 5, permanecem abertas e reaparecem como trabalho futuro no
 Capítulo~\ref{cap:conclusoes}.

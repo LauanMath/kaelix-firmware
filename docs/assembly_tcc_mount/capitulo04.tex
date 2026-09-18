@@ -14,12 +14,10 @@
 %% mistura as três procedências em texto corrido. Por isso a marcação é POR
 %% NÚMERO (\pS, \pM, \pE) e não por seção.
 %%
-%% \pS  sinal sintetizado a partir do modelo da Seção 3.x
+%% \pS  sinal sintetizado a partir do modelo da Seção 3.2
 %% \pM  dado real de bancada instrumentada, decimado em software
 %% \pE  modelagem ou cálculo sobre as especificações de projeto
 %%
-%% Requer \usepackage{xcolor} no principal.tex (ver nota no capitulo01.tex).
-%% Recomenda-se também \usepackage{booktabs}: sem ele as tabelas usam \hline.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \makeatletter
@@ -59,8 +57,8 @@ sustenta. Três procedências se misturam no texto que segue, e cada valor numé
 marcado individualmente:
 
 \begin{description}
-  \item[\pS\ Sinal sintetizado.] Gerado pelo modelo de dois mecanismos descrito no
-        Capítulo~3: harmônicas da rotação somadas a um trem de impulsos amortecidos que
+  \item[\pS\ Sinal sintetizado.] Gerado pelo modelo de dois mecanismos descrito na
+        Seção~\ref{sec:dev-sinal}: harmônicas da rotação somadas a um trem de impulsos amortecidos que
         modula uma ressonância estrutural, mais ruído gaussiano. Sustenta afirmações sobre
         \emph{relações entre métodos} --- qual procedimento recupera o valor correto, qual
         decisão altera o resultado e em que direção. Não sustenta afirmação sobre
@@ -72,7 +70,7 @@ marcado individualmente:
   \item[\pE\ Modelagem sobre especificação.] Fórmulas fechadas e cálculo sobre as cotas do
         desenho e a configuração implementada, tomadas como dadas. Sustenta afirmações
         sobre \emph{limites impostos pelo projeto}, dentro das condições de contorno
-        declaradas na Seção~\ref{sec:conc-alcance}.
+        declaradas na Seção~\ref{sec:dev-mecanica}.
 \end{description}
 
 \emandamento{Nenhuma das três é medição no dispositivo montado. A marcação por número, e
@@ -121,13 +119,14 @@ reaparece onde nada existe fisicamente.}
 
 \subsection{O que o dispositivo detecta, por modo de falha}
 
-Em dado real decimado, no ponto de operação de \SI{2}{\percent} de falso alarme, o quadro
-de detecção por classe é o da Tabela~\ref{tab:deteccao}.
+Em dado real decimado, com o limiar calibrado para falso alarme alvo de \SI{1}{\percent},
+o falso alarme medido foi de $\num{2,0} \pm \num{1,3}\,\si{\percent}$\pM. Nesse ponto de
+operação, o quadro de detecção por classe é o da Tabela~\ref{tab:deteccao}.
 
 \begin{table}[!htb]
 \centering
-\caption{Detecção por modo de falha a \SI{2}{\percent} de falso alarme, em dado real
-decimado (\pM). Desvio entre partições onde registrado. As duas classes de rolamento
+\caption{Detecção por modo de falha a \SI{2}{\percent} de falso alarme medido, em dado
+real decimado (\pM). Desvio entre partições onde registrado. As duas classes de rolamento
 correspondem à condição sem massa de desbalanceamento sobreposta.}
 \label{tab:deteccao}
 \small
@@ -158,8 +157,8 @@ de massa de desbalanceamento sobreposta, e a detecção acompanha a massa, não 
 sobe de \SI{14,8}{\percent}\pM\ sem massa para \SI{87,3}{\percent}\pM\ no maior nível, na
 classe \emph{underhang}. Reportar o agregado das quatro condições --- \SI{42,6}{\percent}\pM\
 --- como ``detecção de defeito de rolamento'' produziria exatamente o tipo de número
-inflado que a Seção~\ref{sec:res-estimacao} documenta em outro contexto. O que o modelo
-detecta nos arquivos de rolamento é a massa adicionada.
+inflado que a Seção~\ref{sec:res-estimacao} documenta em outro contexto. O padrão indica
+que, nos arquivos de rolamento, o modelo responde à massa adicionada, e não ao defeito.
 
 \subsection{O invólucro filtra o sinal antes que ele alcance o sensor}
 
@@ -212,8 +211,9 @@ arbitrária; a informação está na distribuição.}
 \section{O que a estimação decide}
 \label{sec:res-estimacao}
 
-Três decisões deste elo alteraram os resultados por margens maiores que o efeito físico sob
-investigação. Todos os valores desta seção são de sinal sintetizado, e o que eles sustentam
+Quatro decisões deste elo --- método de integração, política de limiar, métrica e
+protocolo de validação --- alteraram os resultados por margens maiores que o efeito físico
+sob investigação. Todos os valores desta seção são de sinal sintetizado, e o que eles sustentam
 é a relação entre métodos, não o desempenho do dispositivo.
 
 \subsection{A norma exige velocidade, e a integração precisa ser feita na frequência}
@@ -246,8 +246,10 @@ Dois resultados são contraintuitivos. O filtro passa-alta não corrige a integr
 tempo e chega a piorá-la, porque a soma cumulativa continua acumulando o transiente de
 borda do filtro. E um viés de \SI{0,02}{\meter\per\second\squared}\pE, valor contido na
 especificação do sensor, leva o resultado a \SI{55,08}{\milli\meter\per\second}\pS\ quando
-o correto é \num{6,75}: um sinal situado na zona A da norma seria classificado além da
-zona D. A integração na frequência permanece exata sob o mesmo viés, porque o termo
+o correto é \num{6,75}. O valor correto fica abaixo do limite entre as zonas C e D em três
+das quatro combinações de grupo de máquina e tipo de fundação da norma; o valor obtido
+excede esse limite em todas, e o sinal seria classificado na zona D qualquer que fosse a
+máquina. A integração na frequência permanece exata sob o mesmo viés, porque o termo
 contínuo cai fora da máscara imposta pela própria norma.
 
 \subsection{O limiar padrão produz falso alarme incompatível com operação}
@@ -269,8 +271,8 @@ Sobre defeito incipiente, com descritores e modelo idênticos, a área sob a cur
 caiu \SI{3,7}{\percent}\pS\ entre a cadeia de referência e a do dispositivo, enquanto a
 área parcial restrita à região de falso alarme baixo caiu \SI{16,2}{\percent}\pS\ a
 \SI{10}{\percent} de falso alarme e \SI{20,3}{\percent}\pS\ a \SI{5}{\percent}. A perda na
-região em que um dispositivo de campo precisa operar é quatro a cinco vezes maior do que a
-área global indica.
+região em que um dispositivo de campo precisa operar é de \num{4,4} a \num{5,5} vezes a que
+a área global indica.
 
 \subsection{O protocolo de validação infla a acurácia}
 
@@ -289,7 +291,7 @@ protocolo incorreto suprime.
 \begin{figure}[!htb]
 \centering
 \includegraphics[width=\textwidth]{\kxfig{fig2_metodologia.pdf}}
-\caption[Três escolhas metodológicas alteram os resultados mais que o efeito medido]{\textbf{Três escolhas metodológicas alteram os resultados mais do que o efeito
+\caption[Quatro escolhas metodológicas alteram os resultados mais que o efeito medido]{\textbf{Quatro escolhas metodológicas alteram os resultados mais do que o efeito
 medido} (\pS). \textbf{a}, Velocidade eficaz por cinco variantes de integração contra o
 valor analítico exato; apenas a integração no domínio da frequência o recupera.
 \textbf{b}, Deriva causada por viés contido na especificação do sensor. \textbf{c},
@@ -303,29 +305,52 @@ aquisição; a faixa sombreada marca a região de operação realista.}
 \section{O que a implantação impõe}
 \label{sec:res-implantacao}
 
-\subsection{A bateria, e não o invólucro, define a margem térmica}
+\subsection{A carga da bateria, e não o invólucro, define a margem térmica}
 
 A hipótese inicial atribuía ao material do invólucro o papel de elo térmico mais frágil. A
 análise inverteu essa leitura. A resistência térmica do caminho condutivo em ASA é de
-\SI{88,8}{\kelvin\per\watt}\pE, contra \SI{0,074}{\kelvin\per\watt}\pE\ em alumínio, e com
-a carcaça a \SI{80}{\celsius} a temperatura interna estabiliza em \SI{44,8}{\celsius}\pE.
-O autoaquecimento é irrelevante: a potência média de \SI{2,0}{\milli\watt}\pE\ eleva a
-temperatura interna em \SI{0,01}{\celsius}\pE, de modo que todo o calor provém do exterior.
+\SI{88,8}{\kelvin\per\watt}\pE, contra \SI{0,074}{\kelvin\per\watt}\pE\ em alumínio, uma
+razão de \num{1206}\pE\ vezes. Com base em alumínio, a temperatura interna alcançaria
+\SI{79,0}{\celsius}\pE\ com a carcaça a \SI{80}{\celsius}. Com base em ASA, o balanço
+térmico resolvido até a convergência dá \SI{33,0}{\celsius}\pE\ com a carcaça a
+\SI{80}{\celsius}, e o modelo tridimensional do invólucro situa a placa entre
+\SI{35,1}{\celsius}\pE\ e \SI{38,3}{\celsius}\pE\ com a carcaça a \SI{90}{\celsius}.
 
-O componente que atinge primeiro seu limite é a bateria, pela restrição de carga em
-\SI{45}{\celsius}, temperatura interna alcançada com carcaça em torno de
-\SI{81}{\celsius}\pE. A consequência de projeto é um conflito entre elos: substituir o ASA
-por alumínio resolveria a limitação mecânica da Seção~\ref{sec:res-aquisicao} e agravaria
-esta, elevando a temperatura interna a \SI{79,0}{\celsius}\pE\ sob a mesma carcaça. Os dois
-requisitos recaem sobre a mesma peça e apontam em sentidos opostos.
+Em operação, nenhum limite é atingido até \SI{90}{\celsius} de carcaça: a placa permanece
+abaixo tanto dos \SI{45}{\celsius} admitidos na carga da célula quanto dos
+\SI{60}{\celsius} admitidos na descarga. O autoaquecimento é irrelevante em operação: a
+potência média de \SI{2,0}{\milli\watt}\pE\ eleva a temperatura interna em
+\SI{0,01}{\celsius}\pE, e todo o calor provém do exterior.
+
+\emandamento{Durante a carga da bateria, não. O carregador linear da placa v3 dissipa cerca
+de \SI{0,41}{\watt}\pE\ no pior ponto de uma carga a \SI{200}{\milli\ampere}, dentro do
+invólucro fechado, e o modelo tridimensional eleva a placa em cerca de
+\SI{15}{\kelvin}\pE\ por watt. O limite que restringe passa a ser o de carga da célula,
+\SI{45}{\celsius}, e somente nessa fase: restam \SI{8,3}{\kelvin}\pE\ de folga com o
+dispositivo fora do motor e de \SIrange{0,7}{3,9}{\kelvin}\pE\ com o motor a
+\SI{90}{\celsius}. Esta última folga é otimista, porque o modelo aplica à troca entre a
+placa e a cavidade o coeficiente de convecção da face externa, e a convecção dentro da
+cavidade é mais fraca; a folga real pode ser nula. Na placa v3, o limite é imposto pelo
+próprio carregador, que suspende a carga acima de \SI{45}{\celsius} e a retoma ao esfriar.
+O procedimento recomendado é carregar o dispositivo fora do motor ou com o motor parado.}
+
+Os demais limites ficam bem acima: circuitos integrados em \SI{85}{\celsius}, deformação
+térmica do ASA em \SI{98}{\celsius} e ímãs em \SI{150}{\celsius}. A consequência de projeto
+é um conflito entre elos: substituir o ASA por alumínio resolveria a limitação mecânica da
+Seção~\ref{sec:res-aquisicao} e agravaria a térmica, levando a temperatura interna a
+\SI{79,0}{\celsius}\pE\ sob a mesma carcaça, acima dos limites de carga e de descarga da
+célula. Os dois requisitos recaem sobre a mesma peça e apontam em sentidos opostos.
 
 \begin{figure}[!htb]
 \centering
 \includegraphics[width=\textwidth]{\kxfig{fig4_termica.pdf}}
-\caption[A bateria, e não o invólucro, define a margem térmica]{\textbf{A bateria, e não o invólucro, define a margem térmica} (\pE). Por ser mau
-condutor, o polímero do invólucro mantém o interior em \SI{44,8}{\celsius} com a carcaça a
-\SI{80}{\celsius}; o componente que atinge primeiro seu limite é a célula, pela restrição
-de carga em \SI{45}{\celsius}.}
+\caption[O invólucro isola a eletrônica da carcaça]{\textbf{O invólucro isola a eletrônica
+da carcaça} (\pE). Por ser mau condutor, o polímero do invólucro mantém a eletrônica abaixo
+de todos os limites em operação. Os painéis \textbf{a} e \textbf{b} ainda apresentam o valor
+do modelo concentrado não convergido, \SI{44,8}{\celsius} com a carcaça a
+\SI{80}{\celsius}; o balanço convergido dá \SI{33,0}{\celsius}, e o modelo tridimensional
+situa a placa entre \SI{35,1}{\celsius} e \SI{38,3}{\celsius} com a carcaça a
+\SI{90}{\celsius}.}
 \label{fig:termica}
 \end{figure}
 
@@ -351,7 +376,7 @@ calculado separadamente.}
 Os parâmetros do enlace foram fixados explicitamente, em vez de herdados do padrão da
 biblioteca --- condição para que uma atualização não altere o consumo do produto sem que a
 mudança seja detectável. O tempo no ar resultante é de \SI{185}{\milli\second}\pE, contra
-os \SI{150}{\milli\second} que o orçamento anterior assumia sem derivação.
+os \SI{150}{\milli\second} que a estimativa inicial de consumo assumia sem derivação.
 
 O custo em autonomia é direto: \SI{256}{\day}\pE\ no fator de espalhamento mais baixo
 contra \SI{138}{\day}\pE\ no mais alto, com \SI{12,5}{\decibel} de ganho entre os extremos.
@@ -376,11 +401,13 @@ margem de enlace dependem de medição em campo.}}
 \subsection{Convergências}
 
 O achado de inflação por vazamento de assinatura de montagem tem correlato direto: a
-literatura mede inflação da mesma ordem em uma base de referência consolidada, faixa que
-contém os pontos obtidos aqui, e relata que \num{40} de \num{41} estudos revisados sobre
-essa base adotaram delineamento suscetível ao problema~\cite{varejao2025,vieira2026}.
+literatura mede inflação da ordem de dezenas de pontos percentuais em uma base de referência
+consolidada, e relata que \num{40} de \num{41} estudos revisados sobre essa base adotaram
+delineamento suscetível ao problema~\cite{varejao2025,vieira2026}. A convergência é de
+direção e de ordem de grandeza: os \num{36} pontos\pS\ obtidos aqui vêm de sinal
+sintetizado, e os valores publicados, de dado medido.
 
-A fronteira de detecção encontrada reproduz, por medição, a divisão de trabalho que a
+A fronteira de detecção encontrada reproduz, em dado real decimado, a divisão de trabalho que a
 literatura implementou por projeto. Um nó publicado reserva um acelerômetro de banda
 estreita para desbalanceamento e outro de dezenas de quilohertz para
 rolamento~\cite{jakobsen2024}, e o trabalho mais próximo em arquitetura demonstra
