@@ -1,0 +1,46 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Resumo --- ABNT NBR 6028:2021
+%%   parágrafo único; voz ativa; sem citações;
+%%   palavras-chave separadas por ponto e vírgula, iniciais minúsculas,
+%%   finalizadas por ponto.
+%%
+%% Enuncia a MESMA afirmação central do Capítulo 1 e do Capítulo 5, com a mesma
+%% força. Ao alterar a tese, alterar os três.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{resumo}
+A manutenção preditiva de máquinas rotativas por análise de vibração é normalizada, e o
+obstáculo à sua adoção é o custo de instrumentação, que restringe a cobertura aos ativos
+críticos. Nós sensores de baixo custo respondem a esse obstáculo, mas a literatura que os
+propõe raramente declara a banda e o piso de ruído que sustentam o desempenho reportado.
+Este trabalho determina o que a cadeia de medição especificada para um dispositivo dessa
+classe --- acelerômetro de consumo com taxa de amostragem de 1~kHz, microcontrolador de
+baixo consumo, enlace de longo alcance e invólucro impresso em polímero --- permite medir,
+e calibra o estágio de decisão de modo que o desempenho seja verificável no ponto de
+operação pretendido. O método constrói condições de referência cujo resultado correto
+decorre de solução analítica ou de definição normativa, submete-as à cadeia proposta e mede
+o desvio. Os resultados têm três procedências, declaradas individualmente: sinal
+sintetizado, dado real de bancada decimado em \emph{software} e modelagem sobre as
+especificações de projeto. Em dado real, a 2\% de falso alarme, a detecção é de
+75,0\% $\pm$ 3,5\% em desbalanceamento, entre 14,8\% e 20,7\% em defeito de rolamento puro
+e entre 5,0\% e 7,2\% em desalinhamento. Em sinal sintetizado, três decisões de estimação
+alteram os resultados por margens maiores que o efeito físico investigado: a integração no
+domínio do tempo erra o indicador normativo em 73\% sem viés e em 716\% sob viés contido na
+especificação do sensor, enquanto a integração no domínio da frequência o recupera
+exatamente; a política de limiar padrão do detector marca 42,1\% da operação normal como
+anomalia, contra 1,4\% sob limiar calibrado; e a partição aleatória de janelas infla a
+acurácia em cerca de 36 pontos percentuais frente à partição por ensaio. Por modelagem, a
+frequência de montagem do conjunto situa-se em 557~Hz, dentro da banda de medição, e o
+limite térmico de operação é imposto pela bateria, e não pelo invólucro. Conclui-se que a
+cadeia sustenta a detecção de desbalanceamento sob falso alarme fixado e não sustenta
+diagnóstico de defeito de rolamento, e que a contribuição verificável de um dispositivo
+dessa classe está no estágio de decisão, desde que o estágio de aquisição esteja declarado.
+As conclusões valem para a cadeia especificada, e não para o desempenho do dispositivo
+montado em operação industrial: a construção do protótipo e seu ensaio em ambiente real
+constituem a etapa seguinte.
+
+\vspace{\onelineskip}
+\noindent
+\textbf{Palavras-chave}: manutenção preditiva; análise de vibração; detecção de anomalia;
+sistemas embarcados; instrumentação de baixo custo.
+\end{resumo}

@@ -1,0 +1,53 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Lista de Siglas e Abreviaturas (pacote glossaries)
+%%
+%% Contém apenas as siglas efetivamente usadas nos Capítulos 1 a 5 e nos
+%% apêndices. Acrescentar entrada aqui ao introduzir sigla nova no texto.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Instrumentação e mecânica
+\newacronym{MEMS}{MEMS}{sistemas microeletromecânicos (\emph{Micro-Electro-Mechanical Systems})}
+\newacronym{IMU}{IMU}{unidade de medição inercial (\emph{Inertial Measurement Unit})}
+\newacronym{BPFO}{BPFO}{frequência de passagem de esferas na pista externa (\emph{Ball Pass Frequency, Outer race})}
+\newacronym{BPFI}{BPFI}{frequência de passagem de esferas na pista interna (\emph{Ball Pass Frequency, Inner race})}
+\newacronym{DLPF}{DLPF}{filtro passa-baixas digital (\emph{Digital Low-Pass Filter})}
+\newacronym{RMS}{RMS}{valor eficaz (\emph{Root Mean Square})}
+\newacronym{ASA}{ASA}{acrilonitrila estireno acrilato}
+\newacronym{NTC}{NTC}{termistor de coeficiente de temperatura negativo}
+
+%% Normalização
+\newacronym{ISO}{ISO}{Organização Internacional de Normalização (\emph{International Organization for Standardization})}
+\newacronym{ABNT}{ABNT}{Associação Brasileira de Normas Técnicas}
+
+%% Detecção e avaliação
+\newacronym{ROC}{ROC}{característica de operação do receptor (\emph{Receiver Operating Characteristic})}
+\newacronym{AUC}{AUC}{área sob a curva (\emph{Area Under the Curve})}
+\newacronym{pAUC}{pAUC}{área parcial sob a curva, restrita a uma faixa de falso alarme}
+\newacronym{PRAUC}{PR-AUC}{área sob a curva de precisão e revocação}
+\newacronym{FPR}{FPR}{taxa de falso alarme (\emph{False Positive Rate})}
+
+%% Computação embarcada e comunicação
+\newacronym{TinyML}{TinyML}{aprendizado de máquina em dispositivos de recursos limitados}
+\newacronym{LoRa}{LoRa}{modulação de longo alcance e baixa potência (\emph{Long Range})}
+\newacronym{SF}{SF}{fator de espalhamento (\emph{Spreading Factor})}
+\newacronym{CRC}{CRC}{verificação cíclica de redundância (\emph{Cyclic Redundancy Check})}
+\newacronym{ADC}{ADC}{conversor analógico-digital}
+
+%% Projeto de hardware
+\newacronym{PCB}{PCB}{placa de circuito impresso (\emph{Printed Circuit Board})}
+\newacronym{ERC}{ERC}{verificação de regras elétricas (\emph{Electrical Rules Check})}
+\newacronym{DRC}{DRC}{verificação de regras de projeto (\emph{Design Rules Check})}
+\newacronym{PDN}{PDN}{rede de distribuição de alimentação (\emph{Power Delivery Network})}
+
+%% Instituição
+\newacronym{UFRJ}{UFRJ}{Universidade Federal do Rio de Janeiro}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% O pacote glossaries só imprime as siglas EFETIVAMENTE USADAS via \gls{...}.
+%% Como o texto dos capítulos usa as siglas em forma literal (e não \gls{}),
+%% \glsaddall força todas as entradas acima para a lista impressa.
+%%
+%% Se no futuro o texto passar a usar \gls{}, remova a linha abaixo para que a
+%% lista volte a conter apenas o que é citado.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\glsaddall

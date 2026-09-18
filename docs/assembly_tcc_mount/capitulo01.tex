@@ -1,0 +1,204 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Capítulo 1 --- Introdução
+%%
+%% Estrutura conforme o modelo de TCC da Escola Politécnica / UFRJ
+%% (capitulo01.tex: Introdução, Objetivo, Metodologia, Estrutura do Trabalho).
+%%
+%% Classe esperada: \documentclass[tcc,alf]{tcc-poli}
+%% Citações: abntex2cite (sistema alfabético). \cite{} → (AUTOR, ano);
+%%           \citeonline{} → Autor (ano).
+%% Pacotes usados neste arquivo: siunitx, hyperref (ambos já no principal.tex).
+%%
+%% DEPENDÊNCIA: as chaves citadas aqui precisam existir em referencias.bib.
+%% Elas vêm das bibliografias de docs/relatorio/revisao-literatura.tex e
+%% docs/relatorio/relatorio-kaelix.tex, hoje em \thebibliography embutido.
+%%
+%% MARCAÇÃO DE TRECHO EM ANDAMENTO --------------------------------------------
+%% \emandamento{...} destaca em vermelho os trechos cuja validade muda quando o
+%% protótipo for construído e ensaiado em ambiente real. É marcação de rascunho.
+%%
+%% Para ver o vermelho, acrescente ao principal.tex, junto dos demais pacotes:
+%%     \usepackage{xcolor}
+%% Sem esse pacote o texto compila normalmente, apenas sem cor.
+%%
+%% Para REMOVER todas as marcas na versão final, troque a definição abaixo por:
+%%     \newcommand{\emandamento}[1]{#1}
+%% ou apague as chamadas \emandamento{...} do texto.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+\@ifundefined{emandamento}{%
+  \@ifundefined{textcolor}%
+    {\newcommand{\emandamento}[1]{#1}}%
+    {\newcommand{\emandamento}[1]{\textcolor{red}{#1}}}%
+}{}
+\makeatother
+
+\chapter{Introdução}
+\label{cap:introducao}
+
+A manutenção preditiva de máquinas rotativas por análise de vibração é uma prática
+normalizada. A norma ISO 20816-3:2022 estabelece faixas de severidade a partir da
+velocidade eficaz de vibração de banda larga e define os limites que separam operação
+aceitável de operação inaceitável para máquinas industriais acima de
+\SI{15}{\kilo\watt}, com rotação entre \num{120} e \num{30000}~r/min. Para essa medição,
+a norma exige do instrumento resposta plana em faixa de \emph{ao menos}
+\SIrange{10}{1000}{\hertz}~\cite{iso208163_2022}. O procedimento é
+consolidado, e o obstáculo à sua adoção não é metodológico: é de custo de instrumentação.
+Acelerômetros piezoelétricos com a banda exigida para diagnóstico, seus condicionadores e
+os analisadores associados restringem a cobertura aos ativos considerados críticos, e
+deixam sem instrumentação a maior parte do parque de motores de uma planta.
+
+A resposta que a literatura recente oferece a esse obstáculo é o nó sensor de baixo custo:
+uma unidade de medição inercial MEMS acoplada a um microcontrolador de baixo consumo, com
+detecção de anomalia executada no próprio dispositivo e enlace de rádio de longo alcance
+para telemetria. A viabilidade computacional dessa arquitetura está estabelecida. O
+algoritmo Isolation Forest~\cite{liu2008} treina e executa dentro de um
+ESP32~\cite{antonini2023}, existem variantes desenhadas para reduzir seu custo em
+TinyML~\cite{barbariol2022}, e a combinação de microcontrolador, acelerômetro MEMS de
+consumo e detecção não supervisionada já foi demonstrada em manutenção preditiva de baixo
+custo~\cite{kolok2025}. O que a viabilidade computacional não resolve --- e é o ponto de
+partida deste trabalho --- é a questão anterior: o que uma cadeia de medição dessa classe
+efetivamente permite medir.
+
+Essa questão tem uma ordem de precedência que organiza todo o restante. Primeiro vem a
+aquisição: piso de ruído, banda passante e caminho mecânico entre a fonte de vibração e o
+elemento sensor. Nenhuma decisão posterior recupera informação que o sensor não coletou.
+Depois vem a estimação, que decide o que se faz com a informação disponível: a política de
+limiar, a métrica de desempenho e o protocolo de validação. Por último vem a implantação
+--- energia, comportamento térmico e invólucro ---, que determina por quanto tempo o
+dispositivo continua operando. Os três elos são encadeados, e um erro no primeiro não é
+compensável nos seguintes.
+
+É contra essa cadeia que se identifica a lacuna. A literatura de vibração embarcada é
+forte no primeiro elo e frágil no segundo. Sobre aquisição, há consenso quantitativo:
+nenhum estudo de adequação de sensor revisado testou dispositivo com limite superior
+abaixo de \SI{1500}{\hertz}~\cite{albarbar2008}, e os grupos que se propõem a diagnosticar
+defeito de rolamento com MEMS escolhem sensores de dezenas de
+quilohertz~\cite{landi2023,jakobsen2024}, porque a assinatura do defeito viaja modulada em
+uma portadora de alta frequência~\cite{randall2011,antoni2007}. Sobre estimação, ao
+contrário, o registro é lacunar. O escore do Isolation Forest tem \num{0,5} como
+referência interpretativa, e não como corte calibrado~\cite{liu2008}; a implementação de
+referência transporta essa interpretação para um deslocamento fixo, sem alterar o
+ranqueamento~\cite{scikitlearn2026}; e os trabalhos que reportam bom desempenho com o
+detector abandonam o padrão sem que a política adotada seja submetida a
+varredura~\cite{antonini2023,brito2022}. Não se localizou, entre os trabalhos que executam
+o detector em microcontrolador, nenhum que variasse o parâmetro de contaminação sobre a
+mesma base e reportasse a fração de operação normal marcada como anomalia, nem taxa de
+falso alarme publicada para detector treinado no próprio dispositivo --- que é justamente
+o modo de operação exigido de uma máquina sem histórico rotulado. Soma-se a isso uma
+fragilidade de protocolo com efeito documentado: janelas consecutivas de um mesmo ensaio
+compartilham a assinatura da montagem, e sua divisão aleatória entre treino e teste
+permite que o modelo identifique o ensaio em vez da falha. \citeonline{varejao2025}
+denominam o fenômeno \emph{similarity bias} e relatam que, de \num{41} estudos revisados
+sobre uma base de referência consolidada, \num{40} adotaram delineamento suscetível a ele.
+
+Este trabalho ocupa essa lacuna com uma tese delimitada. Uma cadeia de medição de baixo
+custo, com banda e piso de ruído declarados, sustenta a detecção de desbalanceamento e de
+desvios de condição de operação sob taxa de falso alarme fixada, mas não sustenta
+diagnóstico de defeito de rolamento; e a contribuição verificável de um dispositivo dessa
+classe está no segundo elo da cadeia --- limiar calibrado por risco alvo, métrica avaliada
+no ponto de operação e protocolo de validação sem vazamento entre ensaios ---, contribuição
+que só é válida se o primeiro elo estiver declarado em vez de disfarçado. O objeto de
+estudo é o Kaelix, um dispositivo que combina acelerômetro MPU6050, microcontrolador
+ESP32-S3, enlace LoRa e invólucro em ASA impresso por deposição, com detecção de anomalia
+embarcada e rotulagem de severidade pela norma.
+
+A validade dessa tese depende de que se declare a procedência de cada resultado, e ela não
+é uniforme. Os resultados de detecção provêm de dado real medido: sinais de uma bancada
+instrumentada, adquiridos a \SI{50}{\kilo\hertz}, submetidos a decimação controlada em
+\emph{software} para emular a banda do dispositivo. O que é modelado, portanto, não é o
+sinal, é a aquisição. Os resultados de análise mecânica e térmica provêm de modelagem
+computacional sobre as especificações de projeto, tomadas como dadas. \emandamento{E a cadeia física do próprio
+dispositivo não foi verificada: nenhum ensaio físico foi conduzido e nenhuma medição de
+campo alimenta os modelos, uma vez que a construção do protótipo e seu ensaio em ambiente
+real constituem a etapa seguinte deste trabalho.} Essa distinção restringe uma afirmação
+específica e é declarada aqui por isso: \emandamento{os resultados sustentam conclusões
+sobre o que a cadeia de aquisição especificada permite medir, e não sobre o desempenho do
+dispositivo montado em operação industrial.} As duas coisas serão mantidas separadas ao
+longo do texto, e cada resultado indicará de qual das três origens provém.
+
+\section{Objetivo}
+\label{sec:objetivo}
+
+\subsection{Objetivo Geral}
+\label{ssec:objetivo-geral}
+
+Determinar o que a cadeia de medição de vibração especificada para o Kaelix permite medir,
+e calibrar o estágio de decisão do detector embarcado de modo que o desempenho reportado
+seja verificável no ponto de operação pretendido.
+
+\subsection{Objetivo Específico}
+\label{ssec:objetivo-especifico}
+
+Dentro desse objetivo geral, encontram-se como metas específicas:
+
+\begin{itemize}
+    \item Quantificar a perda de contraste do indicador de defeito de rolamento entre a
+          cadeia de referência e a cadeia truncada do dispositivo, e delimitar o que esse
+          contraste atribui à banda e o que atribui ao método de demodulação;
+
+    \item Determinar o método de integração de aceleração para velocidade compatível com a
+          norma, e quantificar o erro dos métodos alternativos contra um sinal cuja
+          integral é conhecida analiticamente~\cite{brandt2014,iso208163_2022};
+
+    \item Medir a taxa de falso alarme produzida pela política de limiar padrão do
+          Isolation Forest e o efeito do parâmetro de contaminação sobre ela;
+
+    \item Comparar o desempenho do detector sob divisão aleatória por janela e sob divisão
+          por ensaio, e quantificar a inflação de acurácia atribuível ao vazamento de
+          assinatura de montagem;
+
+    \item Avaliar, por modelagem, a resposta modal e a margem térmica do conjunto
+          invólucro-sensor-fixação, e identificar qual componente impõe o limite de
+          operação;
+
+    \item Declarar, para cada questão levantada, se ela foi respondida por medição, por
+          modelagem ou se permanece dependente de ensaio físico.
+\end{itemize}
+
+\section{Metodologia}
+\label{sec:metodologia}
+
+A estratégia adotada é comum às questões investigadas: construir uma condição de
+referência cujo resultado correto decorre de solução analítica ou de definição normativa,
+submetê-la à cadeia de medição proposta e medir o desvio introduzido pela configuração do
+projeto. Quando a resposta certa é conhecida de antemão, um erro de implementação não
+consegue se esconder atrás de um resultado plausível.
+
+O trabalho se desenvolve em quatro etapas. A primeira é a revisão da literatura,
+organizada por eixos correspondentes aos elos da cadeia descrita, com verificação de cada
+referência em fonte primária e registro explícito das lacunas encontradas, incluindo
+aquelas que a própria verificação derrubou. A segunda é a caracterização da aquisição: um
+conjunto de sinais de bancada adquiridos em alta taxa é decimado de forma controlada para
+emular a banda do dispositivo, e os descritores extraídos são comparados entre as cadeias.
+A terceira é a calibração do estágio de decisão, na qual a política de limiar é avaliada
+por varredura, o desempenho é reportado no ponto de operação de baixa taxa de falso alarme
+e o protocolo de validação é submetido à divisão por ensaio. A quarta é a verificação de
+implantação, por modelagem mecânica e térmica do conjunto montado a partir das
+especificações de projeto.
+
+Duas decisões metodológicas atravessam as quatro etapas. A primeira é a rastreabilidade:
+cada resultado é acompanhado da indicação de sua origem --- medição em dado real,
+decimação controlada ou modelagem sobre especificação --- e os artefatos que o produzem,
+dados intermediários e código de geração, são mantidos versionados e regeneráveis. A
+segunda é o registro do que não foi verificado. As questões levantadas que dependem de
+ensaio físico ou de consulta regulatória são enunciadas, mantidas abertas e associadas à
+afirmação cujo alcance elas restringem, em vez de omitidas. Esse registro é parte do
+método, e não uma ressalva sobre ele.
+
+\section{Estrutura do Trabalho}
+\label{sec:estrutura}
+
+Este trabalho está organizado em cinco capítulos. O Capítulo~\ref{cap:introducao}
+apresentou o contexto, a lacuna identificada, a tese defendida e a procedência dos
+resultados que a sustentam. O Capítulo~2 revisa a literatura por eixos, seguindo a ordem
+de precedência da cadeia de medição, e consolida o que a literatura sustenta, o que ela
+contesta e quais lacunas permanecem abertas. O Capítulo~3 descreve o desenvolvimento do
+dispositivo: a cadeia de aquisição, o detector embarcado, o projeto de hardware e a
+arquitetura de comunicação e recepção. O Capítulo~4 apresenta os resultados e os confronta
+com a literatura revisada, organizado pela ordem de precedência da cadeia: primeiro o que
+a aquisição permite medir, depois o que a estimação decide com a informação disponível e,
+por fim, o que a implantação impõe como limite de operação. O Capítulo~5
+reúne as conclusões, delimita seu alcance e enuncia o trabalho futuro decorrente das
+questões mantidas em aberto.

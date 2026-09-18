@@ -1,0 +1,42 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Abstract --- tradução do resumo, mesma afirmação e mesma força.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{resumo}[Abstract]
+\begin{otherlanguage*}{english}
+Vibration-based predictive maintenance of rotating machinery is a standardised practice,
+and the obstacle to its adoption is the cost of instrumentation, which restricts coverage
+to critical assets. Low-cost sensor nodes address this obstacle, but the literature
+proposing them rarely declares the measurement bandwidth and noise floor that underpin the
+reported performance. This work determines what the measurement chain specified for a
+device of this class --- a consumer-grade accelerometer sampling at 1~kHz, a low-power
+microcontroller, a long-range radio link and a polymer printed enclosure --- is able to
+measure, and calibrates the decision stage so that performance is verifiable at the
+intended operating point. The method builds reference conditions whose correct result
+follows from an analytical solution or from a normative definition, submits them to the
+proposed chain and measures the deviation. Results have three provenances, declared
+individually: synthesised signal, real test-rig data decimated in software, and modelling
+over design specifications. On real data, at a 2\% false alarm rate, detection reaches
+75.0\% $\pm$ 3.5\% for imbalance, between 14.8\% and 20.7\% for pure bearing faults and
+between 5.0\% and 7.2\% for misalignment. On synthesised signals, three estimation
+decisions alter the results by larger margins than the physical effect under
+investigation: time-domain integration misses the normative indicator by 73\% without bias
+and by 716\% under a bias within the sensor specification, whereas frequency-domain
+integration recovers it exactly; the detector's default thresholding policy flags 42.1\% of
+normal operation as anomalous, against 1.4\% under a calibrated threshold; and random
+window partitioning inflates accuracy by roughly 36 percentage points relative to
+partitioning by test run. From modelling, the assembly mounting frequency falls at 557~Hz,
+inside the measurement band, and the thermal operating limit is imposed by the battery
+rather than by the enclosure. We conclude that the chain supports imbalance detection under
+a fixed false alarm rate and does not support bearing fault diagnosis, and that the
+verifiable contribution of a device of this class lies in the decision stage, provided the
+acquisition stage is declared. The conclusions hold for the specified chain, not for the
+performance of the assembled device in industrial operation: building the prototype and
+testing it in a real environment constitute the next stage.
+
+\vspace{\onelineskip}
+\noindent
+\textbf{Keywords}: predictive maintenance; vibration analysis; anomaly detection;
+embedded systems; low-cost instrumentation.
+\end{otherlanguage*}
+\end{resumo}

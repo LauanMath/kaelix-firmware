@@ -1,0 +1,258 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Trabalho de Conclusão de Curso --- Engenharia de Software, iCEV
+%%
+%% Classe: abnTeX2 (ABNT NBR 14724, 6023, 6024, 6027, 6028, 6034, 10520).
+%% Substitui o modelo POLI/UFRJ usado no rascunho inicial, cuja classe fixava
+%% nome, logotipo, grau e cidade da UFRJ em oito pontos da capa, folha de rosto
+%% e resumo, e não admitia o curso de Engenharia de Software.
+%%
+%% COMPILAR:   make          (ou: make limpo && make)
+%% O Makefile executa pdflatex -> bibtex -> makeglossaries -> makeindex ->
+%% pdflatex x2, na ordem verificada.
+%%
+%% Este diretório vive dentro do repositório, em docs/assembly_tcc_mount/, e
+%% consome do próprio repositório, sem copiar nada:
+%%   figuras       ../../experiments/figures/output/   (regeneráveis)
+%%   hardware      ../../hardware/
+%%   referências   ../relatorio/referencias.bib          (fonte canônica)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[
+  12pt,
+  openright,
+  oneside,
+  a4paper,
+  english,
+  brazil
+]{abntex2}
+
+%% --- Fontes e codificação --------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+%% Times no corpo. As figuras do pipeline (experiments/figures/scripts/
+%% theme_kaelix.R) compõem em Times New Roman para casar com este corpo;
+%% trocar a fonte aqui sem trocar lá reabre a incoerência visual.
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+
+%% --- Pacotes de conteúdo ---------------------------------------------------
+\usepackage{graphicx}
+\usepackage{xcolor}      % marcas vermelhas \emandamento
+\usepackage{booktabs}    % réguas de tabela
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{etoolbox}    % \ifstrequal em simbolos.tex
+\usepackage{siunitx}
+%% Separador decimal do português: vírgula. Sem isto, \num{0,5} sai "0.5".
+\sisetup{
+  output-decimal-marker = {,},
+  group-separator       = {\,},
+  range-phrase          = {~a~},
+  list-final-separator  = {~e~},
+  per-mode              = symbol
+}
+
+%% --- Citações (ABNT, sistema autor-data) -----------------------------------
+\usepackage[alf]{abntex2cite}
+
+%% --- Listas de siglas e de símbolos ----------------------------------------
+%% glossaries deve vir DEPOIS do hyperref, que a abntex2 carrega.
+\usepackage[acronym,nomain,toc,nonumberlist]{glossaries}
+\makeglossaries
+\usepackage[intoc]{nomencl}
+\makenomenclature
+
+%% --- Caminhos para o repositório -------------------------------------------
+%% Definidos uma única vez aqui; os capítulos têm fallback idêntico.
+\newcommand{\kxfig}[1]{../../experiments/figures/output/#1}
+\newcommand{\kxhw}[1]{../../#1}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% DADOS DO TRABALHO
+%% Campos entre colchetes ainda precisam ser preenchidos.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% TÍTULO PROVISÓRIO (working title). Finalizar só após o ensaio do protótipo:
+%% o título deve refletir o que foi realizado, e os resultados ainda podem mudar.
+%%   - Descritivo, sem afirmar resultado ("limites" entra só depois do ensaio).
+%%   - Sem nome de projeto (Kaelix) nem modelo comercial (MPU6050, ESP32-S3):
+%%     a NBR 14724 exige que o título permita indexação e recuperação.
+%%   - Sem sigla (MEMS): desaconselhada em título por IEEE e Nature.
+%%   - O subtítulo descreve o conteúdo; na versão final, é onde entra a
+%%     contribuição apurada.
+\titulo{Monitoramento de vibração de baixo custo para manutenção preditiva: aquisição e detecção embarcada de anomalias em motores}
+\autor{Lauan Matheus}
+\local{Teresina -- PI}
+\data{2026}
+\orientador{[Nome do orientador]}
+%\coorientador{[Nome do coorientador]}
+\instituicao{%
+  Instituto de Ensino Superior iCEV
+  \par
+  Bacharelado em Engenharia de Software}
+\tipotrabalho{Trabalho de Conclusão de Curso}
+\preambulo{Trabalho de Conclusão de Curso apresentado ao curso de Bacharelado em
+Engenharia de Software do Instituto de Ensino Superior iCEV, como requisito parcial
+para a obtenção do título de Bacharel em Engenharia de Software.}
+
+%% Metadados do PDF
+\makeatletter
+\hypersetup{
+  pdftitle    = {\@title},
+  pdfauthor   = {\@author},
+  pdfsubject  = {\imprimirpreambulo},
+  pdfcreator  = {LaTeX com abnTeX2},
+  pdfkeywords = {manutenção preditiva}{análise de vibração}{detecção de anomalia}
+                {sistemas embarcados}{instrumentação de baixo custo},
+  colorlinks  = true,
+  linkcolor   = black,
+  citecolor   = black,
+  filecolor   = black,
+  urlcolor    = black,
+  bookmarksdepth = 4
+}
+\makeatother
+
+%% Capa. A capa padrão da abnTeX2 omite a instituição; a NBR 14724 a prevê como
+%% primeiro elemento da capa "quando solicitado", e a maioria das instituições
+%% solicita. Remover o bloco da instituição se o iCEV dispensar.
+\renewcommand{\imprimircapa}{%
+  \begin{capa}%
+    \center
+    %% Caixa-alta escrita à mão: \MakeUppercase transformaria "iCEV" em "ICEV".
+    {\ABNTEXchapterfont\large INSTITUTO DE ENSINO SUPERIOR iCEV}\par
+    {\ABNTEXchapterfont\large Bacharelado em Engenharia de Software}
+    \vspace*{2.5cm}
+
+    {\ABNTEXchapterfont\large\imprimirautor}
+
+    \vfill
+    \begin{center}
+      \ABNTEXchapterfont\bfseries\LARGE\imprimirtitulo
+    \end{center}
+    \vfill
+
+    \large\imprimirlocal
+    \par
+    \large\imprimirdata
+    \vspace*{1cm}
+  \end{capa}%
+}
+
+%% Títulos em serifa. A abnTeX2 usa sans nos títulos por padrão, o que reabriria
+%% a incoerência corrigida nas figuras: corpo, títulos e figuras em Times.
+\renewcommand{\ABNTEXchapterfont}{\rmfamily}
+
+%% Espaçamento de parágrafo (ABNT: recuo, sem espaço entre parágrafos)
+\setlength{\parindent}{1.3cm}
+\setlength{\parskip}{0.2cm}
+
+\makeindex
+
+%% Listas de siglas e símbolos (definidas antes do documento)
+\input{abrev}
+\input{simbolos}
+
+\begin{document}
+
+\selectlanguage{brazil}
+\frenchspacing
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% ELEMENTOS PRÉ-TEXTUAIS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\imprimircapa
+\imprimirfolhaderosto*
+
+%% Ficha catalográfica: elaborada pela biblioteca da instituição; inserir o PDF
+%% recebido aqui, se exigido.
+%\begin{fichacatalografica}
+%  \includepdf{fig_ficha_catalografica.pdf}
+%\end{fichacatalografica}
+
+\begin{folhadeaprovacao}
+  \begin{center}
+    {\ABNTEXchapterfont\large\imprimirautor}
+
+    \vspace*{\fill}\vspace*{\fill}
+    \begin{center}
+      \ABNTEXchapterfont\bfseries\Large\imprimirtitulo
+    \end{center}
+    \vspace*{\fill}
+
+    \hspace{.45\textwidth}
+    \begin{minipage}{.5\textwidth}
+        \imprimirpreambulo
+    \end{minipage}%
+    \vspace*{\fill}
+   \end{center}
+
+   Trabalho aprovado. \imprimirlocal, [dia] de [mês] de \imprimirdata:
+
+   \assinatura{\textbf{\imprimirorientador} \\ Orientador}
+   \assinatura{\textbf{[Nome do membro da banca]} \\ Convidado 1}
+   \assinatura{\textbf{[Nome do membro da banca]} \\ Convidado 2}
+
+   \begin{center}
+    \vspace*{0.5cm}
+    {\large\imprimirlocal}
+    \par
+    {\large\imprimirdata}
+    \vspace*{1cm}
+  \end{center}
+\end{folhadeaprovacao}
+
+%% Dedicatória, agradecimentos e epígrafe são opcionais (NBR 14724).
+%\begin{agradecimentos}
+%  ...
+%\end{agradecimentos}
+
+\input{resumo}
+\input{abstract}
+
+%% Listas
+\pdfbookmark[0]{\listfigurename}{lof}
+\listoffigures*
+\cleardoublepage
+
+\pdfbookmark[0]{\listtablename}{lot}
+\listoftables*
+\cleardoublepage
+
+\printglossary[type=\acronymtype, title={Lista de abreviaturas e siglas}, toctitle={Lista de abreviaturas e siglas}]
+\cleardoublepage
+
+\printnomenclature
+\cleardoublepage
+
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% ELEMENTOS TEXTUAIS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\textual
+
+\include{capitulo01}
+\include{capitulo02}
+\include{capitulo03}
+\include{capitulo04}
+\include{capitulo05}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% ELEMENTOS PÓS-TEXTUAIS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\postextual
+
+\bibliography{../relatorio/referencias}
+
+\begin{apendicesenv}
+  \partapendices
+  \input{appenA}
+  \input{appenB}
+\end{apendicesenv}
+
+\end{document}

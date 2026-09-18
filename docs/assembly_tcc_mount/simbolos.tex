@@ -1,0 +1,64 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Lista de Símbolos (pacote nomencl)
+%%
+%% Contém apenas os símbolos que aparecem nas equações dos Capítulos 3 e 4.
+%% Grupos: [S] modelo de sinal, [M] modelo mecânico, [D] descritores e
+%% avaliação. A macro \nomunit acrescenta a unidade alinhada à direita.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\renewcommand{\nomname}{Lista de Símbolos}
+
+%----------------------------------------------
+\newcommand{\nomunit}[1]{%
+\renewcommand{\nomentryend}{\hspace*{\fill}#1}}
+%----------------------------------------------
+\renewcommand\nomgroup[1]{%
+   \item[\bfseries
+   \ifstrequal{#1}{S}{Modelo de sinal e aquisição}{%
+   \ifstrequal{#1}{M}{Modelo mecânico e térmico}{%
+   \ifstrequal{#1}{D}{Descritores e avaliação}{}}}%
+]}
+
+%% --- Modelo de sinal e aquisição -------------------------------------------
+\nomenclature[S]{\(a(t)\)}{Aceleração simulada\nomunit{\si{\meter\per\second\squared}}}
+\nomenclature[S]{\(f_r\)}{Frequência de rotação do eixo\nomunit{\si{\hertz}}}
+\nomenclature[S]{\(A_k\)}{Amplitude da \(k\)-ésima harmônica da rotação\nomunit{\si{\meter\per\second\squared}}}
+\nomenclature[S]{\(\varphi_k\)}{Fase da \(k\)-ésima harmônica\nomunit{\si{\radian}}}
+\nomenclature[S]{\(D\)}{Amplitude do impacto do defeito\nomunit{\si{\meter\per\second\squared}}}
+\nomenclature[S]{\(\zeta_d\)}{Taxa de amortecimento do impacto\nomunit{\si{\per\second}}}
+\nomenclature[S]{\(f_{\mathrm{res}}\)}{Frequência da ressonância estrutural excitada\nomunit{\si{\hertz}}}
+\nomenclature[S]{\(t_i\)}{Instante do \(i\)-ésimo impacto\nomunit{\si{\second}}}
+\nomenclature[S]{\(\delta_i\)}{Desvio aleatório que modela o escorregamento das esferas\nomunit{\si{\second}}}
+\nomenclature[S]{\(\varepsilon(t)\)}{Ruído gaussiano branco\nomunit{\si{\meter\per\second\squared}}}
+\nomenclature[S]{\(u(\cdot)\)}{Degrau unitário}
+\nomenclature[S]{\(f_s\)}{Taxa de amostragem\nomunit{\si{\hertz}}}
+\nomenclature[S]{\(f_{\mathrm{ap}}\)}{Frequência aparente sob subamostragem sem filtro\nomunit{\si{\hertz}}}
+\nomenclature[S]{\(v_{\mathrm{rms}}\)}{Velocidade eficaz de banda larga, indicador normativo\nomunit{\si{\milli\meter\per\second}}}
+
+%% --- Modelo mecânico e térmico ---------------------------------------------
+\nomenclature[M]{\(k\)}{Rigidez equivalente do caminho de transmissão\nomunit{\si{\newton\per\meter}}}
+\nomenclature[M]{\(k_{\mathrm{base}}\)}{Rigidez da base, placa circular engastada\nomunit{\si{\newton\per\meter}}}
+\nomenclature[M]{\(k_{\mathrm{res}}\)}{Rigidez do ressalto de centragem, compressão axial\nomunit{\si{\newton\per\meter}}}
+\nomenclature[M]{\(k_{\mathrm{corpo}}\)}{Rigidez do corpo, viga tubular engastada\nomunit{\si{\newton\per\meter}}}
+\nomenclature[M]{\(\mathcal{D}\)}{Rigidez flexional da placa\nomunit{\si{\newton\meter}}}
+\nomenclature[M]{\(E\)}{Módulo de elasticidade\nomunit{\si{\pascal}}}
+\nomenclature[M]{\(\nu\)}{Coeficiente de Poisson}
+\nomenclature[M]{\(I\)}{Momento de inércia da seção tubular quadrada\nomunit{\si{\meter\tothe{4}}}}
+\nomenclature[M]{\(A\)}{Área da seção resistente\nomunit{\si{\meter\squared}}}
+\nomenclature[M]{\(L\)}{Comprimento do elo\nomunit{\si{\meter}}}
+\nomenclature[M]{\(h\)}{Espessura da base\nomunit{\si{\meter}}}
+\nomenclature[M]{\(a\)}{Raio da placa circular\nomunit{\si{\meter}}}
+\nomenclature[M]{\(\ell\)}{Lado externo da seção tubular\nomunit{\si{\meter}}}
+\nomenclature[M]{\(t\)}{Espessura da parede tubular\nomunit{\si{\meter}}}
+\nomenclature[M]{\(f_n\)}{Frequência natural de montagem do conjunto\nomunit{\si{\hertz}}}
+\nomenclature[M]{\(R_{\mathrm{th}}\)}{Resistência térmica do caminho condutivo\nomunit{\si{\kelvin\per\watt}}}
+
+%% --- Descritores e avaliação ------------------------------------------------
+\nomenclature[D]{\(x_{\mathrm{rms}}\)}{Valor eficaz do sinal na janela\nomunit{\si{\meter\per\second\squared}}}
+\nomenclature[D]{\(\kappa\)}{Curtose do sinal na janela}
+\nomenclature[D]{\(\sigma\)}{Desvio-padrão do sinal na janela\nomunit{\si{\meter\per\second\squared}}}
+\nomenclature[D]{\(s(x,n)\)}{Escore de anomalia do Isolation Forest}
+\nomenclature[D]{\(\mathrm{AUC}_\alpha\)}{Área parcial sob a curva ROC, acumulada até \(\alpha\)}
+\nomenclature[D]{\(\alpha\)}{Limite superior da faixa de falso alarme na área parcial}
+\nomenclature[D]{\(q\)}{Risco alvo na calibração de limiar por valores extremos}
+\nomenclature[D]{\(N\)}{Número de amostras na janela}
