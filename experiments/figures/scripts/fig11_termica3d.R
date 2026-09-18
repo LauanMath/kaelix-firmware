@@ -36,7 +36,7 @@ ver_cols <- c("v1" = pal[["signal_blue"]], "v2" = pal[["accent_red"]])
 # --- (a) onde o salto de 60 K é gasto ---------------------------------------
 pa <- ggplot(perf, aes(t_media, z_mm, colour = versao)) +
   annotate("rect", xmin = T_AMB, xmax = LIPO, ymin = -Inf, ymax = Inf,
-           fill = pal[["signal_teal"]], alpha = 0.10) +
+           fill = pal[["teal_wash"]], alpha = 0.10) +
   geom_vline(xintercept = T_AMB, colour = pal[["neutral_mid"]],
              linetype = "22", linewidth = 0.35) +
   geom_vline(xintercept = T_MOT, colour = pal[["neutral_dark"]],

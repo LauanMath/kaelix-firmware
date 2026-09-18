@@ -118,7 +118,7 @@ tw$cor <- unname(cfg_cols)
 
 p_c <- ggplot(tw, aes(f_n_hz, t_interna_c)) +
   annotate("rect", xmin = B_ISO, xmax = 1450, ymin = 30, ymax = LIM_CAR,
-           fill = pal[["signal_teal"]], alpha = 0.16) +
+           fill = pal[["teal_wash"]], alpha = 0.16) +
   annotate("text", x = 1420, y = 34, hjust = 1, size = 1.75, fontface = "bold",
            colour = "#1F7A6C", label = "alvo: rígido e frio") +
   geom_hline(yintercept = LIM_CAR, linewidth = 0.35, linetype = "22",

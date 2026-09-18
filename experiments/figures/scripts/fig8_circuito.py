@@ -32,13 +32,17 @@ import gen_schematic as SCH  # noqa: E402
 OUT = pathlib.Path(__file__).resolve().parents[1] / "output"
 OUT.mkdir(parents=True, exist_ok=True)
 
-TINTA = "#1a1a1a"
-ALIM = "#b3402f"
-CORTE = "#1f6feb"
-CINZA = "#6b6b6b"
+# Alinhado a scripts/theme_kaelix.R: mesma tinta, mesmo azul de sinal, mesmo
+# vermelho de acento e mesmo cinza neutro das figuras em R. Antes este
+# esquemático usava paleta e família próprias, e destoava das demais no PDF.
+TINTA = "#272727"   # pal neutral_dark
+ALIM = "#8C2D1E"    # pal accent_red
+CORTE = "#3182BD"   # pal signal_blue
+CINZA = "#767676"   # pal neutral_mid
 FUNDO = "#ffffff"
 CAIXA = "#fcfcfc"
-FONTE = "DejaVu Sans, Helvetica, Arial, sans-serif"
+# Serif, para casar com o corpo do TCC (pacote `times`), como no tema em R.
+FONTE = "Times New Roman, Times, Nimbus Roman, serif"
 
 S = []
 DESENHADO = set()          # (ref, pino) já representados no desenho
@@ -462,14 +466,14 @@ txt(JX1 - 108, 965, "IO0", size=11, anc="end")
 txt(840, 1080,
     "GPIO5 em nível alto liga o rail +3V3_SW pelo load switch Q2/Q1. Em nível baixo — ou com o pino solto, "
     "graças ao R8 — o rail cai a zero e",
-    size=12, cor="#3a3a3a")
+    size=12, cor=TINTA)
 txt(840, 1098,
     "leva junto o MPU6050, os pull-ups do I2C e o topo do divisor do NTC. Cortar só o retorno a GND não "
     "desligaria o sensor: os pull-ups",
-    size=12, cor="#3a3a3a")
+    size=12, cor=TINTA)
 txt(840, 1116,
     "continuariam em +3V3 e o alimentariam pelos diodos de ESD de SDA/SCL.",
-    size=12, cor="#3a3a3a")
+    size=12, cor=TINTA)
 txt(840, 1142,
     "O rádio NÃO está no rail comutado: lora_sleep() por software é obrigatório (1,5 mA x 720 s = 1093 mA·s por ciclo).",
     size=12, cor=ALIM)

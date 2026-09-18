@@ -48,7 +48,7 @@ p_a <- ggplot(tr, aes(freq_hz, T, colour = rotulo, linetype = rotulo)) +
   annotate("rect", xmin = 10, xmax = B_SENSOR, ymin = 0.04, ymax = 40,
            fill = pal[["signal_blue"]], alpha = 0.09) +
   annotate("rect", xmin = B_SENSOR, xmax = B_ISO, ymin = 0.04, ymax = 40,
-           fill = pal[["accent_orange"]], alpha = 0.13) +
+           fill = pal[["orange_wash"]], alpha = 0.13) +
   geom_hline(yintercept = 1, linewidth = 0.35, linetype = "22",
              colour = pal[["neutral_mid"]]) +
   geom_line(linewidth = 0.5) +
@@ -153,7 +153,7 @@ md_ <- rd("fig3b_modos.csv") |>
 
 p_e <- ggplot(md_, aes(f_apoiada_hz, painel)) +
   annotate("rect", xmin = 0, xmax = B_ISO, ymin = 0.4, ymax = 3.6,
-           fill = pal[["accent_orange"]], alpha = 0.13) +
+           fill = pal[["orange_wash"]], alpha = 0.13) +
   geom_segment(aes(xend = f_engastada_hz, yend = painel),
                linewidth = 1.5, colour = pal[["signal_blue"]], alpha = 0.35) +
   geom_point(size = 1.1, colour = pal[["signal_blue"]]) +
