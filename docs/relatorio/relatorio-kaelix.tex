@@ -67,7 +67,7 @@ Este relatório reúne as simulações realizadas sobre o Kaelix, um dispositivo
 baixo custo para manutenção preditiva de motores industriais. O projeto combina um
 acelerômetro MPU6050, um microcontrolador ESP32-S3, rádio LoRa e um invólucro em ASA
 impresso em três dimensões, com detecção de anomalias por Isolation Forest embarcado e
-rotulagem de severidade pela norma ISO 10816-3.
+rotulagem de severidade pela norma ISO 20816-3.
 
 As especificações de hardware, as cotas do desenho mecânico e a arquitetura de
 processamento foram fornecidas pela equipe do projeto e tomadas como dadas. A partir
@@ -166,7 +166,7 @@ Defeito incipiente           & amplitude               & \num{0,25} \\
 Referência de banda larga    & $f_s$                   & \SI{20}{\kilo\hertz} \\
 MPU6050                      & $f_s$ máxima            & \SI{1}{\kilo\hertz} \\
 Banda útil do MPU6050        & Nyquist                 & \SI{500}{\hertz} \\
-Banda exigida pela norma     & ISO 10816-3             & \SIrange{10}{1000}{\hertz} \\
+Banda exigida pela norma     & ISO 20816-3             & \SIrange{10}{1000}{\hertz} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -221,7 +221,11 @@ diagnóstico é a razão entre as amplitudes de $E$ em BPFO nas condições com 
 \subsection{Conversão para velocidade e limiar do detector}
 \label{ssec:conversao}
 
-A ISO 10816-3 avalia a severidade em velocidade eficaz sobre \SIrange{10}{1000}{\hertz}.
+A ISO 20816-3:2022, que cancela e substitui a ISO 10816-3:2009, avalia a severidade em
+velocidade eficaz de banda larga, e exige do instrumento resposta plana em faixa de
+\emph{ao menos} \SIrange{10}{1000}{\hertz} \cite{iso10816,iso20816}. Os valores de
+zona são idênticos nas duas edições, de modo que a substituição afeta a rastreabilidade da
+citação e não os números reportados aqui.
 A conversão adotada opera no domínio da frequência: cada componente do espectro de
 aceleração $A(f)$ é dividida por $j2\pi f$ e a máscara normativa é aplicada antes da
 síntese,
@@ -438,8 +442,11 @@ de acerto.
 \subsection{A norma exige velocidade, e a integração precisa ser feita na frequência}
 \label{ssec:norma}
 
-A ISO 10816-3 define as zonas de severidade em velocidade eficaz, sobre a banda de
-\SI{10}{\hertz} a \SI{1000}{\hertz} \cite{iso10816,iso20816}. O acelerômetro entrega aceleração. A conversão foi
+A ISO 20816-3 define as zonas de severidade em velocidade eficaz e exige resposta plana
+do instrumento em faixa de \emph{ao menos} \SI{10}{\hertz} a \SI{1000}{\hertz}, com limite
+inferior de até \SI{2}{\hertz} abaixo de \num{600}~r/min \cite{iso10816,iso20816}. A exigência
+recai sobre o instrumento, e não sobre a janela de análise --- é o que torna o truncamento
+em \SI{500}{\hertz} uma violação de requisito, e não uma escolha de processamento. O acelerômetro entrega aceleração. A conversão foi
 testada contra uma senoide cuja integral é conhecida analiticamente, com amplitude
 \SI{3,0}{\meter\per\second\squared} a \SI{50}{\hertz}, correspondendo a
 \SI{6,7524}{\milli\meter\per\second} eficazes (Tabela~\ref{tab:integracao}).
@@ -476,7 +483,7 @@ norma. O método foi validado também em sinal com três componentes, com erro d
 \SI{0,003}{\percent}.
 
 Com a frequência de Nyquist em \SI{500}{\hertz}, o dispositivo cobre metade da banda que a
-norma exige. A conformidade plena com a ISO 10816-3 não é alcançável com o sensor atual,
+norma exige. A conformidade plena com a ISO 20816-3 não é alcançável com o sensor atual,
 independentemente da questão de detecção de rolamento.
 
 \subsection{O protocolo de validação infla a acurácia}
