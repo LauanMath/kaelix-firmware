@@ -5,6 +5,109 @@ Registro das mudanças do projeto Kaelix. Formato baseado em
 
 ## [Não publicado]
 
+## Placa v3: a bateria passa a ser carregável
+
+Até a v2 a placa **não tinha como carregar a célula**: nenhum CI carregador,
+nenhum conector de entrada. O invólucro tinha o furo de USB-C, os relatórios
+falavam em "recarga por USB-C", a análise térmica inteira raciocinava sobre o
+limite de 45 °C *de carga* — e a netlist não tinha nada disso. O achado veio
+da auditoria do TCC (defeito 19 do `verificacao-hardware`, enterrado entre
+ângulo de pad e rabicho de antena).
+
+A correção é uma **v3**, e não uma mudança na v2: a v2 é revisão mecânica por
+regra (`hardware/pcb/README.md`), e circuito novo em versão velha tornaria
+impossível atribuir diferença medida. v1 e v2 mantêm o esquemático byte a byte.
+
+| Peça | Função |
+|---|---|
+| U5 BQ21040 | carregador linear de uma célula; pino TS suspende a carga fora de 0–45 °C |
+| RT2 NTC 10k β 3380 | sensor do TS, na face de cima, sob a célula e longe do U5 |
+| R13 2k7 | I_carga = 540 / 2,7 k = **200 mA** |
+| J3 USB-C só energia, R11/R12 5k1 | entrada de 5 V; Rd em CC1/CC2 para fonte C-para-C |
+| C13, C14, C15 | entrada, saída e filtro do TS |
+| IO7 ← CHG_N | estado da carga para o firmware (nenhum código lê ainda) |
+
+**Por que BQ21040.** Único entre BQ21040, TP4056 e MCP73831 com monitor de
+temperatura da célula pronto para NTC de 10 k. O limite de 45 °C deixa de ser
+recomendação da folha de dados da célula e passa a ser imposto pelo hardware.
+O RT1 existente (B3950) não serve: os limiares do CI são calibrados para
+β ≈ 3370, e com B3950 o corte cairia perto de 39 °C.
+
+**Por que 200 mA — do modelo térmico, não de regra de bolso.** O carregador
+é linear e dissipa I·(V_USB − V_bat) dentro do invólucro fechado. Novo
+`hardware/termica_carga.py` roda o FEM de `termica.py` com essa fonte interna
+(helpers extraídos para `termica_base.py`, saída de `termica.py` inalterada):
+a placa sobe **~15 K/W**.
+
+| 200 mA, 0,41 W | placa | folga até o corte |
+|---|---|---|
+| fora do motor | 36,7 °C | 8,3 K |
+| motor a 90 °C | 41,1 – 44,3 °C | 0,7 – 3,9 K, **otimista** |
+
+A 500 mA o TS cortaria nos três cenários. A folga do motor quente é otimista
+porque a troca interna usa o h externo; ali ela pode ser nula. Procedimento
+recomendado: carregar fora do motor ou com ele parado.
+
+### A conclusão térmica muda — e já estava errada antes da carga
+
+`relatorio-kaelix` concluía que "a bateria atinge 45 °C com a carcaça em torno
+de 81 °C". Esse número vinha do modelo concentrado **que não convergia**
+(44,8 °C a 80 °C); a correção (33,0 °C convergido; placa a 38,3 °C a 90 °C no
+FEM) estava registrada no `verificacao-hardware` e nunca chegou ao texto nem à
+figura 4. Reescrito: em operação nenhum limite é atingido até 90 °C de
+carcaça; o limite de 45 °C restringe **só durante a carga**. A figura 4 segue
+mostrando o valor não convergido, agora declarado na legenda — refazê-la mexe
+no notebook de origem.
+
+### Defeitos de gerador achados no caminho
+
+- **Pino passante não era obstáculo na face oposta** (`gen_pcb.py`). Só furo
+  de fixação era. Os pinos de carcaça do USB-C caíam sob U5, R13 e C14: 3
+  `pth_inside_courtyard` no DRC. Regra estendida a pad ≥ 0,8 mm; as vias
+  térmicas de 0,6 mm do WROOM-1U seguem de fora, como antes.
+- **O roteador contava como plano a faixa entre as fileiras de um QFN**
+  (`router.py`). O escape de GND do U2.1 terminava numa ilha sob o MPU6050 e
+  o DRC acusava grupo solto. Agora o plano não conta como caminho sob o corpo
+  de peça de passo fino. **Mudou o roteamento da v1 e da v2** (costura 92 → 71
+  e 261 → 234), sem tocar em circuito nem placement; as três passam com DRC
+  limpo.
+- **Os furos de USB-C e SMA nunca foram cortados** (`gen_involucro.py`). O
+  cilindro começava em −cx, a largura externa inteira, e ficava fora do corpo.
+  O defeito "furo USB-C sem conector" descrevia um furo que só existia no
+  desenho. Corrigido; os corpos v1 e v2 perdem 0,58 cm³. **Os resultados
+  modais e térmicos de `hardware/fem/` foram calculados sem os furos** e não
+  foram refeitos (~1,7% da parede).
+- **Peça de borda.** O corpo do USB-C passa da borda da placa por projeto.
+  `gen_pcb.py` confere o encaixe pelos pads e exige a linha "PCB Edge" do
+  footprint sobre a borda (desvio 0,000 mm); `check_3d.py` aceita a passagem
+  só no lado −X; `gen_involucro.py` mede a altura do conector no `.step` da
+  placa e põe o furo ali (15,73 mm, contra 21,50 arbitrados).
+
+### Não verificado
+
+Modal, PDN e vibração não foram recalculados para a v3. O NTC do TS lê a
+placa, não a célula. Célula invertida com USB ligado injeta a pré-carga
+(falha dupla; conector polarizado). Sem TVS no VBUS. Tudo acima é modelo,
+nenhuma medição.
+
+## Correções de documentação: norma, procedência, referências e TCC
+
+Entrada que faltou nos commits de 17/09/2026.
+
+- **ISO 20816-3.** Os relatórios chamavam de "a norma" a ISO 10816-3:2009,
+  retirada. Os valores de zona são idênticos; muda a rastreabilidade da
+  citação. A banda passou a ser enunciada como requisito de instrumento ("ao
+  menos 10–1000 Hz"), que é o que sustenta a conclusão de não conformidade.
+- **Procedência.** Três resultados próprios da revisão eram apresentados como
+  medidos no MAFAULDA e vêm de sinal sintetizado: o par 413×/20×, a queda de
+  pAUC de 16,2% contra 3,7% e o falso alarme de ~42% com
+  `contamination='auto'`. Todos no único documento que mistura procedências.
+- **`docs/relatorio/referencias.bib`**, fonte canônica: 55 chaves, 53 obras;
+  nas 5 divergentes vence a versão auditada.
+- **Figuras** em Times, com cores de série de contraste ≥ 3:1.
+- **TCC** em `docs/assembly_tcc_mount/`, consumindo o `.bib` e as figuras
+  sem cópia.
+
 ## Período do ciclo para 12 minutos: REQ-PWR-06 atendido
 
 `SLEEP_MINUTES` passou de 10 para 12 (`src/main.cpp:83`).
