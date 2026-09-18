@@ -353,6 +353,35 @@ def conflito(refA, refB):
                 return ("furo/corpo", min(rh[2], ro[2]) - max(rh[0], ro[0]),
                         min(rh[3], ro[3]) - max(rh[1], ro[1]))
 
+    # Pino PASSANTE de peça, o mesmo raciocínio aplicado ao furo: ele atravessa
+    # o laminado e sai na face oposta com pad e filete de solda, e ali nenhum
+    # corpo pode assentar. É o pth_inside_courtyard do KiCad. Até a v2 só o J2
+    # tinha pino passante e nada ficava sob ele; na v3 os quatro pinos de
+    # carcaça do USB-C caem na face de baixo, onde fica o carregador.
+    for h, o in ((refA, refB), (refB, refA)):
+        if eh_furo(h) or eh_furo(o) or h not in POSICOES or o not in POSICOES:
+            continue
+        fo, ro = rect_mecanico(o)
+        if fo == POSICOES[h][3]:
+            continue          # mesma face: já coberto pela colisão mecânica
+        x, y, rot, _l = POSICOES[h]
+        for pd in geom(NET[h][0])["pads"]:
+            # Via térmica não é pino: as 12 do pad térmico do WROOM-1U têm pad
+            # de 0,6 mm, furo de 0,2 e máscara por cima, e na v1 o Ra-02 assenta
+            # sob elas por projeto (ver rect_mecanico). Pino de verdade começa em
+            # 1,1 mm (carcaça do USB-C) e 1,7 mm (header).
+            if not pd["tht"] or min(pd["w"], pd["h"]) < 0.8:
+                continue
+            xs, ys = [], []
+            for sx in (-1, 1):
+                for sy in (-1, 1):
+                    rx, ry = gira(pd["x"] + sx * pd["w"] / 2, pd["y"] + sy * pd["h"] / 2, rot)
+                    xs.append(x + rx); ys.append(y + ry)
+            rp = (min(xs), min(ys), max(xs), max(ys))
+            if _cruza(rp, ro, FOLGA):
+                return ("pino/corpo", min(rp[2], ro[2]) - max(rp[0], ro[0]),
+                        min(rp[3], ro[3]) - max(rp[1], ro[1]))
+
     furo = eh_furo(refA) or eh_furo(refB)
     folga = FOLGA_FURO if furo else FOLGA_COBRE
     for f1, r1, n1 in rects_cobre(refA):
