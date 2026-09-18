@@ -281,6 +281,14 @@ def _monta_grade(net, posicoes, netnum, pads_abs, centro, contorno, nc):
     _G["cobre"] = np.zeros((2, N, N), dtype=bool)
     _G["gnd"] = np.zeros((2, N, N), dtype=bool)     # cobre de GND: pad, pista, via
     _G["gnd_alheio"] = np.zeros((2, N, N), dtype=bool)   # pads de GND de passo fino
+    # Sob o corpo de um encapsulamento de passo fino, na face dele, o plano
+    # NÃO conta. A grade via ali células de plano entre as fileiras de pads e
+    # tratava a região como caminho; o preenchimento do KiCad, com espessura
+    # mínima e folga exatas, deixa só retalhos que o escape seguinte ou uma
+    # pista de sinal fecham em ilha. Foi assim que o U2.1 da v3 terminou num
+    # toco "ligado ao plano" que o DRC acusou como grupo solto. Atravessar
+    # com pista continua possível; o que sai é contar com plano ali.
+    _G["sob_fino"] = np.zeros((2, N, N), dtype=bool)
     _G["centro"] = (CXc, CYc)
     _G["nid_gnd"] = netnum["GND"]
 
@@ -293,6 +301,12 @@ def _monta_grade(net, posicoes, netnum, pads_abs, centro, contorno, nc):
         if ref not in posicoes:
             continue
         todos = pads_abs(ref)
+        if mapa and _passo_fino(todos):
+            xs = [q["x"] for q in todos]; ys = [q["y"] for q in todos]
+            caixa = _mask_ret((min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2,
+                              max(xs) - min(xs), max(ys) - min(ys), 0.0)
+            for f in {f for q in todos for f in q["faces"]}:
+                _G["sob_fino"][LADO[f]] |= caixa
         for p in todos:
             if not mapa:        # furo de fixação: NPTH, folga de furo
                 _carimba(_mask_ret(p["x"], p["y"], 0.0, 0.0,
@@ -430,7 +444,7 @@ def _gnd_ok(nid=None, margem=0.0):
     borda = _fora_do_contorno(FOLGA_BORDA)
     alheio = _G["cobre"] | borda[None, :, :]
     r = int(math.ceil((FOLGA_ZONA + ESP_ZONA / 2 + margem) / PASSO))
-    return ~_dilata(alheio, r)
+    return ~_dilata(alheio, r) & ~_G["sob_fino"]
 
 
 def _dilata(mask, r):

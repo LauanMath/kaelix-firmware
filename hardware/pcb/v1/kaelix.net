@@ -2,7 +2,7 @@
 	(version "E")
 	(design
 		(source "/Users/fox/estudos/lauan/kaelix-firmware/hardware/pcb/v1/kaelix.kicad_sch")
-		(date "2026-09-17T17:54:24")
+		(date "2026-09-18T09:44:44")
 		(tool "Eeschema 10.0.6")
 		(sheet
 			(number "1")
