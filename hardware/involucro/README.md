@@ -1,12 +1,19 @@
-# Invólucro — v1 e v2
+# Invólucro — v1, v2 e v3
 
-Duas versões geradas por `hardware/gen_involucro.py` a partir de um único
-conjunto de parâmetros (`VERSOES`). Ambas reprodutíveis; nenhum arquivo desta
+Três versões geradas por `hardware/gen_involucro.py` a partir de um único
+conjunto de parâmetros (`VERSOES`). Todas reprodutíveis; nenhum arquivo desta
 pasta é editado à mão.
+
+A **v3** é o corpo da v2 para a placa v3, que carrega a bateria por USB-C. A
+única diferença é a altura do furo do USB-C, que deixa de ser arbitrada e
+passa a ser **medida** no `.step` da placa: centro do conector a 7,73 mm do
+fundo da cavidade, no eixo da placa em Y (desvio 0,00 mm). O furo sai de
+z = 21,50 para z = 15,73 mm. Na altura antiga a borda de baixo do furo barrava
+o plugue. Tudo o mais na tabela abaixo vale para a v3 como para a v2.
 
 | | v1 | v2 |
 |---|---|---|
-| estado | congelada | ativa |
+| estado | congelada | ativa (v3 = v2 com o furo do USB-C medido) |
 | origem das cotas | `docs/device/IMG_5298.jpeg`, versão 4 | dimensionada pela célula real e pela placa |
 | planta | quadrada | retangular |
 | cavidade | 43 × 43 × 54 | 62 × 52 × 30 |
@@ -19,14 +26,16 @@ pasta é editado à mão.
 | autonomia a 314 µA | 66 dias (célula de 500 mAh, **que também não entra**) | **265 dias** |
 | REQ-PWR-06 (243 dias) | não atendido | atendido |
 
-Eletrônica idêntica nas duas. Cada versão tem a sua placa, desenhada para o
-próprio vão (`hardware/pcb/README.md`): 42 × 42 mm na v1, 61 × 51 mm na v2.
-Cada uma entra na cavidade correspondente com interferência **0,0 mm³**.
+Eletrônica idêntica na v1 e na v2; a v3 acrescenta o circuito de carga. Cada
+versão tem a sua placa, desenhada para o próprio vão
+(`hardware/pcb/README.md`): 42 × 42 mm na v1, 61 × 51 mm na v2 e na v3. Cada
+uma entra na cavidade correspondente com interferência **0,0 mm³** — na v3
+com o nariz do USB-C passando pelo furo da parede.
 
 ## Arquivos
 
 ```
-v1/  v2/
+v1/  v2/  v3/
   corpo.step  tampa.step  base.step     peças, cada uma na própria origem
   montagem.step                          posicionadas, com placa e bateria
   montagem-corte.step                    meia seção
@@ -58,9 +67,10 @@ Cada linha traz como o defeito foi medido e o que decorre dele.
 | 8 | Empilhamento não fecha: 74,5 mm contra os **78,0** da vista 6 | base 9,0 + corpo 62,0 (rebaixo 3,3 absorvido) + tampa 3,5 | −3,5 mm. Candidatos: espessura da tampa, altura da base, gaxeta |
 | 9 | **Espessura da tampa não é cotada.** Adotado 3,5, herdado de `experiments/figures/scripts/export_enclosure_data.py` | vista 3 não a apresenta | Se for 7,0, o item 8 fecha exato |
 | 10 | Massa anotada (118 g) é cálculo **maciço**, não impresso | modelo maciço: 112 g a 1070 kg/m³ → fração implícita 1,06 | Peça impressa a 35% de infill pesa menos. Diferença de 5% valida a leitura das cotas |
-| 11 | Furo USB-C Ø13,0 sem conector correspondente na placa | netlist: J2 é header UART de 6 vias | O desenho anota o furo como provisório |
+| 11 | Furo USB-C Ø13,0 sem conector correspondente na placa | netlist: J2 é header UART de 6 vias | Fechado na v3 (J3, USB-C de carga). Na v1 e na v2 segue sem conector |
 | 12 | Antena SMA Ø6,5 sem rabicho u.FL→SMA na BOM | `hardware/pcb/v1/kaelix-bom.csv` | O Ra-02 tem conector IPEX; a ligação ao painel não está especificada |
-| 13 | Altura dos furos de USB-C e SMA na parede não legível na foto do desenho | — | Modelados a 45% e 80% da cavidade. Bitolas são as do desenho; posições verticais são arbitradas |
+| 13 | Altura dos furos de USB-C e SMA na parede não legível na foto do desenho | — | Modelados a 45% e 80% da cavidade. Bitolas são as do desenho; posições verticais são arbitradas. Na v3 a do USB-C é medida no conector (15,73 mm); a da SMA segue arbitrada |
+| 18 | **Os furos de USB-C e SMA nunca foram cortados.** O cilindro começava em x = −cx, a largura externa inteira, e ia de −69 a −58,5 mm num corpo que termina em −34,5 | interferência de 0,07 mm entre a carcaça do USB-C da v3 e a parede, dentro do que devia ser o furo | Corrigido: o cilindro começa fora da parede e a atravessa. O corpo perde 0,58 cm³ nas duas versões, o volume dos dois furos. **Os resultados modais e térmicos de `hardware/fem/` foram calculados sobre o corpo sem furos** e não foram refeitos: ~166 mm² de abertura numa parede de ~9.700 mm². O efeito esperado é pequeno, mas não foi medido |
 | 14 | Assento mínimo da placa não estava especificado em lugar nenhum | interferência 220,3 mm³ com assento de 2,0 mm | **A placa exige ≥3,3 mm acima do fundo**: o Ra-02 está na face de baixo e desce 3,29 mm. Adotado 5,0 mm |
 | 16 | **Não existe assento.** Seccionando o corpo no plano dos 5,0 mm adotados, a seção tem só a parede externa e os quatro bosses — nenhum ressalto, nervura ou batente | seção do sólido em z = FUNDO + 5,0 | Os 0,0 mm³ de interferência que `check_3d.py` reporta como aprovação significam que **nada toca a placa**. Onde a carga se apoia vale **fator 2,5** na frequência do conjunto (679 Hz contra 1670 Hz na v2); ver `hardware/fem/README.md` |
 | 17 | A v2 **não resolve** o caminho de montagem confirmado em `analise-involucro.ipynb`, e na hipótese pessimista piora | modal FEM: v1 936 Hz, v2 **679 Hz**, com carga na borda de cima | A célula de 2000 mAh que entrega os 265 dias põe 25 g a mais sobre a mola de ASA; a massa vence a redução de 24 mm na altura. A recomendação de base metálica permanece |

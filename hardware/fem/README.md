@@ -243,6 +243,36 @@ O conjunto acompanha o motor com cerca de meia hora de atraso e nunca chega
 perto dele. A massa térmica interna (20 J/K na v1, 50 J/K na v2) é pequena
 diante da do invólucro e some em série.
 
+### Durante a carga (placa v3)
+
+`hardware/termica_carga.py`, dados em
+`experiments/figures/data/termica_carga.csv`. A cavidade adiabática vale para
+a operação — 2,0 mW médios, centésimos de kelvin — e deixa de valer na carga:
+o BQ21040 da placa v3 é linear e dissipa I·(V_USB − V_bat) dentro do
+invólucro fechado, centenas de mW. Mesma malha, material e troca externa
+desta seção; a potência entra como fluxo uniforme pelas faces da cavidade, e a
+placa fica acima da parede pela R_int de `termica.py`.
+
+| cenário | placa sem carga | ganho | 200 mA (0,41 W no pior ponto) |
+|---|---|---|---|
+| bancada, fora do motor | 30,3 °C | 15,7 K/W | 36,7 °C |
+| preso ao motor parado | 30,3 °C | 15,5 K/W | 36,6 °C |
+| preso ao motor a 90 °C | 35,3 – 38,5 °C | 14,3 K/W | **41,1 – 44,3 °C** |
+
+O intervalo do motor quente é o mesmo desta seção: da média da parede ao
+equilíbrio radiativo com o piso quente. O NTC do TS está na placa, então o
+corte de 45 °C é lido na placa — o limite superior da célula.
+
+A conclusão muda de forma. **Em operação**, nenhum limite é atingido até
+90 °C de carcaça: a placa fica em 38,3 °C, abaixo tanto dos 45 °C de carga
+quanto dos 60 °C de descarga da célula. **Durante a carga** o limite de 45 °C
+passa a restringir: com folga de 8,3 K na bancada e de só 0,7 a 3,9 K no
+motor quente. E essa folga é **otimista**: a R_int herdada usa o h externo, e a
+convecção dentro da cavidade fechada é mais fraca — a placa real esquenta mais
+que o modelo durante a carga. No motor quente a folga real pode ser nula. O
+TS suspende e retoma a carga sozinho; o procedimento recomendado é carregar
+fora do motor ou com ele parado.
+
 ### Correção a `analise-termica.ipynb`
 
 O notebook resolve o balanço concentrado por iteração de ganho fixo
@@ -278,7 +308,10 @@ e isso é decisão de quem o mantém.
 | radiação linearizada (h = 4εσT³) | erro < 1% para salto de poucos kelvin |
 | h externo de convecção natural por correlação de placa vertical | valor único para toda a peça; o real varia com a orientação da face |
 | ASA maciço, k = 0,17 | peça impressa a 35% de preenchimento conduz **menos**; o resultado real é ainda mais isolado |
-| sem fonte interna | os 314 µA médios dissipam ~1 mW, contra os 640 mW que entram |
+| sem fonte interna | os 314 µA médios dissipam ~1 mW, contra os 640 mW que entram. **Não vale durante a carga** da placa v3: ver "Durante a carga" |
+| fonte da carga como fluxo uniforme nas faces da cavidade | o calor real sai concentrado perto do U5; a média da parede não muda, a distribuição sim |
+| R_int da placa com o h externo (herdado de `termica.py`) | a convecção interna é mais fraca que a externa: a placa real fica **mais quente** que o modelo durante a carga |
+| corpo sem os furos de USB-C e SMA | os furos nunca foram cortados até a correção 18 de `hardware/involucro/README.md`; ~1,7% da parede, não refeito |
 
 ## Convergência de malha
 
