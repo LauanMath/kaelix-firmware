@@ -5,6 +5,16 @@ Registro das mudanças do projeto Kaelix. Formato baseado em
 
 ## [Não publicado]
 
+## Verificação formal em Lean 4 passa a ser versionada
+
+`experiments/verificacao-lean/`: 76 teoremas que reproduzem por aritmética
+exata de intervalos as contas de forma fechada do TCC, sem `sorry` e sem
+axiomas — conferido com `#print axioms` em todos os 76, e não só nos cinco
+que `Auditoria.lean` imprime. Estava fora do repositório, sem versionamento.
+Inclui a refutação dos 44,8 °C do modelo térmico concentrado (a raiz está em
+33,0 °C), o que corrobora por outra via a correção feita nos relatórios.
+Rodar: `lake build` na pasta.
+
 ## Placa v3: a bateria passa a ser carregável
 
 Até a v2 a placa **não tinha como carregar a célula**: nenhum CI carregador,
