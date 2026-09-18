@@ -1,0 +1,616 @@
+% =============================================================================
+% referencias.bib --- fonte canônica das referências do projeto Kaelix
+%
+% Extraído entrada por entrada dos blocos \thebibliography de:
+%   revisao-literatura.tex        (38 entradas)
+%   relatorio-kaelix.tex          (13 entradas, 6 novas)
+%   comunicacao-topologia.tex     ( 7 entradas, 0 novas)
+%   praticas-sistemas-criticos.tex(11 entradas, 11 novas)
+%   verificacao-hardware.tex      (sem bibliografia própria)
+%
+% 69 \bibitem no total; 55 chaves únicas; 53 OBRAS distintas (ver nota ISO).
+%
+% REGRA DE RESOLUÇÃO DE DIVERGÊNCIA -------------------------------------------
+% 13 chaves aparecem em mais de um documento (kolok2025 aparece em três).
+% Em 8 delas as cópias são idênticas. Nas 5 divergentes vence a versão do
+% revisao-literatura.tex, por ser superconjunto da outra em todos os casos e
+% por ser a que passou pela auditoria em fonte primária:
+%   han2022     -- venue completo + preprint arXiv
+%   koizumi2020 -- 11 autores nominais, título completo, local e páginas
+%   kolok2025   -- nota de inconsistência interna da fonte (ver annote)
+%   nabavi2025  -- CORREÇÃO DE AUDITORIA: "S. M. H. Nabavi" e "S. M. A. Nabavi"
+%                  são autores distintos; as outras cópias traziam "S. Nabavi"
+%                  nos dois, colapsando-os
+%   randall2011 -- DOI
+% Consequência: relatorio-kaelix.tex, comunicacao-topologia.tex e
+% praticas-sistemas-criticos.tex mantêm bibliografias parcialmente
+% pré-auditoria até serem migrados para este arquivo.
+%
+% COLISÃO DE CHAVES ISO -------------------------------------------------------
+% As mesmas duas normas aparecem sob grafias diferentes:
+%   revisao-literatura.tex  -> iso108163_2009 , iso208163_2022   (canônicas)
+%   relatorio-kaelix.tex    -> iso10816       , iso20816         (aliases)
+% Canonizadas aqui nas primeiras, por serem mais completas (edição, mês,
+% cancelamento explícito). Ao migrar o relatorio-kaelix, substituir:
+%   iso10816 -> iso108163_2009        iso20816 -> iso208163_2022
+%
+% CAMPO note vs. annote -------------------------------------------------------
+% note   : ressalva de procedência que deve aparecer na lista de referências
+%          (norma retirada, literatura de fabricante, texto integral não
+%          acessado). É disclosure bibliográfico.
+% annote : julgamento sobre a fonte, que pertence ao texto e NÃO deve ser
+%          impresso na lista. Preservado aqui para não se perder.
+%
+% Codificação: UTF-8. Consumido por abntex2cite (abntex2-alf / abntex2-num).
+% =============================================================================
+
+
+% --- Sensores MEMS, adequação e diagnóstico de rolamento ---------------------
+
+@article{albarbar2008,
+  author  = {Albarbar, A. and Mekid, S. and Starr, A. and Pietruszkiewicz, R.},
+  title   = {Suitability of {MEMS} accelerometers for condition monitoring: an experimental study},
+  journal = {Sensors},
+  volume  = {8},
+  number  = {2},
+  pages   = {784--799},
+  year    = {2008},
+  doi     = {10.3390/s8020784}
+}
+
+@article{antoni2006,
+  author  = {Antoni, J. and Randall, R. B.},
+  title   = {The spectral kurtosis: application to the vibratory surveillance and diagnostics of rotating machines},
+  journal = {Mechanical Systems and Signal Processing},
+  volume  = {20},
+  number  = {2},
+  pages   = {308--331},
+  year    = {2006},
+  doi     = {10.1016/j.ymssp.2004.09.002}
+}
+
+@article{antoni2007,
+  author  = {Antoni, J.},
+  title   = {Fast computation of the kurtogram for the detection of transient faults},
+  journal = {Mechanical Systems and Signal Processing},
+  volume  = {21},
+  number  = {1},
+  pages   = {108--124},
+  year    = {2007},
+  doi     = {10.1016/j.ymssp.2005.12.002},
+  note    = {Metadados conferidos no depósito do editor; resumo integral lido em fonte secundária}
+}
+
+@article{fidali2024,
+  author  = {Fidali, M. and Augustyn, D. and Ochmann, J. and Uchman, W.},
+  title   = {Evaluation of the diagnostic sensitivity of digital vibration sensors based on capacitive {MEMS} accelerometers},
+  journal = {Sensors},
+  volume  = {24},
+  number  = {14},
+  pages   = {4463},
+  year    = {2024},
+  doi     = {10.3390/s24144463}
+}
+
+@article{landi2023,
+  author  = {Landi, E. and Prato, A. and Fort, A. and Mugnaini, M. and Vignoli, V. and Facello, A. and Mazzoleni, F. and Murgia, M. and Schiavi, A.},
+  title   = {Highly reliable multicomponent {MEMS} sensor for predictive maintenance management of rolling bearings},
+  journal = {Micromachines},
+  volume  = {14},
+  number  = {2},
+  pages   = {376},
+  year    = {2023},
+  doi     = {10.3390/mi14020376}
+}
+
+@article{maruthi2016,
+  author  = {Maruthi, G. S. and Hegde, V.},
+  title   = {Application of {MEMS} accelerometer for detection and diagnosis of multiple faults in the roller element bearings of three phase induction motor},
+  journal = {IEEE Sensors Journal},
+  volume  = {16},
+  number  = {1},
+  pages   = {145--152},
+  year    = {2016},
+  doi     = {10.1109/JSEN.2015.2476561}
+}
+
+@article{rodrigues2021,
+  author  = {Rodrigues, J. V. O. and Pedroso, M. P. G. and Silva, F. F. B. and Le{\~a}o Junior, R. G.},
+  title   = {Performance evaluation of accelerometers {ADXL345} and {MPU6050} exposed to random vibrational input},
+  journal = {Research, Society and Development},
+  volume  = {10},
+  number  = {15},
+  pages   = {e286101523082},
+  year    = {2021},
+  doi     = {10.33448/rsd-v10i15.23082}
+}
+
+@article{sharma2024,
+  author  = {Sharma, G. and Kaur, T. and Mangal, S. K. and Kohli, A.},
+  title   = {Investigating bearing and gear vibrations with a {Micro-Electro-Mechanical} {Systems} ({MEMS}) and machine learning approach},
+  journal = {Results in Engineering},
+  volume  = {24},
+  pages   = {103499},
+  year    = {2024},
+  doi     = {10.1016/j.rineng.2024.103499},
+  note    = {Achado extraído do resumo e dos destaques depositados pelo editor; texto integral não acessado}
+}
+
+@article{randall2011,
+  author  = {Randall, R. B. and Antoni, J.},
+  title   = {Rolling element bearing diagnostics: a tutorial},
+  journal = {Mechanical Systems and Signal Processing},
+  volume  = {25},
+  number  = {2},
+  pages   = {485--520},
+  year    = {2011},
+  doi     = {10.1016/j.ymssp.2010.07.017}
+}
+
+@article{elbouharrouti2024,
+  author  = {El Bouharrouti, N. and Morinigo-Sotelo, D. and Belahcen, A.},
+  title   = {Multi-rate vibration signal analysis for bearing fault detection in induction machines using supervised learning classifiers},
+  journal = {Machines},
+  volume  = {12},
+  number  = {1},
+  pages   = {17},
+  year    = {2024},
+  doi     = {10.3390/machines12010017},
+  note    = {Publicado online em 27 dez. 2023}
+}
+
+@article{smith2015,
+  author  = {Smith, W. A. and Randall, R. B.},
+  title   = {Rolling element bearing diagnostics using the {Case} {Western} {Reserve} {University} data: a benchmark study},
+  journal = {Mechanical Systems and Signal Processing},
+  volume  = {64--65},
+  pages   = {100--131},
+  year    = {2015}
+}
+
+
+% --- Protocolo de validação e vazamento --------------------------------------
+
+@article{varejao2025,
+  author  = {Varej{\~a}o, I. M. S. and others},
+  title   = {The similarity bias problem: what it is and how it impacts vibration based intelligent fault diagnosis},
+  journal = {Mechanical Systems and Signal Processing},
+  volume  = {235},
+  pages   = {112822},
+  year    = {2025}
+}
+
+@article{vieira2026,
+  author  = {Vieira, J. P. and Bauler, V. A. and Rosa, R. K. and Silva, D.},
+  title   = {Towards a more realistic evaluation of machine learning models for bearing fault diagnosis},
+  journal = {Mechanical Systems and Signal Processing},
+  volume  = {258},
+  pages   = {114640},
+  year    = {2026},
+  note    = {Preprint: arXiv:2509.22267}
+}
+
+@article{abburi2023,
+  author  = {Abburi, H. and others},
+  title   = {A closer look at bearing fault classification approaches},
+  journal = {Annual Conference of the PHM Society},
+  volume  = {15},
+  number  = {1},
+  year    = {2023},
+  doi     = {10.36001/phmconf.2023.v15i1.3473},
+  note    = {Preprint: arXiv:2309.17001}
+}
+
+
+% --- Detecção de anomalia: algoritmo, limiar e métrica -----------------------
+
+@inproceedings{liu2008,
+  author    = {Liu, F. T. and Ting, K. M. and Zhou, Z.-H.},
+  title     = {Isolation {Forest}},
+  booktitle = {Proceedings of the 2008 Eighth IEEE International Conference on Data Mining (ICDM)},
+  address   = {Pisa},
+  pages     = {413--422},
+  year      = {2008},
+  doi       = {10.1109/ICDM.2008.17}
+}
+
+@inproceedings{siffer2017,
+  author    = {Siffer, A. and Fouque, P.-A. and Termier, A. and Largou{\"e}t, C.},
+  title     = {Anomaly detection in streams with extreme value theory},
+  booktitle = {Proceedings of the 23rd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD '17)},
+  address   = {Halifax},
+  pages     = {1067--1075},
+  year      = {2017},
+  doi       = {10.1145/3097983.3098144}
+}
+
+@inproceedings{han2022,
+  author    = {Han, S. and Hu, X. and Huang, H. and Jiang, M. and Zhao, Y.},
+  title     = {{ADBench}: anomaly detection benchmark},
+  booktitle = {Advances in Neural Information Processing Systems 35 (NeurIPS 2022), Datasets and Benchmarks Track},
+  year      = {2022},
+  note      = {Preprint: arXiv:2206.09426}
+}
+
+@article{bouman2024,
+  author  = {Bouman, R. and Bukhsh, Z. and Heskes, T.},
+  title   = {Unsupervised anomaly detection algorithms on real-world data: how many do we need?},
+  journal = {Journal of Machine Learning Research},
+  volume  = {25},
+  number  = {105},
+  pages   = {1--34},
+  year    = {2024},
+  note    = {JMLR não atribui DOI}
+}
+
+@misc{bouman2025,
+  author       = {Bouman, R. and Heskes, T.},
+  title        = {Autoencoders for anomaly detection are unreliable},
+  howpublished = {Preprint arXiv (cs.LG)},
+  year         = {2025},
+  month        = jan,
+  note         = {arXiv:2501.13864. Sem revisão por pares até ago. 2026}
+}
+
+@article{ma2023,
+  author  = {Ma, M. Q. and Zhao, Y. and Zhang, X. and Akoglu, L.},
+  title   = {The need for unsupervised outlier model selection: a review and evaluation of internal evaluation strategies},
+  journal = {ACM SIGKDD Explorations Newsletter},
+  volume  = {25},
+  number  = {1},
+  pages   = {19--35},
+  year    = {2023},
+  doi     = {10.1145/3606274.3606277},
+  note    = {O preprint arXiv:2104.01422 (2021) circula com título distinto e não deve ser citado como se fosse esta versão}
+}
+
+@inproceedings{koizumi2020,
+  author    = {Koizumi, Y. and Kawaguchi, Y. and Imoto, K. and Nakamura, T. and Nikaido, Y. and Tanabe, R. and Purohit, H. and Suefusa, K. and Endo, T. and Yasuda, M. and Harada, N.},
+  title     = {Description and discussion on {DCASE2020} challenge task 2: unsupervised anomalous sound detection for machine condition monitoring},
+  booktitle = {Proceedings of the DCASE2020 Workshop},
+  address   = {T{\'o}quio},
+  pages     = {81--85},
+  year      = {2020},
+  note      = {Preprint: arXiv:2006.05822}
+}
+
+@article{brito2022,
+  author  = {Brito, L. C. and Susto, G. A. and Brito, J. N. and Duarte, M. A. V.},
+  title   = {An explainable artificial intelligence approach for unsupervised fault detection and diagnosis in rotating machinery},
+  journal = {Mechanical Systems and Signal Processing},
+  volume  = {163},
+  pages   = {108105},
+  year    = {2022},
+  doi     = {10.1016/j.ymssp.2021.108105},
+  note    = {Preprint: arXiv:2102.11848 (2021)}
+}
+
+@article{hermansa2022,
+  author  = {Hermansa, M. and Kozielski, M. and Michalak, M. and Szczyrba, K. and Wr{\'o}bel, {\L}. and Sikora, M.},
+  title   = {Sensor-based predictive maintenance with reduction of false alarms: a case study in heavy industry},
+  journal = {Sensors},
+  volume  = {22},
+  number  = {1},
+  pages   = {226},
+  year    = {2022},
+  doi     = {10.3390/s22010226}
+}
+
+@manual{scikitlearn2026,
+  author       = {{scikit-learn developers}},
+  title        = {sklearn.ensemble.{IsolationForest} --- documentação oficial da API, versão 1.9.0},
+  year         = {2026},
+  note         = {Disponível em: \url{https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html}. Acesso em ago. 2026}
+}
+
+
+% --- TinyML e nós embarcados -------------------------------------------------
+
+@article{antonini2023,
+  author  = {Antonini, M. and Pincheira, M. and Vecchio, M. and Antonelli, F.},
+  title   = {An adaptable and unsupervised {TinyML} anomaly detection system for extreme industrial environments},
+  journal = {Sensors},
+  volume  = {23},
+  number  = {4},
+  pages   = {2344},
+  year    = {2023},
+  doi     = {10.3390/s23042344}
+}
+
+@article{barbariol2022,
+  author  = {Barbariol, T. and Susto, G. A.},
+  title   = {{TiWS-iForest}: isolation forest in weakly supervised and tiny {ML} scenarios},
+  journal = {Information Sciences},
+  volume  = {610},
+  pages   = {126--143},
+  year    = {2022},
+  doi     = {10.1016/j.ins.2022.07.129},
+  note    = {Preprint: arXiv:2111.15432}
+}
+
+@article{kolok2025,
+  author  = {Kolok, P. and Hodo{\v n}, M. and {\v S}ev{\v c}{\'i}k, P. and Hotz, L. and Remy, N.},
+  title   = {Low-cost {IoT}-based predictive maintenance using vibration},
+  journal = {Sensors},
+  volume  = {25},
+  number  = {21},
+  pages   = {6610},
+  year    = {2025},
+  doi     = {10.3390/s25216610},
+  annote  = {A fonte é internamente inconsistente: a discussão menciona 93,4 por cento de acurácia, número ausente dos resultados; adota-se apenas 72,9 por cento (Tabela 3). Julgamento sobre a fonte --- pertence ao texto, não à lista de referências}
+}
+
+@inproceedings{chevtchenko2023,
+  author    = {Chevtchenko, S. F. and dos Santos, M. C. M. and Vieira, D. M. and Mota, R. L. and Rocha, E. and Cruz, B. V. and Ara{\'u}jo, D. and Andrade, E.},
+  title     = {Predictive maintenance model based on anomaly detection in induction motors: a machine learning approach using real-time {IoT} data},
+  booktitle = {Proceedings of the 33rd European Safety and Reliability Conference (ESREL 2023)},
+  publisher = {Research Publishing},
+  address   = {Singapura},
+  pages     = {3173--3180},
+  year      = {2023},
+  doi       = {10.3850/978-981-18-8071-1\_P578-cd}
+}
+
+@article{kumar2026,
+  author  = {Kumar, G. and Terauds, M. and Ajayakumar Raji, A. and Semenako, J. and Smolaninovs, V. and Sics, P. E. and Malayidinja Poikayil Thankappan, A. K.},
+  title   = {Design of a lightweight edge-{AI} system for predictive maintenance on {ESP32-S3}},
+  journal = {Applied Sciences},
+  volume  = {16},
+  number  = {11},
+  pages   = {5287},
+  year    = {2026},
+  doi     = {10.3390/app16115287}
+}
+
+@article{uselis2025,
+  author  = {{\=U}selis, R. and Serackis, A. and Pomarnacki, R.},
+  title   = {Signal processing optimization in resource-limited {IoT} for fault prediction in rotating machinery},
+  journal = {Electronics},
+  volume  = {14},
+  number  = {18},
+  pages   = {3670},
+  year    = {2025},
+  doi     = {10.3390/electronics14183670}
+}
+
+@article{jakobsen2024,
+  author  = {Jakobsen, M. O.},
+  title   = {Low cost {MEMS} accelerometer and microphone based condition monitoring sensor, with {LoRa} and {Bluetooth} {Low} {Energy} radio},
+  journal = {HardwareX},
+  volume  = {18},
+  pages   = {e00525},
+  year    = {2024},
+  doi     = {10.1016/j.ohx.2024.e00525}
+}
+
+@inproceedings{bisio2025,
+  author    = {Bisio, I. and Garibotto, C. and Grattarola, A. and Iscra, A. and Lavagetto, F. and Sciarrone, A. and Zerbino, M.},
+  title     = {Design, implementation and performance of an {IIoT} node for vibration monitoring},
+  booktitle = {2025 IEEE International Symposium on Circuits and Systems (ISCAS)},
+  address   = {Londres},
+  pages     = {1--4},
+  year      = {2025},
+  doi       = {10.1109/ISCAS56072.2025.11043851},
+  note      = {Texto integral não acessado (assinatura); citado apenas como contexto}
+}
+
+
+% --- Normas de vibração e instrumentação -------------------------------------
+
+@manual{iso208163_2022,
+  author       = {{ISO/TC 108/SC 2}},
+  title        = {ISO 20816-3:2022 --- Mechanical vibration --- Measurement and evaluation of machine vibration --- Part 3: Industrial machinery with a power rating above 15~kW and operating speeds between 120~r/min and 30\,000~r/min},
+  edition      = {1},
+  organization = {ISO},
+  address      = {Genebra},
+  year         = {2022},
+  month        = oct,
+  note         = {Cancela e substitui a ISO 7919-3:2009, a ISO 10816-3:2009 e as respectivas emendas de 2017}
+}
+
+@manual{iso108163_2009,
+  author       = {{ISO/TC 108/SC 2}},
+  title        = {ISO 10816-3:2009 --- Mechanical vibration --- Evaluation of machine vibration by measurements on non-rotating parts --- Part 3: Industrial machines with nominal power above 15~kW and nominal speeds between 120~r/min and 15\,000~r/min when measured in situ},
+  edition      = {2},
+  organization = {ISO},
+  address      = {Genebra},
+  year         = {2009},
+  note         = {Amd 1:2017. \textbf{Norma retirada}, substituída pela ISO 20816-3:2022; mantida como referência por ser a que a prática industrial e parte da literatura ainda adotam. Os valores de zona são idênticos aos da edição vigente}
+}
+
+@manual{iso2954_2012,
+  author       = {{ISO/TC 108/SC 3}},
+  title        = {ISO 2954:2012 --- Mechanical vibration of rotating and reciprocating machinery --- Requirements for instruments for measuring vibration severity},
+  edition      = {2},
+  organization = {ISO},
+  address      = {Genebra},
+  year         = {2012},
+  month        = apr,
+  note         = {Cancela e substitui a ISO 2954:1975; vigência confirmada na revisão sistemática de 2023}
+}
+
+@article{brandt2014,
+  author  = {Brandt, A. and Brincker, R.},
+  title   = {Integrating time signals in frequency domain: comparison with time domain integration},
+  journal = {Measurement},
+  volume  = {58},
+  pages   = {511--519},
+  year    = {2014},
+  doi     = {10.1016/j.measurement.2014.09.004}
+}
+
+@article{looney2017,
+  author  = {Looney, M.},
+  title   = {{MEMS} vibration monitoring: from acceleration to velocity},
+  journal = {Analog Dialogue (Analog Devices)},
+  volume  = {51},
+  number  = {6},
+  year    = {2017},
+  month   = jun,
+  note    = {Literatura técnica de fabricante, não revisada por pares. O orçamento de ruído usualmente atribuído a este artigo não foi localizado em seu corpo; a atribuição permanece pendente}
+}
+
+
+% --- Produtos comerciais (literatura de fabricante) ---------------------------
+
+@manual{bentlynevada2025,
+  author       = {{Bently Nevada (Baker Hughes)}},
+  title        = {Ranger Pro wireless condition monitoring --- folha de dados, doc. 125M5237 Rev. U},
+  organization = {Baker Hughes},
+  year         = {2025},
+  month        = jul,
+  note         = {Revisão corrente Rev. V (dez. 2025), com valores técnicos idênticos. Literatura de fabricante, não revisada por pares}
+}
+
+@manual{erbessd2025,
+  author       = {{Erbessd Instruments}},
+  title        = {PHANTOM Gen~3 vibration sensor --- folha de dados (EPH-V10E / EPH-V11E), rev. 11/2025},
+  organization = {Erbessd Instruments},
+  year         = {2025},
+  note         = {Literatura de fabricante, não revisada por pares}
+}
+
+@manual{tractian2022,
+  author       = {{TRACTIAN}},
+  title        = {Smart Trac --- automated machine monitoring --- folha de dados},
+  organization = {TRACTIAN},
+  address      = {São Paulo},
+  year         = {2022},
+  month        = aug,
+  note         = {Literatura de fabricante, não revisada por pares}
+}
+
+
+% --- Energia e comportamento térmico -----------------------------------------
+
+@article{nabavi2025,
+  author  = {Nabavi, S. M. H. and Hajforoosh, S. and Nabavi, S. M. A.},
+  title   = {Battery selection for energy-efficient {IoT} devices: a comparative study of longevity across environmental conditions},
+  journal = {International Journal of Electrochemistry},
+  volume  = {2025},
+  number  = {1},
+  pages   = {7783200},
+  year    = {2025},
+  doi     = {10.1155/ijel/7783200}
+}
+
+@article{ma2018,
+  author  = {Ma, S. and Jiang, M. and Tao, P. and Song, C. and Wu, J. and Wang, J. and Deng, T. and Shang, W.},
+  title   = {Temperature effect and thermal impact in lithium-ion batteries: a review},
+  journal = {Progress in Natural Science: Materials International},
+  volume  = {28},
+  number  = {6},
+  pages   = {653--666},
+  year    = {2018},
+  doi     = {10.1016/j.pnsc.2018.11.002},
+  note    = {Texto integral não acessado (assinatura); citado a partir do resumo}
+}
+
+
+% --- Práticas de software em sistemas críticos -------------------------------
+
+@manual{arinc653,
+  author       = {{Aeronautical Radio, Inc.}},
+  title        = {ARINC Specification 653: Avionics Application Software Standard Interface},
+  organization = {ARINC},
+  address      = {Annapolis},
+  year         = {1996},
+  note         = {Suplemento 1 (1997) introduz o APEX e o particionamento temporal e espacial}
+}
+
+@inproceedings{briere1993,
+  author    = {Bri{\`e}re, D. and Traverse, P.},
+  title     = {{AIRBUS} {A320/A330/A340} electrical flight controls --- a family of fault-tolerant systems},
+  booktitle = {FTCS-23: The Twenty-Third International Symposium on Fault-Tolerant Computing},
+  address   = {Toulouse},
+  pages     = {616--623},
+  year      = {1993},
+  month     = jun,
+  doi       = {10.1109/FTCS.1993.627364}
+}
+
+@techreport{esa1996,
+  author      = {{Agência Espacial Europeia}},
+  title       = {Ariane 501 --- Presentation of Inquiry Board report},
+  institution = {ESA},
+  address     = {Paris},
+  year        = {1996},
+  month       = jul,
+  note        = {Falha em 4 jun. 1996: perda completa de informação de guiagem e atitude 37~s após o início da sequência de ignição, com as duas unidades inerciais perdidas pela mesma causa. Disponível em: \url{https://www.esa.int/Newsroom/Press_Releases/Ariane_501_-_Presentation_of_Inquiry_Board_report}}
+}
+
+@manual{iec61508,
+  author       = {{International Electrotechnical Commission}},
+  title        = {IEC 61508: Functional safety of electrical/electronic/programmable electronic safety-related systems},
+  edition      = {2},
+  organization = {IEC},
+  address      = {Genebra},
+  year         = {2010}
+}
+
+@manual{iso26262,
+  author       = {{International Organization for Standardization}},
+  title        = {ISO 26262: Road vehicles --- Functional safety},
+  edition      = {2},
+  organization = {ISO},
+  address      = {Genebra},
+  year         = {2018}
+}
+
+@manual{jsf2005,
+  author       = {{Lockheed Martin Corporation}},
+  title        = {Joint Strike Fighter Air Vehicle {C++} Coding Standards for the System Development and Demonstration Program},
+  organization = {Lockheed Martin Corporation},
+  year         = {2005},
+  month        = dec,
+  note         = {Doc. 2RDU00001 Rev. C}
+}
+
+@article{knight1986,
+  author  = {Knight, J. C. and Leveson, N. G.},
+  title   = {An experimental evaluation of the assumption of independence in multiversion programming},
+  journal = {IEEE Transactions on Software Engineering},
+  volume  = {SE-12},
+  number  = {1},
+  pages   = {96--109},
+  year    = {1986},
+  month   = jan,
+  doi     = {10.1109/TSE.1986.6312924}
+}
+
+@manual{misra2008,
+  author       = {{MIRA Limited}},
+  title        = {{MISRA} {C++}:2008 --- Guidelines for the use of the {C++} language in critical systems},
+  organization = {MIRA},
+  address      = {Nuneaton},
+  year         = {2008}
+}
+
+@techreport{nasa2011,
+  author      = {{National Aeronautics and Space Administration}},
+  title       = {Space Shuttle {GN\&C} Development History and Evolution},
+  institution = {NASA},
+  address     = {Houston},
+  number      = {NTRS 20110014833},
+  year        = {2011},
+  note        = {Sistema primário com quatro computadores em conjunto redundante e um quinto executando software de reserva desenvolvido separadamente}
+}
+
+@manual{do178c,
+  author       = {{RTCA, Inc.}},
+  title        = {DO-178C: Software Considerations in Airborne Systems and Equipment Certification},
+  organization = {RTCA},
+  address      = {Washington},
+  year         = {2011},
+  month        = dec
+}
+
+@inproceedings{yeh1996,
+  author    = {Yeh, Y. C.},
+  title     = {Triple-triple redundant 777 primary flight computer},
+  booktitle = {Proceedings of the 1996 IEEE Aerospace Applications Conference},
+  publisher = {IEEE},
+  volume    = {1},
+  pages     = {293--307},
+  year      = {1996}
+}
