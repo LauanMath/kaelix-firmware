@@ -99,6 +99,9 @@ VERSOES = {
     "v2": dict(lado=(61.0, 51.0), boss=(28.5, 23.5), boss_r=4.5, corredor=6.0,
                furo_raios=[24.0 - 0.1 * k for k in range(81)]),
 }
+# v3 = v2 + circuito de carga (gen_schematic.py, COM_CARGA). Mesmo contorno,
+# mesmo invólucro: o que muda é o que entra na placa, não a placa.
+VERSOES["v3"] = dict(VERSOES["v2"])
 if VERSAO not in VERSOES:
     raise SystemExit(f"versão desconhecida: {VERSAO} (há {', '.join(VERSOES)})")
 CFG = VERSOES[VERSAO]
@@ -450,7 +453,25 @@ FIXAS_POR_VERSAO = {
         "U4": (137.0,  81.0,  0, "B"),   # regulador, fora do corredor do J1
     },
 }
+# v3: as fixas da v2 mais o USB-C na borda -X, alinhado ao furo do invólucro
+# (y = 0 no invólucro, CY aqui). rot 270 leva o +y local — a boca do conector —
+# para -x. A linha "PCB Edge" do footprint está em y local = +2,825; com o
+# centro em x = borda + 2,825 ela cai exatamente na borda da placa.
+FIXAS_POR_VERSAO["v3"] = {
+    **FIXAS_POR_VERSAO["v2"],
+    "J3": (CX - VERSOES["v3"]["lado"][0] / 2 + 2.825, CY, 270, "F"),
+    # J1 desce 3 mm: na posição da v2 o corpo dele invade o do J3 em
+    # 3,77 x 2,47 mm. Quem cede é o J1 — o J3 está preso ao furo da parede.
+    "J1": (127.5, 89.0, 0, "F"),
+}
 FIXAS = FIXAS_POR_VERSAO[VERSAO]
+
+# Conector de BORDA: o corpo passa da borda da placa por projeto — é assim que
+# um USB-C horizontal encosta na parede do invólucro. Para ele o encaixe é
+# conferido pelos PADS e pela linha de borda do footprint, não pelo corpo; a
+# parte que sai da placa é conferida contra o furo da parede em
+# gen_involucro.py, por interseção de sólidos. ref -> y local da linha de borda.
+NA_BORDA = {"J3": 2.825}
 
 # Furos M2: três, o mais perto possível de 120° entre si.
 #
@@ -570,6 +591,26 @@ PREFERENCIAS_POR_VERSAO = {
         # --- proteção de polaridade, primeiro elemento depois do conector
         "Q3":  ("J1", "1",   0.00,  5.00,  0, "B"),
     },
+}
+# v3: a v2 mais o carregador. U5 e os passivos dele na face de BAIXO, sob o
+# USB-C: VBUS atravessa uma vez e o resto do laço de carga fica numa face só,
+# junto do Q3 e da entrada de VBAT. U5 vem antes dos passivos que se ancoram
+# nele — a ordem do dicionário é a ordem de legalização.
+#
+# RT2 é a exceção deliberada: face de CIMA, perto do centro, sob a célula e
+# longe do U5. É ele que o TS lê, e ele tem de ler a célula, não o CI que
+# esquenta. C15 fica no pino TS: são ~25 mm de pista de alta impedância até o
+# RT2, na mesma placa do rádio.
+PREFERENCIAS_POR_VERSAO["v3"] = {
+    **PREFERENCIAS_POR_VERSAO["v2"],
+    "U5":  ("J3", "A9",  -3.00,  2.00,  0, "B"),
+    "R11": ("J3", "A5",   2.50,  0.00, 90, "B"),   # Rd do CC1, junto do pad
+    "R12": ("J3", "B5",   2.50,  3.50, 90, "B"),   # Rd do CC2
+    "C13": ("U5", "6",    0.00, -2.50,  0, "B"),   # VBUS, no pino VIN
+    "C14": ("U5", "2",   -2.50,  0.00, 90, "B"),   # VBAT, no pino OUT
+    "R13": ("U5", "4",    2.50,  0.00, 90, "B"),   # R_ISET
+    "C15": ("U5", "1",   -2.50, -2.50, 90, "B"),   # filtro do TS
+    "RT2": ("U5", "1",   24.00,  0.00, 90, "F"),   # NTC do TS, sob a célula
 }
 PREFERENCIAS = PREFERENCIAS_POR_VERSAO[VERSAO]
 
@@ -723,9 +764,23 @@ if _trio:
     FUROS = [(POSICOES[f"H{k}"][0], POSICOES[f"H{k}"][1]) for k in (1, 2, 3)]
 
 
-def _livre(ref, x, y, rot, lado, ja):
+def extensao_encaixe(ref, x, y, rot):
+    """Retângulo que tem de caber no contorno. Para conector de borda, só os
+    pads: o corpo sai da placa por projeto (NA_BORDA)."""
     libfp = NET[ref][0]
-    if not _cabe(*extensao(libfp, x, y, rot)):
+    if ref not in NA_BORDA:
+        return extensao(libfp, x, y, rot)
+    xs, ys = [], []
+    for p in geom(libfp)["pads"]:
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                rx, ry = gira(p["x"] + sx * p["w"] / 2, p["y"] + sy * p["h"] / 2, rot)
+                xs.append(x + rx); ys.append(y + ry)
+    return (min(xs), min(ys), max(xs), max(ys))
+
+
+def _livre(ref, x, y, rot, lado, ja):
+    if not _cabe(*extensao_encaixe(ref, x, y, rot)):
         return False
     POSICOES[ref] = (x, y, rot, lado)
     try:
@@ -776,7 +831,7 @@ def verifica_encaixe():
     fora = []
     for ref in POSICOES:
         x, y, rot, _lado = POSICOES[ref]
-        ext = extensao(NET[ref][0], x, y, rot)
+        ext = extensao_encaixe(ref, x, y, rot)
         if not _cabe(*ext):
             # o quanto invade: pior violação entre quadrado e recortes
             fol = [max(CX - LADO_X / 2 + BORDA - ext[0], ext[2] - (CX + LADO_X / 2 - BORDA),
@@ -1101,6 +1156,22 @@ else:
     print(f"colisão:  nenhum par se sobrepõe ({len(POSICOES)} componentes)")
 
 fora = verifica_encaixe()
+# Conector de borda: a linha "PCB Edge" do footprint TEM de cair na borda da
+# placa. Dentro, o plugue não encosta; fora, o corpo invade a parede além do
+# que o footprint prevê.
+for _ref, _ybord in NA_BORDA.items():
+    if _ref not in POSICOES:
+        continue
+    _x, _y, _rot, _l = POSICOES[_ref]
+    _ex, _ey = gira(0.0, _ybord, _rot)
+    _bx, _by = _x + _ex, _y + _ey
+    _dist = min(abs(_bx - (CX - LADO_X / 2)), abs(_bx - (CX + LADO_X / 2)),
+                abs(_by - (CY - LADO_Y / 2)), abs(_by - (CY + LADO_Y / 2)))
+    if _dist > 0.05:
+        fora.append((_ref, _dist))
+    else:
+        print(f"borda:    {_ref} com a linha de borda do footprint sobre a borda "
+              f"da placa (desvio {_dist:.3f} mm)")
 if fora:
     print("FORA DO CONTORNO:", ", ".join(f"{r} ({v:.2f} mm)" for r, v in fora))
 else:

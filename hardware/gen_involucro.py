@@ -119,6 +119,14 @@ VERSOES = {
         bateria="lipo-2000mah-adafruit2011.step",
         nota="moldado à célula real de 2000 mAh (60,0 x 37,0); boss Ø8"),
 }
+# v3: o corpo da v2 para a placa v3, que tem o USB-C de carga. A única
+# diferença é a ALTURA do furo do USB-C. Na v1 e na v2 ela é arbitrada (45%
+# da cavidade, defeito 13 do README) porque não havia conector; na v3 ela é
+# MEDIDA: sai do centro do corpo do conector no .step da placa, na altura em
+# que a placa assenta. A 45% o centro do furo ficava ~5 mm acima do conector
+# e a borda de baixo barrava o plugue.
+VERSOES["v3"] = dict(VERSOES["v2"], usb="placa",
+                     nota="corpo da v2 com o furo do USB-C na altura do conector da placa v3")
 
 ALTURA_TOTAL_DESENHO = 78.0             # vista 6: "50,0 x 78,0 TOTAL"
 MASSA_DESENHO = 118.0                   # "Massa estimada: ~118 g de ASA"
@@ -157,7 +165,7 @@ def diagonais(r):
 # ---------------------------------------------------------------------
 # Peças
 # ---------------------------------------------------------------------
-def corpo(vao, vao_alt, boss_d, recuo):
+def corpo(vao, vao_alt, boss_d, recuo, usb_z=None):
     cx, cy = vao[0] + 2 * PAREDE, vao[1] + 2 * PAREDE
     alt = vao_alt + FUNDO
     p = caixa(cx, cy, alt, R_CANTO)
@@ -176,7 +184,8 @@ def corpo(vao, vao_alt, boss_d, recuo):
     # USB-C sem conector") descrevia um furo que existia no desenho e não no
     # modelo; só apareceu quando a v3 pôs um conector para passar por ele.
     x0 = -cx / 2 - PAREDE
-    p = p.cut(cil(USB_D, PAREDE * 3, x0, 0, FUNDO + vao_alt * 0.45, eixo=(1, 0, 0)))
+    z_usb = FUNDO + vao_alt * 0.45 if usb_z is None else usb_z
+    p = p.cut(cil(USB_D, PAREDE * 3, x0, 0, z_usb, eixo=(1, 0, 0)))
     p = p.cut(cil(SMA_D, PAREDE * 3, x0, 0, FUNDO + vao_alt * 0.80, eixo=(1, 0, 0)))
     # face de baixo: rebaixo do spigot, furo do pino, passante corpo-base
     p = p.cut(cil(REB_SPIGOT_D, REB_SPIGOT_H, 0, 0, 0))
@@ -230,6 +239,13 @@ ORIGEM3D = AQUI / "3dmodels" / "origem"
 def placa_da(versao):
     return AQUI / "pcb" / versao / "kaelix.step"
 
+
+def substrato(forma):
+    """O laminado: o sólido de maior área em planta. A placa é centrada por
+    ele, não pela caixa do conjunto — na v3 o USB-C passa da borda -X e a
+    caixa deslocaria a placa inteira meio nariz para +X."""
+    return max(forma.Solids, key=lambda sl: sl.BoundBox.XLength * sl.BoundBox.YLength)
+
 falhas, limitacoes = [], []
 for versao, cfg in VERSOES.items():
     vao, vao_alt = cfg["vao"], cfg["vao_alt"]
@@ -237,7 +253,27 @@ for versao, cfg in VERSOES.items():
     saida.mkdir(parents=True, exist_ok=True)
     print(f"\n=== {versao}: vão {vao[0]:.0f} x {vao[1]:.0f} x {vao_alt:.0f} mm — {cfg['nota']}")
 
-    c, (cx, cy, calt) = corpo(vao, vao_alt, cfg["boss_d"], cfg["boss_recuo"])
+    usb_z = None
+    if cfg.get("usb") == "placa":
+        # O conector é o que passa da borda -X do substrato: o sólido cujo XMin
+        # coincide com o XMin do conjunto. Altura e posição lateral saem dele,
+        # no referencial do corpo (z = 0 na face de baixo do corpo).
+        ps = Part.Shape(); ps.read(str(placa_da(versao)))
+        sub = substrato(ps)
+        nariz = [sl for sl in ps.Solids if sl.BoundBox.XMin < ps.BoundBox.XMin + 0.01]
+        zb = min(sl.BoundBox.ZMin for sl in nariz); zt = max(sl.BoundBox.ZMax for sl in nariz)
+        yb = min(sl.BoundBox.YMin for sl in nariz); yt = max(sl.BoundBox.YMax for sl in nariz)
+        usb_z = FUNDO + ASSENTO_PLACA + (zb + zt) / 2
+        dy = (yb + yt) / 2 - sub.BoundBox.Center.y
+        print(f"   USB-C: corpo de {yt - yb:.2f} x {zt - zb:.2f} mm, centro a "
+              f"{usb_z - FUNDO:.2f} mm do fundo da cavidade e {dy:+.2f} mm do eixo "
+              f"da placa em Y -> furo Ø{USB_D:g} em z = {usb_z:.2f} (era "
+              f"{FUNDO + vao_alt * 0.45:.2f})")
+        if abs(dy) > 0.1:
+            falhas.append(f"{versao}: USB-C fora do eixo do furo em {dy:+.2f} mm")
+        if usb_z - USB_D / 2 < FUNDO:
+            falhas.append(f"{versao}: o furo do USB-C cortaria o fundo da cavidade")
+    c, (cx, cy, calt) = corpo(vao, vao_alt, cfg["boss_d"], cfg["boss_recuo"], usb_z)
     t = tampa(vao, cfg["boss_recuo"])
     b = base()
     vol = 0.0
@@ -259,7 +295,7 @@ for versao, cfg in VERSOES.items():
     placa_step = placa_da(versao)
     if placa_step.exists():
         pl = Part.Shape(); pl.read(str(placa_step))
-        pb = pl.BoundBox
+        pb = substrato(pl).BoundBox
         pl.translate(Vector(-(pb.XMin + pb.XMax) / 2, -(pb.YMin + pb.YMax) / 2,
                             Z_CORPO + FUNDO + ASSENTO_PLACA))
         ch = pl.common(cp)

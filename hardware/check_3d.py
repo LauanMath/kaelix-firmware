@@ -36,7 +36,13 @@ DIR3D = pathlib.Path("/Applications/KiCad/KiCad.app/Contents/SharedSupport/3dmod
 # Vão interno do invólucro, por versão — mesma tabela de gen_involucro.py.
 # A v1 sai de CORPO_EXT 50,0 menos 2 x PAREDE 3,5; a v2 é moldada à célula
 # de 2000 mAh. Não é quadrado na v2, então a folga é medida em cada eixo.
-VAO_INTERNO = {"v1": (43.0, 43.0), "v2": (62.0, 52.0)}[VERSAO]
+VAO_INTERNO = {"v1": (43.0, 43.0), "v2": (62.0, 52.0), "v3": (62.0, 52.0)}[VERSAO]
+# Lado em que uma peça passa da cavidade POR PROJETO, e até quanto: o USB-C
+# da v3 entra no furo da parede -X. Aqui só se confere que o excesso fica
+# naquele lado e dentro da espessura da parede (3,5 mm); se ele de fato
+# passa pelo furo sem tocar a parede é interseção de sólidos, em
+# gen_involucro.py.
+PASSA_PAREDE = {"v3": {"-X": 3.5}}.get(VERSAO, {})
 ESPESSURA_PLACA = 1.6
 
 # Part.Shape().read() ACHATA o assembly, aplicando as matrizes de cada nível.
@@ -163,8 +169,30 @@ else:
 fx = VAO_INTERNO[0] - larg
 fy = VAO_INTERNO[1] - prof
 folga = min(fx, fy)
-print(f"vao interno do involucro: {VAO_INTERNO[0]:.1f} x {VAO_INTERNO[1]:.1f} mm "
-      f"-> folga {fx / 2:.2f} mm por lado em X, {fy / 2:.2f} mm em Y")
+if not PASSA_PAREDE:
+    print(f"vao interno do involucro: {VAO_INTERNO[0]:.1f} x {VAO_INTERNO[1]:.1f} mm "
+          f"-> folga {fx / 2:.2f} mm por lado em X, {fy / 2:.2f} mm em Y")
+else:
+    # Folga lado a lado, a partir do centro do substrato: o sólido de maior
+    # área em planta. Nenhum componente chega perto dos 61 x 51 do laminado;
+    # filtrar pela espessura de 1,6 mm pegava corpo de conector.
+    sub = max(forma.Solids, key=lambda sl: sl.BoundBox.XLength * sl.BoundBox.YLength)
+    pcx, pcy = sub.BoundBox.Center.x, sub.BoundBox.Center.y
+    lados = {"-X": VAO_INTERNO[0] / 2 - (pcx - caixa.XMin),
+             "+X": VAO_INTERNO[0] / 2 - (caixa.XMax - pcx),
+             "-Y": VAO_INTERNO[1] / 2 - (pcy - caixa.YMin),
+             "+Y": VAO_INTERNO[1] / 2 - (caixa.YMax - pcy)}
+    print(f"vao interno do involucro: {VAO_INTERNO[0]:.1f} x {VAO_INTERNO[1]:.1f} mm, "
+          f"folga por lado: " + ", ".join(f"{k} {v:.2f}" for k, v in lados.items()))
+    folga = 0.0
+    for lado, v in lados.items():
+        if v >= 0:
+            continue
+        if -v <= PASSA_PAREDE.get(lado, 0.0):
+            print(f"   {lado}: {-v:.2f} mm entram na parede pelo furo, por projeto "
+                  f"(ate {PASSA_PAREDE[lado]:.1f}) — conferir em gen_involucro.py")
+        else:
+            folga = min(folga, v)
 if folga < 0:
     print("NAO CABE no vao interno")
 # flush antes de sair: o freecadcmd não descarrega o buffer no SystemExit, e

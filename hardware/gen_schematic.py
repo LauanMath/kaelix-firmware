@@ -317,10 +317,87 @@ EXTRAS = [
                              "4": "UART_RX", "5": "EN", "6": "IO0"}),
 ]
 
+# =====================================================================
+# Carga da bateria — só a partir da v3
+# =====================================================================
+# Até a v2 a placa não tinha como carregar a célula: nenhum CI carregador,
+# nenhum conector de entrada. O invólucro trazia o furo de USB-C e os
+# relatórios falavam em "recarga por USB-C", mas a netlist não. v1 e v2 ficam
+# como estão — a v2 é revisão mecânica por regra (pcb/README.md), e circuito
+# novo em versão velha tornaria impossível atribuir diferença medida.
+#
+# BQ21040 e não TP4056/MCP73831: é o único dos três com monitor de
+# temperatura da CÉLULA pronto para NTC de 10 k. O pino TS polariza o NTC com
+# 50 µA e suspende a carga com V_TS < 275 mV (45 °C) ou V_TS > 1250 mV (0 °C).
+# O limite de 45 °C que a análise térmica usa deixa de ser recomendação da
+# folha de dados da célula e passa a ser imposto pelo hardware.
+#
+# O NTC do TS NÃO é o RT1. Os limiares do BQ21040 estão calibrados para
+# β ≈ 3370 (103AT-2, folha de dados §9.2); o B3950 do RT1 cortaria perto de
+# 39 °C. RT2 é dedicado, na face de cima, sob a célula e longe do U5 — lê a
+# placa, que fica ACIMA da célula durante a carga, então o corte vem cedo,
+# nunca tarde (hardware/termica_carga.py).
+#
+# Corrente de carga: 200 mA, R_ISET = K_ISET / I = 540 / 0,2 = 2,7 k. O
+# carregador é linear e dissipa I·(V_USB − V_bat) DENTRO do invólucro; o
+# modelo térmico dá 15 K/W da potência à placa. Com 200 mA a placa fica em
+# 36,7 °C na bancada e entre 41,1 e 44,3 °C no motor a 90 °C — abaixo do corte
+# de 45 °C, mas no motor quente com 0,7 a 3,9 K de folga. Com 250 mA o TS já
+# pode cortar no motor quente; com 500 mA corta nos três cenários. Carga
+# completa em ~12 h.
+#
+# Saída do carregador em VBAT, DEPOIS do Q3 de polaridade. Em VBAT_RAW, uma
+# célula invertida conduziria pelo diodo de ESD do pino OUT mesmo sem USB, e
+# a proteção deixaria de existir. Em VBAT o risco que sobra exige falha dupla
+# (célula invertida E USB ligado): o carregador sobe VBAT, liga o canal do
+# Q3 e injeta a corrente de pré-carga na célula invertida até VBAT cair
+# abaixo do Vgs(th). O conector JST-PH é polarizado; o risco fica declarado.
+#
+# CHG_N vai ao IO7, GPIO de RTC: o firmware sabe se está carregando e pode
+# até acordar do deep sleep na borda. Sem pull-up externo — o dreno aberto
+# não consome nada fora da carga; o pull-up interno é ligado só na leitura.
+#
+# USB-C só de energia: CC1 e CC2 com 5,1 k para GND (Rd) são o que faz uma
+# fonte C-para-C entregar VBUS. Sem eles, só cabo A-para-C carregaria.
+COM_CARGA = VERSAO not in ("v1", "v2")
+if COM_CARGA:
+    _u1 = COMPONENTES[0]
+    assert _u1[0] == "U1" and _u1[7]["7"] == NC
+    COMPONENTES[0] = _u1[:7] + ({**_u1[7], "7": "CHG_N"},)
+    COMPONENTES.append(
+        ("U5", "Battery_Management", "BQ21040DBV", "Package_TO_SOT_SMD:SOT-23-6",
+         "BQ21040DBV", 120, 280, {
+            "1": "CHG_TS", "2": "VBAT", "3": "CHG_N", "4": "CHG_ISET",
+            "5": "GND", "6": "VBUS"}))
+    PASSIVOS += [
+        ("R11", "R", "Resistor_SMD:R_0805_2012Metric", "5k1", 40, 250, "CC1", "GND"),
+        ("R12", "R", "Resistor_SMD:R_0805_2012Metric", "5k1", 40, 280, "CC2", "GND"),
+        ("R13", "R", "Resistor_SMD:R_0805_2012Metric", "2k7", 160, 250, "CHG_ISET", "GND"),
+        ("RT2", "Thermistor_NTC", "Resistor_SMD:R_0805_2012Metric",
+         "NTC 10k B3380 (103AT)", 160, 280, "CHG_TS", "GND"),
+        # entrada e saída do BQ21040: 1 a 10 µF pela folha de dados
+        ("C13", "C", "Capacitor_SMD:C_0805_2012Metric", "1u", 80, 250, "VBUS", "GND"),
+        ("C14", "C", "Capacitor_SMD:C_0805_2012Metric", "1u", 200, 280, "VBAT", "GND"),
+        # C_TS da folha de dados (0,22 µF típico). Opcional lá; aqui não: o RT2
+        # fica sob a célula, a ~25 mm do U5, e o nó de 10 k divide a placa com
+        # os surtos de TX do rádio. Um disparo espúrio do TS suspende a carga.
+        ("C15", "C", "Capacitor_SMD:C_0805_2012Metric", "220n", 200, 250, "CHG_TS", "GND"),
+    ]
+    EXTRAS.append(
+        ("J3", "Connector", "USB_C_Receptacle_PowerOnly_6P",
+         "Connector_USB:USB_C_Receptacle_GCT_USB4125-xx-x_6P_TopMnt_Horizontal",
+         "USB-C 5V", 20, 300, {
+            "A9": "VBUS", "B9": "VBUS", "A12": "GND", "B12": "GND",
+            "A5": "CC1", "B5": "CC2", "SH": "GND"}))
+
 # O ERC exige que toda net de potência tenha um pino de SAÍDA de potência.
 # +3V3 vem do VOUT do HT7333, mas +3V3_SW vem do dreno de Q1, que é passivo:
 # sem o flag o ERC acusa VDD/VLOGIC do MPU6050 como entrada não alimentada.
+# Com carga, VBAT passa a ter saída de potência de verdade (OUT do U5) e o
+# flag dela sairia em conflito; VBUS vem do conector, que é passivo.
 PWR_FLAGS = [("GND", 175, 40), ("VBAT", 225, 40), ("+3V3_SW", 120, 30)]
+if COM_CARGA:
+    PWR_FLAGS = [f for f in PWR_FLAGS if f[0] != "VBAT"] + [("VBUS", 60, 250)]
 
 
 # =====================================================================
