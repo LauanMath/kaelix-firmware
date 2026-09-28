@@ -7,9 +7,22 @@
 
 #include <cstdint>
 
-// Divisor de tensão: Vcc -> R_FIXED -> NTC_ADC_PIN -> NTC -> GND.
-// TODO: confirmar pino, R_FIXED e topologia contra o esquemático final
-// (Fase 3) — valores abaixo são os nominais do NTC 10K (beta 3950).
+// Divisor de tensão: +3V3_SW -> R_FIXED -> NTC_ADC_PIN -> NTC -> GND.
+//
+// O topo do divisor está no rail comutado, não em +3V3 direto: fora da
+// janela de leitura o divisor não drena nada, e VCC_MV continua sendo a
+// saída do HT7333 (3300 mV), com a queda no canal de Q1 (~0,2 mV a 3,9 mA)
+// abaixo de um LSB do ADC. Consequência para quem chama: só faz sentido ler
+// depois de peripherals_power(true).
+//
+// LIMITE CONHECIDO, não resolvido aqui: com R_FIXED = 10 k e o NTC para
+// GND, o nó sobe quando esfria — 3,22 V a -40 °C, acima da faixa útil do
+// ADC do ESP32-S3 (~3,1 V com 12 dB de atenuação). Abaixo de ~-35 °C a
+// leitura satura e a temperatura reportada fica otimista. Não dispara os
+// limiares de curto/aberto de thermistor.h (ratio 0,94 contra o limiar de
+// 0,99), então o valor sai como medição válida. Inverter o divisor
+// resolveria o frio e refaria toda a derivação de limiares — decisão para
+// a fase de calibração, com o equipamento monitorado definido.
 
 namespace kaelix::sensors {
 namespace {

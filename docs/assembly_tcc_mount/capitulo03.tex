@@ -1,0 +1,325 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Capítulo 3 --- Desenvolvimento e métodos
+%%
+%% Reúne o que os cinco relatórios de origem descreviam em aberturas de seção
+%% separadas, cada um com escopo próprio. Os cinco "Escopo" colapsam aqui na
+%% delimitação única da Seção 3.1.
+%%
+%% Ordem das subseções espelha a do Capítulo 4, para que método e resultado
+%% correspondente possam ser localizados em paralelo.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+\@ifundefined{toprule}{%
+  \newcommand{\toprule}{\hline}%
+  \newcommand{\midrule}{\hline}%
+  \newcommand{\bottomrule}{\hline}%
+}{}
+\@ifundefined{emandamento}{%
+  \@ifundefined{textcolor}%
+    {\newcommand{\emandamento}[1]{#1}}%
+    {\newcommand{\emandamento}[1]{\textcolor{red}{#1}}}%
+}{}
+\makeatother
+
+%% Ver nota sobre caminhos de figura no capitulo04.tex.
+\providecommand{\kxfig}[1]{../../experiments/figures/output/#1}
+\providecommand{\kxhw}[1]{../../#1}
+
+\chapter{Desenvolvimento e métodos}
+\label{cap:desenvolvimento}
+
+\section{Delimitação}
+\label{sec:dev-delimitacao}
+
+O objeto de estudo é o Kaelix, um dispositivo de monitoramento de vibração de baixo custo
+composto por acelerômetro MPU6050, microcontrolador ESP32-S3, enlace LoRa e invólucro em
+ASA impresso por deposição, com detecção de anomalia embarcada e rotulagem de severidade
+pela norma. As especificações de hardware, as cotas do desenho mecânico e a arquitetura de
+processamento são tomadas como dadas; o que se determina é o que elas permitem medir.
+
+A estratégia é comum a todas as questões investigadas: construir uma condição de referência
+cujo resultado correto decorre de solução analítica ou de definição normativa, submetê-la à
+cadeia proposta e medir o desvio introduzido pela configuração do projeto. Quando a
+resposta certa é conhecida de antemão, um erro de implementação não consegue se esconder
+atrás de um resultado plausível.
+
+\emandamento{Nenhum ensaio físico foi conduzido e nenhuma medição de campo alimenta os
+modelos. A construção do protótipo e seu ensaio em ambiente real são a etapa seguinte
+declarada deste trabalho.} As três procedências de resultado que decorrem dessa delimitação
+--- sinal sintetizado, dado real decimado e modelagem sobre especificação --- estão
+definidas na Seção~\ref{sec:proc}, e cada valor do Capítulo~\ref{cap:resultados} é marcado
+individualmente por elas.
+
+\section{Modelo de sinal e cadeias de aquisição}
+\label{sec:dev-sinal}
+
+\subsection{Sinal sintetizado}
+
+Os sinais foram sintetizados com dois mecanismos de escalas de frequência distintas.
+Desbalanceamento e desalinhamento aparecem como componentes harmônicas da rotação, todas
+abaixo de \SI{100}{\hertz}. Defeito de pista externa aparece como um trem de impulsos
+amortecidos, repetido na taxa característica da geometria e modulando uma ressonância
+estrutural. A aceleração simulada é
+
+\begin{equation}
+a(t) \;=\; \underbrace{\sum_{k=1}^{3} A_k \sin\!\left(2\pi k f_r t + \varphi_k\right)}_{\text{banda baixa}}
+\;+\; \underbrace{\sum_{i} D\, e^{-\zeta_d (t-t_i)} \sin\!\left(2\pi f_{\mathrm{res}} (t-t_i)\right) u(t-t_i)}_{\text{impactos do defeito}}
+\;+\; \varepsilon(t),
+\label{eq:dev-sinal}
+\end{equation}
+
+\noindent
+com $f_r$ a rotação, $A_k$ as amplitudes harmônicas, $D$ a amplitude do defeito, $\zeta_d$
+a taxa de amortecimento do impacto, $f_{\mathrm{res}}$ a ressonância excitada,
+$u(\cdot)$ o degrau unitário e $\varepsilon(t)$ ruído gaussiano branco. Os instantes de
+impacto são $t_i = i/\mathrm{BPFO} + \delta_i$, em que $\delta_i$ modela o escorregamento
+das esferas. As frequências características decorrem da geometria do rolamento pelas
+expressões usuais de BPFO e BPFI.
+
+\subsection{Três cadeias comparadas sobre o mesmo sinal}
+
+A comparação isola o efeito da aquisição mantendo o sinal fixo:
+
+\begin{enumerate}
+  \item \textbf{Referência} --- amostragem a \SI{20}{\kilo\hertz}, representando um
+        acelerômetro de banda larga.
+  \item \textbf{Dispositivo corretamente configurado} --- decimação para
+        \SI{1}{\kilo\hertz} com filtro anti-\emph{aliasing}.
+  \item \textbf{Dispositivo sem filtro} --- subamostragem para \SI{1}{\kilo\hertz} sem
+        filtro, representando a leitura direta do registrador quando o filtro passa-baixas
+        digital interno não é configurado.
+\end{enumerate}
+
+No terceiro caso, uma componente em $f$ acima de Nyquist é observada na frequência aparente
+
+\begin{equation}
+f_{\mathrm{ap}} = \left| f - f_s \left\lfloor \frac{f}{f_s} + \frac{1}{2} \right\rceil \right|,
+\label{eq:dev-alias}
+\end{equation}
+
+\noindent
+com $f_s$ a taxa de amostragem e $\lfloor\cdot\rceil$ o arredondamento ao inteiro mais
+próximo. É essa cadeia que corresponde ao estado atual do firmware
+(Seção~\ref{sec:dev-firmware}).
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.88\textwidth]{\kxfig{fig8_circuito.pdf}}
+\caption[Circuito de condicionamento e aquisição]{Circuito de condicionamento e aquisição. Os valores da figura são gerados
+diretamente a partir das constantes do firmware, com o arquivo e a linha de origem
+registrados no cabeçalho do gerador.}
+\label{fig:circuito}
+\end{figure}
+
+Na comparação entre cadeias, os descritores extraídos por janela são o valor eficaz, a
+curtose, o fator de crista, o pico e o pico a pico. O detector embarcado usa um conjunto
+menor, idêntico no treino e no firmware: valor eficaz, curtose, fator de crista e frequência
+dominante. A escolha tem consequência analisada no Capítulo~\ref{cap:resultados}: os
+descritores descrevem energia, impulsividade e a linha espectral mais intensa, e nenhum
+captura a relação entre harmônicas ou a fase.
+
+\subsection{Dado real decimado}
+
+Para as taxas de detecção por modo de falha, o sinal não é sintetizado. Utilizaram-se as
+gravações do conjunto público MAFAULDA, obtidas em bancada instrumentada a
+\SI{50}{\kilo\hertz} e decimadas em \emph{software} para \SI{1}{\kilo\hertz}, a banda do
+dispositivo. %% TODO: citar o MAFAULDA; a chave ainda não existe em referencias.bib.
+O conjunto soma \num{1951} arquivos em seis classes --- operação normal, desbalanceamento,
+desalinhamento horizontal e vertical e defeito de rolamento nas posições \emph{overhang} e
+\emph{underhang} ---, segmentados em \num{17559} janelas de \num{512} amostras. Apenas
+\num{49} arquivos são de operação normal, e é deles que sai todo o treino, já que o detector
+aprende somente a operação normal. A bancada está abaixo do escopo de potência e altura de
+eixo da norma, o que a torna adequada como fonte de sinal para estudar a cadeia de medição e
+inadequada como caso de aplicação normativa.
+
+O limiar do detector é calibrado pelo quantil do escore sobre operação normal, com falso
+alarme alvo de \SI{1}{\percent}. \emandamento{Os resultados desse treino não têm artefato
+versionado próprio --- arquivo de resultados ou registro de execução ---: estão registrados
+no histórico de alterações do repositório, e reproduzi-los exige executar o treino de novo.}
+
+A validação emprega partição por ensaio, e não por janela, em cinco partições com os
+arquivos de origem como grupos. A justificativa é o próprio
+resultado de vazamento apresentado na Seção~\ref{sec:res-estimacao}: janelas do mesmo
+ensaio compartilham a assinatura da montagem, e dividi-las aleatoriamente mede a
+capacidade de identificar o ensaio, não a falha. Nos ensaios de rolamento, os resultados
+são adicionalmente estratificados pelo nível de massa de desbalanceamento sobreposta,
+porque o agregado confunde os dois efeitos.
+
+\section{Conversão normativa e estágio de decisão}
+\label{sec:dev-estimacao}
+
+A norma define as zonas de severidade em velocidade eficaz de banda larga, e o acelerômetro
+entrega aceleração \cite{iso208163_2022}. A conversão foi testada contra uma senoide cuja
+integral é conhecida analiticamente, comparando cinco variantes: integração no tempo com e
+sem filtro passa-alta, integração no domínio da frequência restrita à máscara normativa, e
+esta última e a integração no tempo sem filtro repetidas sob viés contínuo contido na
+especificação do sensor. O método correto
+está estabelecido na literatura \cite{brandt2014}; o que se mede aqui é o erro das
+alternativas sobre um valor de referência exato.
+
+O estágio de decisão emprega detecção não supervisionada por Isolation Forest
+\cite{liu2008}, treinada exclusivamente com dados de operação normal --- o cenário de uma
+máquina sem histórico rotulado. Três aspectos foram submetidos a variação controlada: a
+política de limiar, pela varredura do parâmetro de contaminação contra a fração de operação
+normal marcada; a métrica, pela comparação entre área sob a curva ROC global e área parcial
+restrita à região de falso alarme baixo \cite{koizumi2020}; e o protocolo de validação,
+pela comparação entre partição aleatória por janela e partição por ensaio.
+
+\section{Projeto mecânico e térmico}
+\label{sec:dev-mecanica}
+
+O invólucro foi analisado a partir das cotas do desenho técnico, por fórmulas fechadas de
+resistência dos materiais. A rigidez do caminho de transmissão entre a superfície do motor
+e o sensor foi modelada como associação em série de três elos --- a base como placa
+circular engastada com carga central, o ressalto de centragem em compressão axial e o corpo
+como viga tubular engastada:
+
+\begin{equation}
+k_{\mathrm{base}} = \frac{16\pi \mathcal{D}}{a^2},
+\qquad
+k_{\mathrm{res}} = \frac{E A}{L},
+\qquad
+k_{\mathrm{corpo}} = \frac{3 E I}{L^3},
+\qquad
+\frac{1}{k} = \sum_i \frac{1}{k_i},
+\label{eq:dev-rigidez}
+\end{equation}
+
+\noindent
+com $\mathcal{D} = E h^3 / [12(1-\nu^2)]$ a rigidez flexional da placa e
+$I = [\ell^4 - (\ell-2t)^4]/12$ o momento de inércia da seção tubular quadrada. A
+frequência de montagem e a transmissibilidade de base decorrem do modelo de um grau de
+liberdade.
+
+A análise térmica considera o invólucro fechado em regime permanente, com o calor entrando
+pela carcaça do motor e o autoaquecimento do circuito como fonte interna. O caminho
+condutivo é modelado como resistência térmica em série, e o limite de operação é
+determinado pelo primeiro componente a atingir sua temperatura máxima admissível.
+
+\emandamento{As condições de contorno são idealizadas: a rigidez real depende de pré-carga
+de parafusos, planicidade das faces impressas e orientação das camadas, e a análise térmica
+não modela resistência de contato, convecção forçada pelo ventilador do motor nem radiação
+de superfícies próximas.}
+
+\section{Geração e verificação do hardware}
+\label{sec:dev-hardware}
+
+Nenhum arquivo derivado é editado à mão. O esquemático, a placa e o sólido são gerados por
+\emph{script} a partir de uma fonte única, e cada etapa tem verificação automática
+associada, conforme a Tabela~\ref{tab:dev-cadeia}.
+
+\begin{table}[!htb]
+\centering
+\caption{Cadeia de geração do hardware e verificação automática de cada etapa.}
+\label{tab:dev-cadeia}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Etapa & Saída & Verificação automática \\
+\midrule
+Esquemático & \texttt{.kicad\_sch}, netclasses & ERC com aviso tratado como erro \\
+Placa       & \texttt{.kicad\_pcb}             & DRC com zonas preenchidas; colisão \\
+Sólido      & \texttt{.step} da placa e do invólucro & modelo por \emph{footprint}; interferência \\
+Modal       & frequências e formas             & convergência de malha em três refinos \\
+Térmica     & campo e transiente               & balanço fechado contra modelo concentrado \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!htb]
+\centering
+\begin{minipage}{0.24\textwidth}\centering
+\includegraphics[width=\linewidth]{\kxhw{hardware/pcb/v1/render_top.png}}\\[1pt]
+{\footnotesize v1, superior}
+\end{minipage}\hfill
+\begin{minipage}{0.24\textwidth}\centering
+\includegraphics[width=\linewidth]{\kxhw{hardware/pcb/v1/render_bottom.png}}\\[1pt]
+{\footnotesize v1, inferior}
+\end{minipage}\hfill
+\begin{minipage}{0.24\textwidth}\centering
+\includegraphics[width=\linewidth]{\kxhw{hardware/pcb/v2/render_top.png}}\\[1pt]
+{\footnotesize v2, superior}
+\end{minipage}\hfill
+\begin{minipage}{0.24\textwidth}\centering
+\includegraphics[width=\linewidth]{\kxhw{hardware/pcb/v2/render_bottom.png}}\\[1pt]
+{\footnotesize v2, inferior}
+\end{minipage}
+\caption[Placas de circuito impresso geradas, versões v1 e v2]{Placas geradas nas duas versões. Contorno retangular com quatro recortes de canto
+para os apoios do invólucro; duas camadas, com plano de terra em ambas.}
+\label{fig:placas}
+\end{figure}
+
+A regeneração a partir de diretório limpo reproduz os arquivos de esquemático, placa e
+símbolos byte a byte nas duas versões; o roteador é determinístico. Essa propriedade é o
+que torna a verificação significativa: um resultado que não se reproduz não distingue
+correção de coincidência.
+
+As regras de fabricação adotadas são traço de \SI{0,20}{\milli\meter}, folga de
+\SI{0,15}{\milli\meter} e via de \SI{0,60}{\milli\meter} com furo de
+\SI{0,30}{\milli\meter}, contra mínimos declarados de \SI{0,15}{\milli\meter} para traço e
+folga. \emandamento{Os defeitos de geração encontrados e corrigidos, bem como os que
+permanecem abertos, constam do Apêndice~\ref{ape:hardware}.}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.94\textwidth]{\kxfig{fig9_pdn.pdf}}
+\caption[Rede de distribuição de alimentação]{Rede de distribuição de alimentação: impedância vista do pino de cada carga,
+composição da indutância de laço e comprimento roteado contra distância em linha reta.}
+\label{fig:pdn}
+\end{figure}
+
+\section{Firmware e estado de implementação}
+\label{sec:dev-firmware}
+
+O firmware é escrito em C++ para o ESP32-S3, com disciplina de sistemas críticos: caminhos
+não implementados devolvem um estado de erro explícito e propagam-no, em vez de retornar
+sucesso ou falha silenciosa. A justificativa dessa escolha e sua correspondência com a
+prática de sistemas de alta criticidade constam do Apêndice~\ref{ape:praticas}.
+
+\emandamento{Dois caminhos permanecem não implementados e são decisivos para a validade da
+medição em campo: a inicialização do acelerômetro --- que inclui a conferência do registro
+de identidade, o fundo de escala, o divisor de taxa de amostragem e, decisivamente, a
+configuração do filtro passa-baixas interno abaixo de $f_s/2$ --- e o segundo caminho de
+aquisição. Enquanto o filtro não for configurado, o dispositivo opera na terceira cadeia da
+Seção~\ref{sec:dev-sinal}, aquela em que todo conteúdo acima de \SI{500}{\hertz} dobra para
+dentro da banda de análise.}
+
+\section{Comunicação e recepção}
+\label{sec:dev-comunicacao}
+
+A cadeia vai do motor ao manutentor em dez elos. Os parâmetros do enlace LoRa foram fixados
+explicitamente --- fator de espalhamento, largura de banda e taxa de codificação ---, em vez
+de herdados do padrão da biblioteca. A razão é de rastreabilidade: parâmetros herdados
+significam que uma atualização de biblioteca altera o consumo do produto sem que a mudança
+seja detectável.
+
+O receptor assume três responsabilidades que o dispositivo não pode ter: carimbar o tempo,
+já que o contador de partida fornece ordem e não instante; detectar lacuna na sequência,
+porque perda silenciosa é indistinguível de máquina parada; e decidir quando abrir alerta.
+A regra de disparo é implementada no receptor, e não no dispositivo, porque alterá-la no
+dispositivo exigiria regravar cada aparelho em campo. A verificação de integridade é
+simétrica: o CRC do receptor é comparado contra o do firmware compilado, em \num{204} casos
+de teste.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\textwidth]{\kxfig{fig6_cadeia.pdf}}
+\caption[Cadeia do sistema e estado de implementação de cada elo]{Cadeia do sistema e estado de implementação de cada elo. \emandamento{``Testado''
+refere-se a verificação no \emph{host}: nenhum elo foi exercitado com rádio ou sensor
+reais.}}
+\label{fig:cadeia}
+\end{figure}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.92\textwidth]{\kxfig{fig5_topologia.pdf}}
+\caption[Comparação entre arquiteturas topológicas]{Comparação entre arquiteturas topológicas. O enlace decide autonomia tanto quanto
+decide alcance.}
+\label{fig:topologia}
+\end{figure}
+
+\emandamento{A cadeia foi exercitada injetando os efeitos que o meio impõe --- colisão,
+perda e corrupção de bit. O que a simulação não cobre é a propagação: alcance e margem de
+enlace dependem de medição em campo, e nenhum elo foi exercitado com rádio ou sensor
+reais.}

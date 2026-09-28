@@ -1,0 +1,452 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Capítulo 4 --- Resultados e discussão
+%%
+%% Organizado pela ordem de precedência da cadeia, como o Capítulo 1 promete:
+%% aquisição -> estimação -> implantação, e então o confronto com a literatura.
+%%
+%% MARCAÇÃO DE PROCEDÊNCIA POR NÚMERO -----------------------------------------
+%% Requisito estrutural deste capítulo, não recomendação de estilo.
+%%
+%% Os cinco relatórios de origem têm, cada um, procedência homogênea, declarada
+%% uma vez no escopo --- exceto a revisão de literatura, que mistura as três. Os
+%% três defeitos de procedência encontrados na auditoria estavam todos nela, e
+%% em nenhum dos outros quatro. Este capítulo reproduz a condição de risco: ele
+%% mistura as três procedências em texto corrido. Por isso a marcação é POR
+%% NÚMERO (\pS, \pM, \pE) e não por seção.
+%%
+%% \pS  sinal sintetizado a partir do modelo da Seção 3.2
+%% \pM  dado real de bancada instrumentada, decimado em software
+%% \pE  modelagem ou cálculo sobre as especificações de projeto
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+%% booktabs não é carregado pelo template; se ausente, as réguas viram \hline
+\@ifundefined{toprule}{%
+  \newcommand{\toprule}{\hline}%
+  \newcommand{\midrule}{\hline}%
+  \newcommand{\bottomrule}{\hline}%
+}{}
+\@ifundefined{pS}{%
+  \newcommand{\pS}{\textsuperscript{\textsf{S}}}%
+  \newcommand{\pM}{\textsuperscript{\textsf{M}}}%
+  \newcommand{\pE}{\textsuperscript{\textsf{E}}}%
+}{}
+\@ifundefined{emandamento}{%
+  \@ifundefined{textcolor}%
+    {\newcommand{\emandamento}[1]{#1}}%
+    {\newcommand{\emandamento}[1]{\textcolor{red}{#1}}}%
+}{}
+\makeatother
+
+%% Caminhos para as figuras geradas pelo pipeline do repositório.
+%% NÃO copiar as figuras para dentro do TCC: elas são regeneráveis por
+%% experiments/figures/ e uma segunda cópia divergiria em silêncio.
+%% Ajustar o prefixo abaixo se a pasta de compilação mudar de lugar.
+\providecommand{\kxfig}[1]{../../experiments/figures/output/#1}
+\providecommand{\kxhw}[1]{../../#1}
+
+\chapter{Resultados e discussão}
+\label{cap:resultados}
+
+\section{Procedência dos resultados}
+\label{sec:proc}
+
+Os resultados deste capítulo não têm origem uniforme, e a distinção decide o que cada um
+sustenta. Três procedências se misturam no texto que segue, e cada valor numérico é
+marcado individualmente:
+
+\begin{description}
+  \item[\pS\ Sinal sintetizado.] Gerado pelo modelo de dois mecanismos descrito na
+        Seção~\ref{sec:dev-sinal}: harmônicas da rotação somadas a um trem de impulsos amortecidos que
+        modula uma ressonância estrutural, mais ruído gaussiano. Sustenta afirmações sobre
+        \emph{relações entre métodos} --- qual procedimento recupera o valor correto, qual
+        decisão altera o resultado e em que direção. Não sustenta afirmação sobre
+        desempenho em máquina.
+  \item[\pM\ Dado real decimado.] Sinais de bancada instrumentada, adquiridos em alta taxa
+        e decimados em \emph{software} para emular a banda do dispositivo. O que é
+        modelado é a aquisição, não o sinal. Sustenta afirmações sobre \emph{taxas de
+        detecção por modo de falha}.
+  \item[\pE\ Modelagem sobre especificação.] Fórmulas fechadas e cálculo sobre as cotas do
+        desenho e a configuração implementada, tomadas como dadas. Sustenta afirmações
+        sobre \emph{limites impostos pelo projeto}, dentro das condições de contorno
+        declaradas na Seção~\ref{sec:dev-mecanica}.
+\end{description}
+
+\emandamento{Nenhuma das três é medição no dispositivo montado. A marcação por número, e
+não por seção, é requisito deste capítulo: valores das três procedências aparecem em
+parágrafos vizinhos, e foi exatamente essa vizinhança que produziu, nos relatórios de
+origem, três atribuições incorretas detectadas em auditoria.}
+
+\section{O que a aquisição permite medir}
+\label{sec:res-aquisicao}
+
+\subsection{A banda do sensor descarta a evidência de defeito de rolamento}
+
+O acelerômetro tem taxa máxima de amostragem de \SI{1}{\kilo\hertz}\pE, o que situa a
+frequência de Nyquist em \SI{500}{\hertz}\pE. A frequência característica de defeito de
+pista externa, \SI{104,6}{\hertz}\pE\ na geometria considerada, cai dentro dessa banda; a
+ressonância estrutural de \SI{3,5}{\kilo\hertz}\pS\ que carrega a informação diagnóstica
+não. O defeito repete dentro da banda, e a evidência do defeito não.
+
+Sobre o sinal sintetizado, o contraste entre as condições com e sem defeito foi de
+\num{413}\pS\ vezes por análise de envelope na banda de ressonância, amostrada a
+\SI{20}{\kilo\hertz}, contra \num{20}\pS\ vezes por espectro direto a \SI{1}{\kilo\hertz}.
+O par não isola o efeito da banda: entre as duas medidas mudam duas variáveis, a banda e o
+método de demodulação, e dois pontos não constituem uma função. Ele sustenta que a cadeia
+truncada perde contraste; não sustenta a atribuição quantitativa dessa perda à banda
+isoladamente.
+
+Um segundo efeito é de natureza distinta. Sem filtro passa-baixas configurado abaixo de
+$f_s/2$, a ressonância de \SI{3,5}{\kilo\hertz}\pS\ não desaparece: reaparece rebatida em
+\SI{500}{\hertz}\pS, frequência onde nada existe fisicamente. Descritores estatísticos
+medidos sobre esse sinal podem separar as classes por um mecanismo alheio à física do
+defeito --- uma medição ingênua pode funcionar pelos motivos errados e passar em validação.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\textwidth]{\kxfig{fig1_banda_sensor.pdf}}
+\caption[O limite de banda descarta a evidência de defeito de rolamento]{\textbf{O limite de banda descarta a evidência de defeito de rolamento} (\pS).
+\textbf{a}, Densidade espectral de potência para rolamento sadio e com defeito de pista
+externa. A faixa sombreada marca a banda acessível ao dispositivo; os impactos excitam uma
+ressonância inteiramente fora dela. \textbf{b}, Razão entre as amplitudes na frequência
+característica nas duas condições. \textbf{c}, Razão entre as condições para quatro
+descritores de impacto; nenhum sobrevive à limitação de banda com antialiasing correto.
+\textbf{d}, Frequência aparente da ressonância após subamostragem sem filtro: a energia
+reaparece onde nada existe fisicamente.}
+\label{fig:banda}
+\end{figure}
+
+\subsection{O que o dispositivo detecta, por modo de falha}
+
+Em dado real decimado, com o limiar calibrado para falso alarme alvo de \SI{1}{\percent},
+o falso alarme medido foi de $\num{2,0} \pm \num{1,3}\,\si{\percent}$\pM. Nesse ponto de
+operação, o quadro de detecção por classe é o da Tabela~\ref{tab:deteccao}.
+
+\begin{table}[!htb]
+\centering
+\caption{Detecção por modo de falha a \SI{2}{\percent} de falso alarme medido, em dado
+real decimado (\pM). Desvio entre partições onde registrado. As duas classes de rolamento
+correspondem à condição sem massa de desbalanceamento sobreposta.}
+\label{tab:deteccao}
+\small
+\begin{tabular}{lc}
+\toprule
+Modo de falha & Detecção \\
+\midrule
+Desbalanceamento                      & $\num{75,0} \pm \num{3,5}\,\si{\percent}$ \\
+Rolamento \emph{overhang} (puro)      & \SI{20,7}{\percent} \\
+Rolamento \emph{underhang} (puro)     & \SI{14,8}{\percent} \\
+Desalinhamento vertical               & $\num{7,2} \pm \num{4,3}\,\si{\percent}$ \\
+Desalinhamento horizontal             & $\num{5,0} \pm \num{3,1}\,\si{\percent}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Apenas o desbalanceamento é detectado de forma útil. As demais classes ficam próximas do
+piso, e duas observações sobre a tabela importam mais que os valores.
+
+A primeira é sobre a dispersão. Nas duas classes de desalinhamento, o desvio entre
+partições é da ordem do próprio valor: $\num{7,2} \pm \num{4,3}\,\si{\percent}$\pM\
+admite intervalo que se aproxima de zero. Qualquer afirmação construída sobre esses dois
+números é hipótese sustentada por evidência fraca, e não medição, e assim é tratada na
+Seção~\ref{sec:res-discussao}.
+
+A segunda é sobre estratificação. As classes de rolamento foram ensaiadas em quatro níveis
+de massa de desbalanceamento sobreposta, e a detecção acompanha a massa, não o defeito:
+sobe de \SI{14,8}{\percent}\pM\ sem massa para \SI{87,3}{\percent}\pM\ no maior nível, na
+classe \emph{underhang}. Reportar o agregado das quatro condições --- \SI{42,6}{\percent}\pM\
+--- como ``detecção de defeito de rolamento'' produziria exatamente o tipo de número
+inflado que a Seção~\ref{sec:res-estimacao} documenta em outro contexto. O padrão indica
+que, nos arquivos de rolamento, o modelo responde à massa adicionada, e não ao defeito.
+
+\subsection{O invólucro filtra o sinal antes que ele alcance o sensor}
+
+O invólucro integra a cadeia de medição, e não apenas a protege. A rigidez do caminho entre
+a superfície do motor e o sensor resultou em \SI{1,45e6}{\newton\per\meter}\pE, o que para
+uma massa de \SI{118}{\gram}\pE\ situa a frequência de montagem em \SI{557}{\hertz}\pE,
+dentro da banda de medição. A transmissibilidade atinge aproximadamente cinco vezes em
+\SI{500}{\hertz}\pE\ e o erro de amplitude ultrapassa \SI{10}{\percent} já em
+\SI{168}{\hertz}\pE. A prática consolidada em acelerometria exigiria frequência de montagem
+de ao menos \SI{3}{\kilo\hertz} para a banda normativa.
+
+A decomposição da flexibilidade localiza o problema: a base responde por
+\SI{51,1}{\percent}\pE\ e o corpo por \SI{48,5}{\percent}\pE, contra \SI{0,4}{\percent}\pE\
+do ressalto. O resultado é pouco sensível à incerteza da espessura da base --- dobrando-a,
+a frequência sobe apenas para \SI{750}{\hertz}\pE\ --- e a mesma geometria em alumínio
+alcançaria \SI{3273}{\hertz}\pE. Duas hipóteses concorrentes foram testadas e descartadas:
+a curvatura da carcaça, que reduz a retenção magnética entre \num{7} e \SI{30}{\percent}\pE\
+preservando margem próxima de duas vezes a força inercial, e os modos próprios dos painéis,
+situados acima de \SI{1300}{\hertz}\pE.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\textwidth]{\kxfig{fig3_involucro.pdf}}
+\caption[O caminho elástico coloca a frequência de montagem dentro da banda]{\textbf{O caminho elástico coloca a frequência de montagem dentro da banda de
+medição} (\pE). O caminho motor--base--ressalto--corpo--sensor resulta em frequência de
+montagem de \SI{557}{\hertz}, com erro de amplitude acima de \SI{10}{\percent} a partir de
+\SI{168}{\hertz}. A decomposição da flexibilidade mostra que base e corpo respondem por
+praticamente toda ela. Os painéis correspondentes a fixação magnética e a modos de placa
+são hipóteses testadas e descartadas.}
+\label{fig:involucro}
+\end{figure}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.92\textwidth]{\kxfig{fig10_vibracao.pdf}}
+\caption[Transmissibilidade do caminho de montagem e margem de fadiga]{Transmissibilidade do caminho de montagem, margem de fadiga de junta de solda por
+componente e sensibilidade ao amortecimento e à severidade da excitação (\pE).}
+\label{fig:vibracao}
+\end{figure}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[height=0.62\textheight]{\kxhw{hardware/fem/figuras/modos.png}}
+\caption[Formas modais da placa e do caminho de montagem]{Formas modais da placa e do
+caminho de montagem, obtidas por elementos finitos (\pE). A amplitude do autovetor é
+arbitrária; a informação está na distribuição.}
+\label{fig:modos}
+\end{figure}
+
+\section{O que a estimação decide}
+\label{sec:res-estimacao}
+
+Quatro decisões deste elo --- método de integração, política de limiar, métrica e
+protocolo de validação --- alteraram os resultados por margens maiores que o efeito físico
+sob investigação. Todos os valores desta seção são de sinal sintetizado, e o que eles sustentam
+é a relação entre métodos, não o desempenho do dispositivo.
+
+\subsection{A norma exige velocidade, e a integração precisa ser feita na frequência}
+
+A norma define as zonas de severidade em velocidade eficaz, e o acelerômetro entrega
+aceleração. Contra uma senoide de \SI{3,0}{\meter\per\second\squared} a \SI{50}{\hertz},
+cuja integral é conhecida analiticamente e vale \SI{6,7524}{\milli\meter\per\second}, os
+métodos comparam-se como na Tabela~\ref{tab:res-integracao}.
+
+\begin{table}[!htb]
+\centering
+\caption{Velocidade eficaz por variante de integração, contra o valor analítico exato
+(\pS).}
+\label{tab:res-integracao}
+\small
+\begin{tabular}{lcc}
+\toprule
+Método & Resultado (\si{\milli\meter\per\second}) & Erro \\
+\midrule
+Integração no tempo, sem passa-alta          & \num{11,69}  & $+\SI{73}{\percent}$ \\
+Integração no tempo, com passa-alta          & \num{17,31}  & $+\SI{156}{\percent}$ \\
+\textbf{Integração na frequência, banda ISO} & \num{6,7525} & \textbf{\SI{0,0}{\percent}} \\
+Na frequência, com viés de \SI{0,02}{\meter\per\second\squared} & \num{6,7525} & \SI{0,0}{\percent} \\
+No tempo sem passa-alta, com o mesmo viés    & \num{55,08}  & $+\SI{716}{\percent}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Dois resultados são contraintuitivos. O filtro passa-alta não corrige a integração no
+tempo e chega a piorá-la, porque a soma cumulativa continua acumulando o transiente de
+borda do filtro. E um viés de \SI{0,02}{\meter\per\second\squared}\pE, valor contido na
+especificação do sensor, leva o resultado a \SI{55,08}{\milli\meter\per\second}\pS\ quando
+o correto é \num{6,75}. O valor correto fica abaixo do limite entre as zonas C e D em três
+das quatro combinações de grupo de máquina e tipo de fundação da norma; o valor obtido
+excede esse limite em todas, e o sinal seria classificado na zona D qualquer que fosse a
+máquina. A integração na frequência permanece exata sob o mesmo viés, porque o termo
+contínuo cai fora da máscara imposta pela própria norma.
+
+\subsection{O limiar padrão produz falso alarme incompatível com operação}
+
+Treinado exclusivamente com dados de operação normal, o detector com o valor padrão do
+parâmetro de contaminação classificou \SI{42,1}{\percent}\pS\ das janelas normais como
+anomalia. Com o parâmetro fixado em \num{0,01}, o falso alarme caiu para
+\SI{1,4}{\percent}\pS. A taxa de detecção permaneceu em \SI{100}{\percent}\pS\ e a área sob
+a curva ROC em \num{1,000}\pS\ nos quatro valores testados.
+
+Detecção unitária e área unitária são condições que nenhum conjunto real produz, e marcam
+o alcance deste resultado: ele demonstra que o parâmetro desloca o corte sem alterar o
+ranqueamento do detector, e é essa propriedade --- não o valor \SI{42}{\percent} --- que se
+transporta para dado real.
+
+\subsection{A métrica global não caracteriza o ponto de operação}
+
+Sobre defeito incipiente, com descritores e modelo idênticos, a área sob a curva completa
+caiu \SI{3,7}{\percent}\pS\ entre a cadeia de referência e a do dispositivo, enquanto a
+área parcial restrita à região de falso alarme baixo caiu \SI{16,2}{\percent}\pS\ a
+\SI{10}{\percent} de falso alarme e \SI{20,3}{\percent}\pS\ a \SI{5}{\percent}. A perda na
+região em que um dispositivo de campo precisa operar é de \num{4,4} a \num{5,5} vezes a que
+a área global indica.
+
+\subsection{O protocolo de validação infla a acurácia}
+
+Janelas consecutivas de um mesmo ensaio compartilham a assinatura da montagem --- nível de
+ruído, ganho do sensor e condição de aperto. Divididas aleatoriamente entre treino e teste,
+permitem que o modelo identifique o ensaio em vez da falha. O mesmo modelo, sobre os mesmos
+dados e os mesmos descritores, atingiu \SI{99,0}{\percent}\pS\ de acurácia sob divisão
+aleatória por janela e $\num{63,2} \pm \num{19,2}\,\si{\percent}$\pS\ sob divisão por
+ensaio: inflação de aproximadamente \num{36} pontos percentuais.
+
+A distribuição entre partições revela o mecanismo. Três das cinco ficaram próximas de
+\num{0,50}\pS, o nível do acerto ao acaso, enquanto uma alcançou \num{1,00}\pS. O desvio
+entre partições indica ausência de generalização --- informação que a média única do
+protocolo incorreto suprime.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\textwidth]{\kxfig{fig2_metodologia.pdf}}
+\caption[Quatro escolhas metodológicas alteram os resultados mais que o efeito medido]{\textbf{Quatro escolhas metodológicas alteram os resultados mais do que o efeito
+medido} (\pS). \textbf{a}, Velocidade eficaz por cinco variantes de integração contra o
+valor analítico exato; apenas a integração no domínio da frequência o recupera.
+\textbf{b}, Deriva causada por viés contido na especificação do sensor. \textbf{c},
+Acurácia do mesmo modelo sobre os mesmos dados, variando apenas a estratégia de partição;
+pontos indicam as partições individuais. \textbf{d}, Fração da operação normal classificada
+como anomalia por valor do parâmetro de contaminação. \textbf{e}, Curvas ROC por banda de
+aquisição; a faixa sombreada marca a região de operação realista.}
+\label{fig:metodologia}
+\end{figure}
+
+\section{O que a implantação impõe}
+\label{sec:res-implantacao}
+
+\subsection{A carga da bateria, e não o invólucro, define a margem térmica}
+
+A hipótese inicial atribuía ao material do invólucro o papel de elo térmico mais frágil. A
+análise inverteu essa leitura. A resistência térmica do caminho condutivo em ASA é de
+\SI{88,8}{\kelvin\per\watt}\pE, contra \SI{0,074}{\kelvin\per\watt}\pE\ em alumínio, uma
+razão de \num{1206}\pE\ vezes. Com base em alumínio, a temperatura interna alcançaria
+\SI{79,0}{\celsius}\pE\ com a carcaça a \SI{80}{\celsius}. Com base em ASA, o balanço
+térmico resolvido até a convergência dá \SI{33,0}{\celsius}\pE\ com a carcaça a
+\SI{80}{\celsius}, e o modelo tridimensional do invólucro situa a placa entre
+\SI{35,1}{\celsius}\pE\ e \SI{38,3}{\celsius}\pE\ com a carcaça a \SI{90}{\celsius}.
+
+Em operação, nenhum limite é atingido até \SI{90}{\celsius} de carcaça: a placa permanece
+abaixo tanto dos \SI{45}{\celsius} admitidos na carga da célula quanto dos
+\SI{60}{\celsius} admitidos na descarga. O autoaquecimento é irrelevante em operação: a
+potência média de \SI{2,0}{\milli\watt}\pE\ eleva a temperatura interna em
+\SI{0,01}{\celsius}\pE, e todo o calor provém do exterior.
+
+\emandamento{Durante a carga da bateria, não. O carregador linear da placa v3 dissipa cerca
+de \SI{0,41}{\watt}\pE\ no pior ponto de uma carga a \SI{200}{\milli\ampere}, dentro do
+invólucro fechado, e o modelo tridimensional eleva a placa em cerca de
+\SI{15}{\kelvin}\pE\ por watt. O limite que restringe passa a ser o de carga da célula,
+\SI{45}{\celsius}, e somente nessa fase: restam \SI{8,3}{\kelvin}\pE\ de folga com o
+dispositivo fora do motor e de \SIrange{0,7}{3,9}{\kelvin}\pE\ com o motor a
+\SI{90}{\celsius}. Esta última folga é otimista, porque o modelo aplica à troca entre a
+placa e a cavidade o coeficiente de convecção da face externa, e a convecção dentro da
+cavidade é mais fraca; a folga real pode ser nula. Na placa v3, o limite é imposto pelo
+próprio carregador, que suspende a carga acima de \SI{45}{\celsius} e a retoma ao esfriar.
+O procedimento recomendado é carregar o dispositivo fora do motor ou com o motor parado.}
+
+Os demais limites ficam bem acima: circuitos integrados em \SI{85}{\celsius}, deformação
+térmica do ASA em \SI{98}{\celsius} e ímãs em \SI{150}{\celsius}. A consequência de projeto
+é um conflito entre elos: substituir o ASA por alumínio resolveria a limitação mecânica da
+Seção~\ref{sec:res-aquisicao} e agravaria a térmica, levando a temperatura interna a
+\SI{79,0}{\celsius}\pE\ sob a mesma carcaça, acima dos limites de carga e de descarga da
+célula. Os dois requisitos recaem sobre a mesma peça e apontam em sentidos opostos.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=\textwidth]{\kxfig{fig4_termica.pdf}}
+\caption[O invólucro isola a eletrônica da carcaça]{\textbf{O invólucro isola a eletrônica
+da carcaça} (\pE). Por ser mau condutor, o polímero do invólucro mantém a eletrônica abaixo
+de todos os limites em operação. Os painéis \textbf{a} e \textbf{b} ainda apresentam o valor
+do modelo concentrado não convergido, \SI{44,8}{\celsius} com a carcaça a
+\SI{80}{\celsius}; o balanço convergido dá \SI{33,0}{\celsius}, e o modelo tridimensional
+situa a placa entre \SI{35,1}{\celsius} e \SI{38,3}{\celsius} com a carcaça a
+\SI{90}{\celsius}.}
+\label{fig:termica}
+\end{figure}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.90\textwidth]{\kxfig{fig11_termica3d.pdf}}
+\caption[Perfil de temperatura e transiente da parede da cavidade]{Perfil de temperatura ao longo da altura, transiente da parede da cavidade e
+comparação com o modelo concentrado (\pE).}
+\label{fig:termica3d}
+\end{figure}
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[height=0.48\textheight]{\kxhw{hardware/fem/figuras/termica.png}}
+\caption[Campo de temperatura em corte]{Campo de temperatura em corte (\pE). A placa não
+integra o modelo de elementos finitos; sua temperatura provém de balanço radiativo
+calculado separadamente.}
+\label{fig:termicafem}
+\end{figure}
+
+\subsection{O enlace impõe um compromisso entre alcance e autonomia}
+
+Os parâmetros do enlace foram fixados explicitamente, em vez de herdados do padrão da
+biblioteca --- condição para que uma atualização não altere o consumo do produto sem que a
+mudança seja detectável. O tempo no ar resultante é de \SI{185}{\milli\second}\pE, contra
+os \SI{150}{\milli\second} que a estimativa inicial de consumo assumia sem derivação.
+
+O custo em autonomia é direto: \SI{256}{\day}\pE\ no fator de espalhamento mais baixo
+contra \SI{138}{\day}\pE\ no mais alto, com \SI{12,5}{\decibel} de ganho entre os extremos.
+A comparação com Wi-Fi, modelada em \SI{5}{\second} a \SI{150}{\milli\ampere} por
+transmissão, resulta em \SI{44}{\day}\pE\ contra \SI{236}{\day}\pE\ no enlace adotado.
+Manter o rádio em \emph{standby} durante o repouso, em vez de colocá-lo em \emph{sleep},
+resulta em \SI{45}{\day}\pE\ --- custo energético equivalente ao de adotar Wi-Fi.
+
+\begin{figure}[!htb]
+\centering
+\includegraphics[width=0.92\textwidth]{\kxfig{fig7_gateway.pdf}}
+\caption[Cadeia de comunicação exercitada por simulação de meio]{Cadeia de comunicação exercitada por simulação de meio (\pE), com injeção de
+colisão, perda e corrupção de bit. \emandamento{A simulação não cobre propagação: alcance e
+margem de enlace dependem de medição em campo.}}
+\label{fig:gateway}
+\end{figure}
+\emandamento{A decisão definitiva depende da distância até o receptor, ainda não medida.}
+
+\section{Confronto com a literatura}
+\label{sec:res-discussao}
+
+\subsection{Convergências}
+
+O achado de inflação por vazamento de assinatura de montagem tem correlato direto: a
+literatura mede inflação da ordem de dezenas de pontos percentuais em uma base de referência
+consolidada, e relata que \num{40} de \num{41} estudos revisados sobre essa base adotaram
+delineamento suscetível ao problema~\cite{varejao2025,vieira2026}. A convergência é de
+direção e de ordem de grandeza: os \num{36} pontos\pS\ obtidos aqui vêm de sinal
+sintetizado, e os valores publicados, de dado medido.
+
+A fronteira de detecção encontrada reproduz, em dado real decimado, a divisão de trabalho que a
+literatura implementou por projeto. Um nó publicado reserva um acelerômetro de banda
+estreita para desbalanceamento e outro de dezenas de quilohertz para
+rolamento~\cite{jakobsen2024}, e o trabalho mais próximo em arquitetura demonstra
+desbalanceamento e adia rolamento~\cite{kolok2025}. Três caminhos independentes chegam à
+mesma fronteira.
+
+\subsection{Fragilidades desta análise}
+
+O problema de calibração do limiar não é anomalia deste projeto: o escore do detector tem
+\num{0,5} como referência interpretativa e não como corte calibrado~\cite{liu2008}, e a
+implementação de referência transporta essa interpretação para um deslocamento
+fixo~\cite{scikitlearn2026}. O resultado de \SI{42}{\percent}\pS\ obtido aqui vem de sinal
+sintetizado, com detecção unitária, e por isso demonstra que a política padrão falha por
+construção --- não que o dispositivo reproduza em máquina o falso alarme das implementações
+publicadas, que se situam entre \num{22} e \SI{38}{\percent} sobre operação
+normal~\cite{chevtchenko2023,kolok2025}. A comparação é de ordem de grandeza entre
+conjuntos, máquinas e limiares diferentes.
+
+A afirmação de que o desalinhamento falha por escolha de descritor, e não por banda, é a
+observação mais original deste trabalho e a que se apoia na evidência mais frágil. O
+mecanismo é claro: o desalinhamento se manifesta em harmônicas da rotação, muito abaixo de
+\SI{500}{\hertz}, e portanto dentro da banda; a assinatura é a razão entre as linhas de
+duas vezes e uma vez a rotação, que valor eficaz, curtose, fator de crista e frequência
+dominante não capturam. Mas a detecção medida, $\num{7,2} \pm \num{4,3}\,\si{\percent}$\pM,
+tem incerteza da ordem do próprio valor. A afirmação é mantida como hipótese acionável, com
+o experimento que a testaria enunciado no Capítulo~\ref{cap:conclusoes}, e não como
+resultado estabelecido.
+
+\subsection{Escolhas de hardware contestadas}
+
+A bateria recarregável contraria a prática estabelecida na literatura de nós de
+monitoramento, que adota célula primária de longa duração~\cite{nabavi2025}. A escolha
+introduz a restrição térmica de carga documentada na Seção~\ref{sec:res-implantacao}, que é
+o limite de operação do dispositivo, e nenhum dos sistemas comparáveis a possui.
+
+Sobre a banda, a objeção da literatura é direta e não admite contorno por
+\emph{software}: nenhum estudo de adequação revisado testou sensor com limite superior
+abaixo de \SI{1500}{\hertz}~\cite{albarbar2008}, e os grupos que diagnosticam rolamento com
+MEMS escolhem sensores de dezenas de quilohertz~\cite{landi2023,jakobsen2024}, porque a
+assinatura viaja modulada em portadora de alta frequência~\cite{randall2011,antoni2007}.
+Os resultados desta seção são consistentes com essa objeção e a delimitam: a banda impede o
+diagnóstico de rolamento e não impede a detecção de desbalanceamento.

@@ -1,0 +1,66 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Apêndice A --- Registro de verificação do hardware
+%%
+%% Absorve o registro de engenharia do relatório de verificação de hardware:
+%% correções no esquemático, defeitos de geração corrigidos e abertos, versões.
+%% O material de PROJETO (cadeia de geração, placa, PDN) fica no Capítulo 3.
+%%
+%% PENDENTE DE TRANSCRIÇÃO: as tabelas completas de defeitos (itens 1--21) e de
+%% comparação entre versões v1/v2 estão em docs/relatorio/verificacao-hardware.tex
+%% e devem ser transportadas na íntegra. A estrutura abaixo é a do destino.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Registro de verificação do hardware}
+\label{ape:hardware}
+
+Este apêndice reúne o registro de engenharia da cadeia de geração descrita na
+Seção~\ref{sec:dev-hardware}. Ele é mantido no trabalho por uma razão de método: a
+verificação só é informativa se os defeitos que ela encontrou forem publicados junto com os
+que ela não encontrou.
+
+Nenhum resultado aqui provém de bancada. Todos os valores são de geração, verificação
+geométrica ou simulação, e o registro não reivindica validação experimental. Cada afirmação
+tem associada a grandeza que a sustenta; itens sem medição associada aparecem como
+\textsf{não verificado}.
+
+\section{Correções no esquemático e defeitos corrigidos}
+\label{sec:ape-corrigidos}
+
+Os defeitos identificados e corrigidos durante a geração constam do relatório de
+verificação com o valor antigo, o valor corrigido e a causa. Incluem, entre outros, erro de
+referencial angular de \emph{pad} que produzia \num{42} curtos no DRC, e inversão de sinal
+de rotação de \emph{footprint}.
+
+\section{Defeitos abertos}
+\label{sec:ape-abertos}
+
+\emandamento{Os defeitos abaixo permanecem abertos e restringem afirmações específicas.}
+
+\begin{itemize}
+  \item \textbf{A placa não parafusa nos bosses do invólucro.} Na v1, o furo M3 exigiria
+        material até \SI{28,2}{\milli\meter} na diagonal e o canto termina em
+        \SI{27,5}{\milli\meter}; na v2, os recortes coincidem com os eixos dos bosses. A
+        fixação passa a ser o assento pelo aro mais três furos M2 próprios.
+  \item \textbf{Corredor do cabo.} Com \SI{6,0}{\milli\meter}, a v1 perde a saída de terra
+        de dois componentes, com três itens soltos no DRC.
+  \item \textbf{Altura do conjunto definida pelos conectores.} Decidir se o cabeçalho de
+        gravação permanece populado no produto.
+  \item \textbf{Divisor do NTC satura no frio}, atingindo \SI{3,22}{\volt} a
+        \SI{-40}{\celsius}, acima da faixa útil do conversor. Abaixo de aproximadamente
+        \SI{-35}{\celsius} os limiares de curto e de circuito aberto não disparam.
+  \item \textbf{Numeração de pino do regulador varia por fabricante} ---
+        \textsf{não verificado}; conferir contra a folha de dados antes de fabricar.
+  \item \textbf{Furo de conector no invólucro sem conector correspondente} na netlist.
+  \item \textbf{Rabicho de antena ausente da lista de materiais}; a ligação do conector
+        do módulo de rádio ao painel não está especificada.
+  \item \textbf{Nenhum código lê a tensão da bateria.} O caminho de hardware existe; os
+        limiares do requisito de segurança correspondente não estão implementados.
+\end{itemize}
+
+\section{Limitações declaradas das análises}
+\label{sec:ape-limitacoes}
+
+A análise modal assume ASA isotrópico e maciço, hipótese otimista: a peça impressa com
+preenchimento parcial é anisotrópica e menos rígida. O amortecimento do material não foi
+medido, e sim herdado de análise anterior do projeto. As demais limitações constam da
+Seção~\ref{sec:conc-alcance}.

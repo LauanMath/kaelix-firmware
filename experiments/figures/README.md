@@ -29,6 +29,14 @@ figures/output/*.{svg,pdf,tiff,png}    SVG/PDF vetoriais, TIFF 600 dpi
 | cálculo no próprio exportador | `export_topologia_data.py` | 5 |
 | **módulo `experiments/gateway/`** | `export_gateway_data.py` | 7 |
 | esquema, sem dado numérico | — | 6 |
+| **firmware** (`src/`, `lib/`) | — (desenho direto) | 8 |
+
+**Figura 8 é a exceção do pipeline.** Um esquemático não tem CSV: os valores
+*são* o desenho. `fig8_circuito.py` gera SVG diretamente, com coordenadas
+absolutas, e cada constante traz no cabeçalho o arquivo e a linha do firmware de
+onde saiu (pinos, R_FIXED, correntes). Não usa R nem biblioteca de esquemático —
+`schemdraw` foi tentada e descartada: o posicionamento relativo dela fazia o
+rótulo do CI disputar espaço com os nomes dos pinos.
 
 **Nota sobre a fonte da verdade das figuras 5 e 7.** As figuras 1 a 4 têm a
 computação no notebook e reproduzida no exportador — duas cópias que podem

@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "kaelix")(type "KiCad")(uri "${KIPRJMOD}/kaelix.kicad_sym")(options "")(descr "Símbolos próprios do Kaelix"))
+)

@@ -1,0 +1,25 @@
+# Intermediários de compilação do LaTeX. O principal.pdf é versionado,
+# como os demais PDFs de docs/relatorio/.
+*.aux
+*.bbl
+*.blg
+*.brf
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.idx
+*.ilg
+*.ind
+*.ist
+*.glo
+*.gls
+*.glg
+*.acn
+*.acr
+*.alg
+*.nlo
+*.nls
+*.xdy
+*.synctex.gz

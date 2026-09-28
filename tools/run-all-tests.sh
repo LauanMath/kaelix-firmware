@@ -22,9 +22,22 @@ if ! (cd training && py -m pytest tests/ -q); then falhas=$((falhas+1)); fi
 secao "gateway"
 if ! py -m pytest experiments/gateway/tests/ -q; then falhas=$((falhas+1)); fi
 
+secao "hardware — esquemático e placa (KiCad)"
+if command -v kicad-cli >/dev/null 2>&1 || [ -x /Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli ]; then
+  # Todas as versões, não só a padrão: até aqui o runner construía apenas a
+  # v1, e uma mudança no gerador ou no roteador podia quebrar a versão ativa
+  # sem que nada acusasse. Com a v3 mudando o roteador, isso deixou de ser
+  # hipotético.
+  for v in v1 v2 v3; do
+    if ! KAELIX_PCB=$v ./tools/build-hardware.sh; then falhas=$((falhas+1)); fi
+  done
+else
+  printf 'pulado: kicad-cli não encontrado\n'
+fi
+
 printf '\n%s\n' "-----------------------------------------------------------------"
 if [ "$falhas" -eq 0 ]; then
-  printf '\033[32mTUDO PASSOU\033[0m  3 suítes\n'
+  printf '\033[32mTUDO PASSOU\033[0m  4 suítes\n'
 else
   printf '\033[31m%d SUÍTE(S) FALHARAM\033[0m\n' "$falhas"
 fi

@@ -1,0 +1,823 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Capítulo 2 --- Fundamentação teórica
+%%
+%% Capítulo expositivo: apresenta os conceitos que os capítulos seguintes
+%% pressupõem, na ordem da cadeia de medição (fenômeno físico -> aquisição ->
+%% avaliação normativa -> decisão -> implantação). O confronto com a
+%% literatura fica no capítulo de trabalhos relacionados.
+%%
+%% Cada seção termina aplicando o conceito ao dispositivo estudado, com
+%% números que o leitor pode refazer. Os valores de projeto vêm de:
+%%   rolamento e rotação   docs/relatorio/relatorio-kaelix.tex, tab:parametros
+%%   enlace LoRa           src/comms/lora.cpp (SF9, 125 kHz, 4/5, preâmbulo 8)
+%%   carga útil            src/power/sleep.cpp (21 bytes)
+%%   rigidez e massa       Capítulo de resultados, Seção do invólucro
+%%   MPU6050               folha de dados rev. 3.1 e mapa de registradores
+%%                         rev. 4.0, conferidos no documento primário
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+\@ifundefined{toprule}{%
+  \newcommand{\toprule}{\hline}%
+  \newcommand{\midrule}{\hline}%
+  \newcommand{\bottomrule}{\hline}%
+}{}
+\makeatother
+
+\chapter{Fundamentação teórica}
+\label{cap:fundamentacao}
+
+Este capítulo apresenta os conceitos sobre os quais o restante do trabalho se apoia. A
+ordem de exposição acompanha o percurso da informação no dispositivo estudado: parte do
+fenômeno físico --- a vibração de uma máquina rotativa e as assinaturas que cada tipo de
+falha deixa nela ---, passa pela conversão desse fenômeno em sequência de números, pelos
+critérios com que a norma avalia a severidade da vibração e pelos métodos com que um
+algoritmo decide se a máquina se afastou da operação normal, e termina nas restrições de
+um equipamento embarcado: comunicação sem fio, energia e temperatura. Ao final de cada
+seção, o conceito é aplicado ao dispositivo estudado, de modo que os números usados nos
+capítulos seguintes possam ser refeitos a partir daqui.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Manutenção de máquinas rotativas}
+\label{sec:fund-manutencao}
+
+A manutenção de equipamentos industriais é usualmente classificada em três estratégias,
+distinguidas pelo momento em que a intervenção ocorre \cite{mobley2002}. Na manutenção
+\emph{corretiva}, o equipamento opera até falhar e só então é reparado; o custo de
+planejamento é nulo, mas a falha ocorre em momento não escolhido e pode danificar
+componentes que estavam íntegros. Na manutenção \emph{preventiva}, a intervenção ocorre em
+intervalos fixos de tempo ou de uso, definidos a partir da vida média esperada dos
+componentes; a falha inesperada torna-se menos frequente, mas componentes em bom estado são
+substituídos sem necessidade, e falhas que ocorrem antes do intervalo continuam não
+detectadas. Na manutenção \emph{preditiva}, ou baseada em condição, a intervenção é decidida
+pelo estado medido do equipamento: acompanha-se uma grandeza física que reflete sua
+condição e intervém-se quando ela indica degradação.
+
+\citeonline{jardine2006} descrevem um programa de manutenção baseada em condição em três
+etapas: aquisição de dados, processamento dos dados e tomada de decisão de manutenção. A
+divisão é útil porque separa problemas de natureza distinta. A aquisição é um problema de
+instrumentação: que grandeza medir, com que sensor, em que ponto da máquina e com que taxa.
+O processamento é um problema de tratamento de sinais: como extrair, dos dados brutos,
+indicadores que respondam à condição do equipamento. A decisão é um problema de
+classificação ou de detecção: a partir desses indicadores, decidir se a condição exige
+intervenção. Os capítulos seguintes adotam uma divisão análoga, em que a qualidade de cada
+etapa limita a das seguintes.
+
+Entre as grandezas empregadas no monitoramento de máquinas rotativas, a vibração é a mais
+difundida, porque a maior parte dos defeitos mecânicos --- desbalanceamento, desalinhamento,
+folga, desgaste de rolamentos e de engrenagens --- altera as forças dinâmicas no interior da
+máquina, e essas forças se transmitem à carcaça, onde podem ser medidas sem interromper a
+operação \cite{randall2011livro}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Fundamentos de vibração mecânica}
+\label{sec:fund-vibracao}
+
+\subsection{Deslocamento, velocidade e aceleração}
+
+Vibração é o movimento oscilatório de um ponto em torno de uma posição de equilíbrio. O
+movimento pode ser descrito por três grandezas relacionadas: o deslocamento $x(t)$, a
+velocidade $v(t) = \mathrm{d}x/\mathrm{d}t$ e a aceleração $a(t) = \mathrm{d}v/\mathrm{d}t$.
+Para um movimento senoidal de frequência $f$ e amplitude de deslocamento $X$, com
+$\omega = 2\pi f$,
+
+\begin{equation}
+x(t) = X \sin(\omega t), \qquad
+v(t) = \omega X \cos(\omega t), \qquad
+a(t) = -\omega^2 X \sin(\omega t).
+\label{eq:fund-senoide}
+\end{equation}
+
+As amplitudes das três grandezas diferem, portanto, por fatores de $\omega$: para um mesmo
+deslocamento, a velocidade cresce proporcionalmente à frequência, e a aceleração, ao
+quadrado dela. Essa relação tem duas consequências práticas. A primeira é que a grandeza
+escolhida para avaliação pondera as frequências de maneira diferente: o deslocamento
+realça as componentes de baixa frequência, a aceleração realça as de alta frequência, e a
+velocidade ocupa posição intermediária. A segunda é que, conhecida uma das grandezas, as
+outras podem ser obtidas por derivação ou integração; em particular, um acelerômetro, que
+mede $a(t)$, pode fornecer a velocidade por integração, operação discutida na
+Seção~\ref{sec:fund-integracao}.
+
+\subsection{Descritores escalares de um sinal}
+\label{sec:fund-descritores}
+
+Um sinal de vibração registrado durante um intervalo é frequentemente resumido por
+descritores escalares. Para uma janela de $N$ amostras $x_n$, com média $\bar{x}$ e
+desvio padrão $\sigma$, os mais usados são \cite{randall2011livro}:
+
+\begin{equation}
+x_{\mathrm{rms}} = \sqrt{\frac{1}{N}\sum_{n=1}^{N} x_n^2},
+\qquad
+x_{\mathrm{pico}} = \max_n |x_n|,
+\qquad
+\mathrm{FC} = \frac{x_{\mathrm{pico}}}{x_{\mathrm{rms}}},
+\qquad
+\kappa = \frac{\frac{1}{N}\sum_{n=1}^{N} (x_n-\bar{x})^4}{\sigma^4}.
+\label{eq:fund-descritores}
+\end{equation}
+
+O valor eficaz ($x_{\mathrm{rms}}$) mede a energia média do sinal e é a base da avaliação
+normativa de severidade (Seção~\ref{sec:fund-norma}). O valor de pico e o pico a pico
+(diferença entre o maior e o menor valor da janela) medem a excursão máxima. O fator de
+crista (FC) e a curtose ($\kappa$) medem a \emph{impulsividade}: quanto o sinal concentra
+sua energia em eventos breves e intensos. Valores de referência ajudam a interpretá-los.
+Uma senoide pura tem $\mathrm{FC} = \sqrt{2} \approx \num{1,41}$ e $\kappa = \num{1,5}$;
+um ruído gaussiano tem $\kappa = 3$. Um sinal composto por impactos espaçados, como o
+produzido por um defeito localizado em rolamento (Seção~\ref{sec:fund-rolamento}), tem
+fator de crista e curtose bem maiores, porque poucos valores extremos dominam a média de
+quarta potência. Esses descritores são insensíveis, porém, à \emph{frequência} em que a
+energia se concentra e à relação entre componentes de frequências diferentes; essa
+informação só é acessível pela análise espectral (Seção~\ref{sec:fund-espectro}).
+
+\subsection{Sistema de um grau de liberdade e ressonância}
+\label{sec:fund-1gdl}
+
+O modelo mais simples de uma estrutura que vibra é o sistema de um grau de liberdade: uma
+massa $m$ ligada a uma base por uma mola de rigidez $k$ e um amortecedor. Deslocada do
+equilíbrio e liberada, a massa oscila na frequência natural \cite{brandt2011}
+
+\begin{equation}
+f_n = \frac{1}{2\pi}\sqrt{\frac{k}{m}}.
+\label{eq:fund-fn}
+\end{equation}
+
+Quando a base vibra com frequência $f$, a razão entre a amplitude do movimento da massa e a
+da base é a \emph{transmissibilidade}. Com a razão de frequências $r = f/f_n$ e a razão de
+amortecimento $\zeta$,
+
+\begin{equation}
+T(r) = \sqrt{\frac{1 + (2\zeta r)^2}{(1-r^2)^2 + (2\zeta r)^2}}.
+\label{eq:fund-transmissibilidade}
+\end{equation}
+
+Para $r \ll 1$, $T \approx 1$: a massa acompanha a base. À medida que $f$ se aproxima de
+$f_n$, a transmissibilidade cresce, e em $r = 1$ é limitada apenas pelo amortecimento ---
+é a ressonância. Acima de $r = \sqrt{2}$, $T < 1$ e o movimento da base é atenuado.
+
+Esse modelo descreve um problema central da medição de vibração: o sensor não está preso
+diretamente à superfície da máquina, mas a um conjunto de peças --- base, fixação,
+invólucro, placa --- que tem rigidez finita. Esse conjunto e a massa que ele sustenta
+formam um sistema com frequência natural própria, a \emph{frequência de montagem}, e o
+sensor mede o movimento da massa, não o da máquina. Para que a medição reproduza a
+vibração da superfície, a transmissibilidade precisa ficar próxima de 1 em toda a banda de
+interesse. Com amortecimento desprezível, o erro de amplitude é $1/(1-r^2) - 1$, e o
+critério de erro máximo de \SI{10}{\percent} exige
+
+\begin{equation}
+\frac{1}{1-r^2} \le \num{1,1}
+\quad\Longrightarrow\quad
+r \le \frac{1}{\sqrt{11}} \approx \num{0,30}
+\quad\Longrightarrow\quad
+f_n \ge \num{3,3}\, f_{\max},
+\label{eq:fund-criterio-montagem}
+\end{equation}
+
+\noindent
+em que $f_{\max}$ é a maior frequência que se deseja medir. Para a banda normativa, cujo
+limite superior é \SI{1000}{\hertz} (Seção~\ref{sec:fund-norma}), a frequência de
+montagem precisa estar acima de cerca de \SI{3,3}{\kilo\hertz}.
+
+\paragraph{Aplicação ao dispositivo estudado.} Com a rigidez do caminho de montagem de
+\SI{1,45e6}{\newton\per\meter} e a massa de \SI{118}{\gram} obtidas na análise do
+invólucro, a Equação~\eqref{eq:fund-fn} dá $f_n \approx \SI{557}{\hertz}$. O erro de
+amplitude atinge \SI{10}{\percent} em $r = \num{0,30}$, isto é, em torno de
+\SI{168}{\hertz}, e em \SI{500}{\hertz} ($r \approx \num{0,90}$) a transmissibilidade sem
+amortecimento é de cerca de 5.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Assinaturas de falha em máquinas rotativas}
+\label{sec:fund-falhas}
+
+Cada tipo de defeito altera a vibração de um modo característico, e é essa assinatura que
+permite, a partir do sinal medido, inferir o que está errado na máquina. As assinaturas
+dividem-se em dois grupos, conforme a escala de frequência em que se manifestam.
+
+\subsection{Defeitos síncronos com a rotação}
+
+Desbalanceamento e desalinhamento produzem forças que se repetem a cada volta do eixo, e
+por isso se manifestam em múltiplos inteiros da frequência de rotação $f_r$, as
+\emph{harmônicas} da rotação \cite{randall2011livro}. No desbalanceamento, o centro de
+massa do rotor não coincide com o eixo de rotação, e a força centrífuga resultante gira com
+o eixo; a assinatura dominante é a componente em $1\times f_r$, cuja amplitude cresce com a
+massa desbalanceada. No desalinhamento, os eixos acoplados não são colineares, e o
+acoplamento impõe esforços que variam mais de uma vez por volta; a assinatura típica é o
+aumento da componente em $2\times f_r$ em relação à de $1\times f_r$.
+
+Como as rotações industriais usuais estão entre algumas centenas e alguns milhares de
+rotações por minuto, essas componentes situam-se entre poucos hertz e algumas centenas de
+hertz. Um motor a \SI{1750}{rpm}, por exemplo, tem $f_r = \SI{29,17}{\hertz}$, e suas três
+primeiras harmônicas estão abaixo de \SI{100}{\hertz}.
+
+\subsection{Defeitos em rolamentos}
+\label{sec:fund-rolamento}
+
+O rolamento de esferas é composto por uma pista interna, solidária ao eixo, uma pista
+externa, fixa à carcaça, e um conjunto de esferas mantidas equidistantes por uma gaiola.
+Um defeito localizado --- uma trinca ou um lascamento em uma das pistas --- é atingido
+periodicamente pelas esferas, e cada passagem produz um impacto. A taxa de repetição desses
+impactos depende apenas da geometria do rolamento e da rotação. Para um defeito na pista
+externa e na pista interna, respectivamente \cite{randall2011},
+
+\begin{equation}
+\mathrm{BPFO} = \frac{N_b}{2}\, f_r \left(1 - \frac{d}{D_p}\cos\theta\right),
+\qquad
+\mathrm{BPFI} = \frac{N_b}{2}\, f_r \left(1 + \frac{d}{D_p}\cos\theta\right),
+\label{eq:fund-bpfo}
+\end{equation}
+
+\noindent
+com $N_b$ o número de esferas, $d$ o diâmetro da esfera, $D_p$ o diâmetro primitivo e
+$\theta$ o ângulo de contato. Para o rolamento SKF~6205 ($N_b = 9$, $d/D_p = \num{0,203}$,
+$\theta = 0$) a \SI{1750}{rpm}, as expressões dão $\mathrm{BPFO} = \SI{104,6}{\hertz}$ e
+$\mathrm{BPFI} = \SI{157,9}{\hertz}$.
+
+A frequência de repetição, contudo, não é onde a energia do defeito aparece. Cada impacto é
+um evento breve, que excita as ressonâncias da estrutura entre o rolamento e o ponto de
+medição, tipicamente na faixa de alguns quilohertz. O sinal resultante é uma sequência de
+oscilações amortecidas na frequência de ressonância, que se repetem na taxa BPFO ou BPFI.
+Em termos espectrais, a energia do defeito concentra-se em torno da ressonância, e a
+frequência característica aparece como \emph{modulação} dessa portadora de alta
+frequência \cite{randall2011}. Nos estágios iniciais do defeito, as linhas espectrais na
+própria BPFO tendem a ser fracas diante das demais componentes da máquina; a informação
+diagnóstica está na alta frequência.
+
+É por isso que o procedimento consolidado de diagnóstico de rolamentos é a \emph{análise de
+envelope}. O sinal é filtrado em uma banda em torno da ressonância; calcula-se sua
+envoltória, isto é, a amplitude instantânea, pelo módulo do sinal analítico obtido com a
+transformada de Hilbert; e o espectro dessa envoltória revela linhas na frequência de
+repetição dos impactos \cite{randall2011}. A escolha da banda de filtragem é a etapa
+crítica, e a curtose espectral --- a curtose calculada em função da frequência --- é a
+ferramenta estabelecida para localizar a banda em que o sinal é mais impulsivo
+\cite{antoni2006,antoni2007}. Todo esse procedimento pressupõe que a banda de ressonância
+tenha sido adquirida: um sistema de medição cuja banda termina abaixo da ressonância não
+dispõe do sinal sobre o qual a análise de envelope opera.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Aquisição e processamento digital de sinais}
+\label{sec:fund-sinais}
+
+\subsection{Amostragem, frequência de Nyquist e rebatimento}
+\label{sec:fund-amostragem}
+
+Um sistema digital não registra o sinal contínuo $a(t)$, mas amostras
+$a_n = a(n/f_s)$ tomadas à taxa de amostragem $f_s$. O teorema da amostragem estabelece
+que um sinal pode ser reconstruído a partir de suas amostras se não contiver componentes
+acima de $f_s/2$, a \emph{frequência de Nyquist} \cite{brandt2011}. Uma componente acima
+desse limite não desaparece na amostragem: suas amostras são idênticas às de uma
+componente de frequência mais baixa, dentro da faixa $[0, f_s/2]$. O fenômeno chama-se
+\emph{rebatimento} (\emph{aliasing}), e a frequência aparente de uma componente em $f$ é
+
+\begin{equation}
+f_{\mathrm{ap}} = \left| f - f_s \cdot \mathrm{round}\!\left(\frac{f}{f_s}\right) \right|.
+\label{eq:fund-alias}
+\end{equation}
+
+Depois da amostragem, a componente rebatida é indistinguível de uma componente legítima
+naquela frequência, e nenhum processamento posterior consegue separá-las. A única proteção
+é remover o conteúdo acima de $f_s/2$ \emph{antes} da amostragem, por um filtro
+passa-baixas chamado filtro \emph{anti-rebatimento} (\emph{anti-aliasing}). Pela mesma
+razão, reduzir a taxa de um sinal já digitalizado --- a \emph{decimação} --- exige filtrar
+o sinal abaixo da nova frequência de Nyquist antes de descartar amostras \cite{brandt2011}.
+
+\paragraph{Aplicação ao dispositivo estudado.} Com $f_s = \SI{1}{\kilo\hertz}$, a
+frequência de Nyquist é \SI{500}{\hertz}. Uma ressonância de rolamento em
+\SI{3,5}{\kilo\hertz} que chegasse sem filtro ao conversor seria observada, pela
+Equação~\eqref{eq:fund-alias}, em $|3500 - 1000 \cdot 4| = \SI{500}{\hertz}$, uma
+frequência em que nada existe fisicamente.
+
+\subsection{Análise espectral}
+\label{sec:fund-espectro}
+
+A representação de um sinal em função da frequência é obtida pela transformada discreta
+de Fourier (DFT), calculada na prática pelo algoritmo da transformada rápida (FFT). Para
+uma janela de $N$ amostras,
+
+\begin{equation}
+X_k = \sum_{n=0}^{N-1} x_n\, e^{-\mathrm{j}2\pi k n / N}, \qquad k = 0, 1, \dots, N-1,
+\label{eq:fund-dft}
+\end{equation}
+
+\noindent
+e o coeficiente $X_k$ corresponde à frequência $k\,f_s/N$ \cite{brandt2011}. Duas
+propriedades limitam o que o espectro mostra. A \emph{resolução} em frequência é
+$\Delta f = f_s/N$, o inverso da duração da janela: duas componentes mais próximas que
+$\Delta f$ não são separadas. E a janela finita provoca \emph{vazamento espectral}: uma
+componente cuja frequência não coincide com um múltiplo de $\Delta f$ espalha energia
+pelos coeficientes vizinhos, efeito que se atenua multiplicando o sinal por uma função de
+janela que o leve suavemente a zero nas bordas, como a de Hann \cite{brandt2011}. Para
+sinais aleatórios, o espectro de uma única janela é uma estimativa muito ruidosa, e
+usa-se a \emph{densidade espectral de potência}, obtida pela média dos espectros de várias
+janelas.
+
+Para o dispositivo estudado, com $f_s = \SI{1}{\kilo\hertz}$ e janelas de \num{512}
+amostras, a janela dura \SI{0,512}{\second} e a resolução é de cerca de
+\SI{1,95}{\hertz}, suficiente para separar as harmônicas de uma rotação de
+\SI{29}{\hertz}.
+
+\subsection{Integração de aceleração para velocidade}
+\label{sec:fund-integracao}
+
+Como a norma avalia a severidade em velocidade (Seção~\ref{sec:fund-norma}) e o
+acelerômetro fornece aceleração, é preciso integrar o sinal. A integração pode ser feita de
+duas formas \cite{brandt2014}.
+
+No \emph{domínio do tempo}, a velocidade é aproximada pela soma acumulada das amostras de
+aceleração multiplicadas pelo intervalo de amostragem. O método é simples, mas tem um
+defeito estrutural: qualquer componente contínua presente na aceleração --- um desvio de
+zero do sensor, por exemplo --- é integrada como uma rampa, e o erro cresce linearmente com
+a duração do registro. Um filtro passa-alta aplicado antes da integração reduz esse efeito,
+mas introduz seus próprios transitórios nas bordas da janela.
+
+No \emph{domínio da frequência}, usa-se a relação da Equação~\eqref{eq:fund-senoide}: cada
+componente de frequência $f$ da velocidade é a componente correspondente da aceleração
+dividida por $\mathrm{j}2\pi f$. Calcula-se a DFT da aceleração, divide-se cada coeficiente
+por $\mathrm{j}2\pi f_k$, anulam-se os coeficientes fora da banda de interesse --- o que
+elimina a componente contínua e a divisão por zero em $f = 0$ --- e retorna-se ao tempo pela
+transformada inversa. \citeonline{brandt2014} compararam os dois métodos e concluíram que a
+integração no domínio da frequência é a mais exata para registros longos.
+
+Como exemplo, uma aceleração senoidal de amplitude \SI{3,0}{\meter\per\second\squared} a
+\SI{50}{\hertz} corresponde a uma velocidade de amplitude
+$3{,}0/(2\pi \cdot 50) \approx \SI{9,55}{\milli\meter\per\second}$ e valor eficaz
+$\num{9,55}/\sqrt{2} \approx \SI{6,75}{\milli\meter\per\second}$. É esse valor analítico que
+serve de referência para comparar os métodos de integração no
+Capítulo~\ref{cap:resultados}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Transdutores de vibração}
+\label{sec:fund-transdutores}
+
+\subsection{Acelerômetros piezoelétricos e MEMS}
+
+O transdutor de referência no monitoramento de máquinas é o acelerômetro piezoelétrico:
+uma massa sísmica apoiada sobre um cristal que gera carga elétrica proporcional à força, e
+portanto à aceleração. Sua frequência de ressonância interna é elevada, o que lhe confere
+resposta plana até vários quilohertz, e seu ruído é baixo; em contrapartida, exige
+condicionamento de sinal dedicado e tem custo alto \cite{albarbar2008}.
+
+Os acelerômetros de sistemas microeletromecânicos (MEMS) capacitivos são fabricados pelos
+mesmos processos dos circuitos integrados. Uma microestrutura suspensa por molas
+desloca-se sob aceleração, e o deslocamento altera a capacitância entre eletrodos. O
+conversor analógico-digital e o processamento digital ficam no mesmo encapsulamento, e o
+sensor entrega amostras digitais por barramento serial. O custo é de uma a duas ordens de
+grandeza menor que o de um piezoelétrico, mas a banda e o ruído dependem fortemente do
+modelo: há MEMS projetados para monitoramento de condição, com banda de dezenas de
+quilohertz, e MEMS de consumo, projetados para orientação e movimento humano, com banda de
+algumas centenas de hertz \cite{albarbar2008,fidali2024}. Os critérios que decidem se um
+MEMS serve para uma aplicação de vibração são a banda útil, a densidade espectral de ruído,
+a faixa de medição e a estabilidade do zero.
+
+A densidade espectral de ruído, expressa em $\si{\micro g}/\sqrt{\si{\hertz}}$, indica o
+ruído por unidade de banda. Para ruído branco, o ruído eficaz na banda $B$ é a densidade
+multiplicada por $\sqrt{B}$: quanto mais larga a banda analisada, maior o ruído total, e
+menor a menor vibração que o sensor consegue distinguir.
+
+\subsection{O acelerômetro MPU6050}
+\label{sec:fund-mpu6050}
+
+O acelerômetro adotado no dispositivo estudado é o MPU6050, uma unidade de medição inercial
+de consumo que combina acelerômetro e giroscópio de três eixos. As características
+relevantes para medição de vibração, conforme a folha de dados e o mapa de registradores do
+fabricante, estão na Tabela~\ref{tab:fund-mpu6050}.
+
+\begin{table}[!htb]
+\centering
+\caption{Características do acelerômetro do MPU6050 relevantes para medição de vibração
+\cite{invensense2011ps,invensense2012rm}.}
+\label{tab:fund-mpu6050}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Característica & Valor \\
+\midrule
+Faixa de medição                         & $\pm2$, $\pm4$, $\pm8$ ou $\pm16$~g, programável \\
+Resolução do conversor                   & \num{16} bits \\
+Taxa de saída de dados                   & \SIrange{4}{1000}{\hertz}, programável \\
+Filtro passa-baixas digital (DLPF)       & \SIrange{5}{260}{\hertz}, programável \\
+Densidade espectral de ruído             & \SI{400}{\micro g}/$\sqrt{\si{\hertz}}$ a \SI{10}{\hertz} \\
+Tolerância de zero (eixos X e Y)         & $\pm\SI{50}{\milli g}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Dois pontos da tabela condicionam o uso do sensor em vibração. O primeiro é a banda. A taxa
+máxima de saída do acelerômetro é de \SI{1}{\kilo\hertz}, o que situa a frequência de
+Nyquist em \SI{500}{\hertz}; mas a banda efetiva é fixada pelo filtro passa-baixas digital
+interno, configurado pelo campo \texttt{DLPF\_CFG}, e não pela taxa de saída. Os valores
+possíveis estão na Tabela~\ref{tab:fund-dlpf}. Na configuração de banda mais larga,
+\texttt{DLPF\_CFG}~=~0, que é também o valor após a inicialização, a banda do acelerômetro
+é de \SI{260}{\hertz}; não há configuração em que o acelerômetro opere sem esse filtro
+\cite{invensense2012rm}. O mapa de registradores informa a banda e o atraso de cada
+configuração, mas não a ordem do filtro nem sua atenuação acima da banda, de modo que o
+grau de proteção contra rebatimento não é especificado pelo fabricante.
+%% ATENÇÃO: os capítulos de desenvolvimento e resultados tratam a banda útil
+%% como 500 Hz (Nyquist) e modelam uma cadeia "sem filtro" como o estado do
+%% sensor quando o DLPF não é configurado. Pela Tabela tab:fund-dlpf, o
+%% acelerômetro nunca opera sem DLPF, e a banda máxima é 260 Hz. Revisar esses
+%% capítulos antes da versão final.
+
+\begin{table}[!htb]
+\centering
+\caption{Banda e atraso do filtro passa-baixas digital do acelerômetro do MPU6050, por
+configuração do campo \texttt{DLPF\_CFG}, com taxa de saída de \SI{1}{\kilo\hertz}
+\cite{invensense2012rm}.}
+\label{tab:fund-dlpf}
+\small
+\begin{tabular}{@{}ccc@{}}
+\toprule
+\texttt{DLPF\_CFG} & Banda (\si{\hertz}) & Atraso (\si{\milli\second}) \\
+\midrule
+0 & 260 & \num{0}    \\
+1 & 184 & \num{2,0}  \\
+2 & 94  & \num{3,0}  \\
+3 & 44  & \num{4,9}  \\
+4 & 21  & \num{8,5}  \\
+5 & 10  & \num{13,8} \\
+6 & 5   & \num{19,0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+O segundo ponto é o ruído. Tratando a densidade de \SI{400}{\micro g}/$\sqrt{\si{\hertz}}$
+como ruído branco, o ruído eficaz na banda de \SI{260}{\hertz} é de
+$400 \cdot \sqrt{260} \approx \SI{6,5}{\milli g}$, cerca de
+\SI{0,063}{\meter\per\second\squared}. A tolerância de zero de $\pm\SI{50}{\milli g}$
+significa, por sua vez, que o sensor pode apresentar uma componente contínua de até
+aproximadamente \SI{0,5}{\meter\per\second\squared} sem estar fora de especificação ---
+exatamente o tipo de desvio que a integração no domínio do tempo acumula
+(Seção~\ref{sec:fund-integracao}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Avaliação normativa da severidade de vibração}
+\label{sec:fund-norma}
+
+A avaliação da vibração de máquinas industriais medida em partes não rotativas é
+normalizada pela ISO 20816-3:2022, que substituiu a ISO 10816-3:2009
+\cite{iso208163_2022,iso108163_2009}. A norma aplica-se a máquinas com potência acima de
+\SI{15}{\kilo\watt} e rotação entre \num{120} e \num{30000}~r/min, e adota como grandeza de
+avaliação a \emph{velocidade eficaz de banda larga}. A justificativa está no próprio texto
+normativo: vibrações com o mesmo valor eficaz de velocidade na faixa de \SIrange{10}{1000}{\hertz}
+podem, em geral, ser consideradas de mesma severidade, ao passo que critérios em
+deslocamento ou em aceleração variariam com a frequência \cite{iso208163_2022}. Pela mesma
+razão, a norma exige do instrumento resposta plana em pelo menos
+\SIrange{10}{1000}{\hertz}, com limite inferior de até \SI{2}{\hertz} para máquinas com
+rotação próxima ou abaixo de \num{600}~r/min, e determina que o sinal de acelerômetros
+montados na carcaça seja integrado para fornecer velocidade. A norma de instrumentação
+correspondente torna verificável o requisito de resposta plana, com tolerância de cerca de
+\SI{10}{\percent} na banda passante \cite{iso2954_2012}.
+
+O valor medido é comparado com quatro zonas de avaliação:
+
+\begin{description}
+  \item[Zona A.] Vibração típica de máquinas recém-comissionadas.
+  \item[Zona B.] Vibração aceitável para operação de longo prazo sem restrição.
+  \item[Zona C.] Vibração insatisfatória para operação contínua de longo prazo; a máquina
+        pode operar por período limitado, até que haja oportunidade de ação corretiva.
+  \item[Zona D.] Vibração suficientemente severa para causar dano à máquina.
+\end{description}
+
+Os limites entre as zonas dependem do porte da máquina e do tipo de fundação, conforme a
+Tabela~\ref{tab:fund-zonas}. A fundação é dita rígida quando a primeira frequência natural
+do conjunto máquina--fundação está suficientemente acima da frequência de excitação
+principal, e flexível no caso contrário. Os valores de zona são idênticos nas edições de
+2009 e de 2022.
+
+\begin{table}[!htb]
+\centering
+\caption{Limites entre zonas de avaliação, em velocidade eficaz de banda larga
+(\si{\milli\meter\per\second}), para máquinas industriais \cite{iso208163_2022}. Grupo 1:
+potência acima de \SI{300}{\kilo\watt}, ou máquinas elétricas com altura de eixo de pelo
+menos \SI{315}{\milli\meter}. Grupo 2: potência de \SIrange{15}{300}{\kilo\watt}, ou
+máquinas elétricas com altura de eixo entre \num{160} e \SI{315}{\milli\meter}.}
+\label{tab:fund-zonas}
+\small
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Grupo & Fundação & A/B & B/C & C/D \\
+\midrule
+1 & rígida   & \num{2,3} & \num{4,5} & \num{7,1}  \\
+1 & flexível & \num{3,5} & \num{7,1} & \num{11,0} \\
+2 & rígida   & \num{1,4} & \num{2,8} & \num{4,5}  \\
+2 & flexível & \num{2,3} & \num{4,5} & \num{7,1}  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A tabela torna concreta a sensibilidade da avaliação ao erro de medição. A velocidade
+eficaz de \SI{6,75}{\milli\meter\per\second} do exemplo da Seção~\ref{sec:fund-integracao}
+está na zona B para máquinas do grupo 1 em fundação flexível, na zona C para o grupo 1
+rígido e o grupo 2 flexível, e na zona D para o grupo 2 rígido. Um erro de medição de
+poucos milímetros por segundo, portanto, muda a classificação e a recomendação de
+manutenção dela decorrente.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Detecção de anomalias}
+\label{sec:fund-anomalias}
+
+\subsection{Paradigmas de aprendizado}
+
+A decisão sobre a condição da máquina pode ser formulada de modos diferentes, conforme os
+dados disponíveis para treinar o modelo \cite{chandola2009}. Na abordagem
+\emph{supervisionada}, o modelo aprende a partir de exemplos rotulados de cada condição ---
+normal e cada tipo de falha --- e classifica novos dados em uma dessas classes. Na
+abordagem \emph{semissupervisionada}, ou de classe única, o modelo aprende apenas a partir
+de exemplos da condição normal e marca como anomalia o que se afasta dela. Na abordagem
+\emph{não supervisionada}, não há rótulo algum, e o modelo supõe que as anomalias são raras
+e diferentes da maioria dos dados.
+
+Em manutenção preditiva, a abordagem supervisionada esbarra em um problema prático: uma
+máquina recém-instalada não tem histórico de falhas, e reunir exemplos rotulados de cada
+defeito exige que eles ocorram. O treino apenas com dados de operação normal, disponíveis
+desde o primeiro dia, é por isso o modo de operação natural de um dispositivo instalado
+em uma máquina sem histórico \cite{chandola2009}. O preço é que o modelo detecta
+\emph{afastamento} da normalidade, e não identifica \emph{qual} defeito está presente.
+
+\subsection{Isolation Forest}
+\label{sec:fund-iforest}
+
+O Isolation Forest \cite{liu2008} parte de uma observação simples: anomalias são poucas e
+diferentes, e por isso são mais fáceis de \emph{isolar} do resto dos dados do que os pontos
+normais. O algoritmo constrói um conjunto de árvores de isolamento. Cada árvore é
+construída sobre uma subamostra aleatória dos dados de treino, dividindo-a recursivamente:
+em cada nó, escolhe-se ao acaso um atributo e um valor de corte entre o mínimo e o máximo
+desse atributo, até que cada ponto fique isolado em uma folha ou que se atinja um limite de
+profundidade. Um ponto anômalo, por estar em região de baixa densidade, tende a ser isolado
+em poucas divisões, isto é, perto da raiz; um ponto normal exige mais divisões.
+
+O comprimento do caminho $h(x)$ entre a raiz e a folha em que o ponto $x$ cai mede,
+portanto, quão fácil é isolá-lo. Para tornar essa medida comparável entre árvores
+construídas com subamostras de tamanho $\psi$, ela é normalizada pelo comprimento médio
+esperado do caminho em uma árvore binária de busca com $\psi$ pontos,
+
+\begin{equation}
+c(\psi) = 2H(\psi-1) - \frac{2(\psi-1)}{\psi}, \qquad H(i) \approx \ln i + \num{0,5772},
+\label{eq:fund-cn}
+\end{equation}
+
+\noindent
+e o escore de anomalia é
+
+\begin{equation}
+s(x, \psi) = 2^{-\,\mathbb{E}[h(x)] / c(\psi)},
+\label{eq:fund-score}
+\end{equation}
+
+\noindent
+em que $\mathbb{E}[h(x)]$ é a média do comprimento do caminho sobre todas as árvores
+\cite{liu2008}. O escore está entre 0 e 1. Valores próximos de 1 indicam ponto facilmente
+isolável, candidato a anomalia; valores bem abaixo de \num{0,5} indicam ponto normal; e, se
+todos os pontos têm escore próximo de \num{0,5}, os dados não contêm anomalias distintas. Os
+valores recomendados pelos autores são $t = 100$ árvores e subamostras de $\psi = 256$
+pontos, para as quais $c(256) \approx \num{10,2}$.
+
+O algoritmo tem características que o tornam atraente para execução embarcada: o treino
+opera sobre subamostras pequenas, a inferência percorre cada árvore uma única vez com uma
+comparação por nó, e o modelo treinado é inteiramente descrito por atributos e valores de
+corte \cite{liu2008}. A viabilidade de treiná-lo e executá-lo em microcontrolador foi
+demonstrada \cite{antonini2023}.
+
+\subsection{Limiar de decisão e taxa de falso alarme}
+\label{sec:fund-limiar}
+
+O escore contínuo de anomalia precisa ser convertido em decisão binária por um
+\emph{limiar}: acima dele, o ponto é marcado como anômalo. O limiar não é propriedade do
+modelo, e sim uma escolha que troca um tipo de erro pelo outro. Um limiar baixo detecta mais
+falhas e marca mais pontos normais como anomalia; um limiar alto faz o contrário.
+
+Na implementação de referência do algoritmo, a escolha é controlada pelo parâmetro de
+contaminação, que representa a fração esperada de anomalias nos dados de treino. No valor
+padrão, o limiar corresponde à referência interpretativa de \num{0,5} do escore; com um valor
+numérico, o limiar é posicionado de modo que essa fração dos pontos de treino fique acima
+dele. Em ambos os casos, o parâmetro altera apenas o deslocamento do limiar, e não o escore
+calculado para cada ponto \cite{scikitlearn2026}.
+
+Quando o treino contém apenas operação normal, o limiar pode ser calibrado diretamente pela
+taxa de falso alarme desejada: se o limiar é o quantil de ordem $1-\alpha$ dos escores de
+dados normais não usados no ajuste das árvores, espera-se que uma fração $\alpha$ da
+operação normal fique acima dele. Uma alternativa com fundamentação estatística mais forte
+modela apenas a cauda da distribuição dos escores pela teoria de valores extremos e fixa o
+limiar a partir de um risco alvo \cite{siffer2017}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Avaliação de detectores}
+\label{sec:fund-avaliacao}
+
+\subsection{Matriz de confusão e taxas derivadas}
+
+Com a anomalia como classe positiva, cada decisão do detector cai em uma de quatro
+categorias: verdadeiro positivo (VP), anomalia corretamente detectada; falso positivo (FP),
+operação normal marcada como anomalia; verdadeiro negativo (VN); e falso negativo (FN),
+anomalia não detectada. Dessas contagens derivam as taxas usuais \cite{fawcett2006}:
+
+\begin{equation}
+\mathrm{TPR} = \frac{\mathrm{VP}}{\mathrm{VP} + \mathrm{FN}},
+\qquad
+\mathrm{FPR} = \frac{\mathrm{FP}}{\mathrm{FP} + \mathrm{VN}},
+\qquad
+\mathrm{precisão} = \frac{\mathrm{VP}}{\mathrm{VP} + \mathrm{FP}},
+\qquad
+F_1 = \frac{2\cdot \mathrm{precisão} \cdot \mathrm{TPR}}{\mathrm{precisão} + \mathrm{TPR}}.
+\label{eq:fund-taxas}
+\end{equation}
+
+A taxa de verdadeiros positivos (TPR) é a \emph{taxa de detecção}; a taxa de falsos
+positivos (FPR) é a \emph{taxa de falso alarme}. Em monitoramento contínuo, a segunda tem
+peso operacional particular: um dispositivo que avalia a máquina a cada poucos minutos e
+marca \SI{10}{\percent} da operação normal como anomalia gera dezenas de alarmes falsos por
+dia, e alarmes frequentes demais deixam de ser atendidos. A acurácia --- fração de decisões
+corretas --- é pouco informativa quando as classes são desbalanceadas, porque um detector
+que nunca dispara alcança acurácia alta se as anomalias são raras.
+
+\subsection{Curva ROC, área sob a curva e área parcial}
+
+Como o limiar é uma escolha, um detector não tem uma única TPR, mas uma para cada limiar. A
+curva ROC traça a TPR contra a FPR à medida que o limiar varre todos os valores possíveis,
+e a área sob essa curva (AUC) resume o desempenho em um número entre \num{0,5}, o de uma
+decisão ao acaso, e 1, o de um detector perfeito \cite{fawcett2006}. A AUC tem uma
+interpretação direta: é a probabilidade de que uma anomalia escolhida ao acaso receba escore
+maior que um ponto normal escolhido ao acaso. Por depender apenas da ordenação dos escores,
+ela é invariante a qualquer deslocamento do limiar.
+
+Essa mesma propriedade é sua limitação para um dispositivo de campo, que opera em um único
+ponto da curva, em falso alarme baixo. Dois detectores com a mesma AUC podem ter
+desempenhos muito diferentes nessa região. A \emph{área parcial sob a curva} (pAUC)
+restringe a integração à faixa de FPR de interesse, entre 0 e um limite $\beta$
+\cite{mcclish1989}. Na forma normalizada adotada no desafio de referência de detecção não
+supervisionada de anomalias em máquinas \cite{koizumi2020},
+
+\begin{equation}
+\mathrm{pAUC}(\beta) = \frac{1}{\beta}\int_{0}^{\beta} \mathrm{TPR}(\mathrm{FPR})\; \mathrm{d}\,\mathrm{FPR},
+\label{eq:fund-pauc}
+\end{equation}
+
+\noindent
+em que a divisão por $\beta$ normaliza o resultado para o intervalo $[0, 1]$; o desafio
+adota $\beta = \num{0,1}$.
+
+\subsection{Validação cruzada e vazamento de informação}
+\label{sec:fund-validacao}
+
+O desempenho de um modelo só é informativo se medido em dados não usados no treino. Na
+\emph{validação cruzada em $k$ partições}, os dados são divididos em $k$ partes; o modelo é
+treinado $k$ vezes, cada vez com uma parte reservada para teste, e o desempenho é a média
+das $k$ avaliações, acompanhada de sua dispersão. A dispersão entre partições é informação,
+e não ruído a descartar: ela indica quanto o resultado depende de quais dados foram usados
+no teste.
+
+A validade da validação cruzada exige que as partes de treino e de teste sejam
+independentes. Quando não são, ocorre \emph{vazamento de informação}: o modelo tem acesso,
+no treino, a informação que não estaria disponível na aplicação real, e o desempenho
+medido superestima o desempenho verdadeiro \cite{kaufman2012}. Em sinais de vibração, a
+forma mais comum de vazamento vem da segmentação. Um ensaio de alguns segundos é dividido em
+muitas janelas, e janelas do mesmo ensaio compartilham características que nada têm a ver
+com a falha --- nível de ruído, ganho do sensor, condição de fixação. Se as janelas são
+distribuídas aleatoriamente entre treino e teste, o modelo pode acertar reconhecendo o
+ensaio, e não a falha. \citeonline{varejao2025} denominam esse efeito \emph{viés de
+similaridade}. A correção é a \emph{validação por grupos}: todas as janelas de um mesmo
+ensaio são mantidas na mesma partição, de modo que o teste é sempre feito sobre ensaios
+inteiramente desconhecidos pelo modelo.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Sistemas embarcados para monitoramento}
+\label{sec:fund-embarcados}
+
+Um nó sensor de monitoramento é um sistema embarcado: um computador dedicado a uma única
+função, integrado ao equipamento que atende e sujeito a restrições de memória, de
+processamento e, sobretudo, de energia. O componente central é o microcontrolador, que
+reúne processador, memória e periféricos --- conversores, interfaces seriais, temporizadores
+--- em um único circuito integrado.
+
+O microcontrolador adotado no dispositivo estudado é o ESP32-S3, com dois núcleos de
+processamento de até \SI{240}{\mega\hertz}, \SI{512}{\kilo\byte} de memória SRAM,
+coprocessadores de ultrabaixo consumo e rádios Wi-Fi e Bluetooth integrados
+\cite{espressif2026}. Para a operação a bateria, a característica decisiva são os modos de
+baixo consumo: no modo \emph{deep-sleep}, os núcleos principais e a maior parte dos
+periféricos são desligados, e o consumo cai para cerca de \SI{7}{\micro\ampere}
+\cite{espressif2026}.
+
+A estratégia usual de um nó a bateria é o \emph{ciclo de trabalho}: o dispositivo permanece
+a maior parte do tempo em modo de baixo consumo, desperta em intervalos regulares, adquire
+e processa uma janela de sinal, transmite o resultado e volta a dormir. A corrente média
+é a média das correntes de cada fase, ponderada pela fração do ciclo que ela ocupa, e a
+autonomia é a capacidade da bateria dividida por essa corrente média. Como a fase de sono
+ocupa quase todo o ciclo, a corrente de sono e a duração das fases ativas --- em especial a
+transmissão --- dominam a autonomia.
+
+Executar a detecção no próprio dispositivo, em vez de transmitir o sinal bruto para
+processamento remoto, é o que viabiliza esse ciclo: transmitir uma janela de \num{512}
+amostras de três eixos custaria ordens de grandeza mais tempo de rádio que transmitir um
+escore. A execução de modelos de aprendizado de máquina em microcontroladores, com memória
+de centenas de quilobytes e consumo de miliwatts, é o campo denominado TinyML
+\cite{antonini2023,barbariol2022}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Comunicação de longo alcance: LoRa}
+\label{sec:fund-lora}
+
+LoRa é uma técnica de modulação de rádio projetada para enlaces de longo alcance e baixo
+consumo, à custa de baixa taxa de dados \cite{augustin2016}. Ela usa espalhamento
+espectral por \emph{chirp}: cada símbolo é representado por um sinal cuja frequência varia
+linearmente ao longo de toda a largura de banda do canal. O espalhamento permite
+demodular sinais abaixo do nível de ruído, o que aumenta o alcance. LoRa designa a camada
+física; LoRaWAN é um protocolo de rede definido sobre ela, com servidores de rede e
+gerência de dispositivos. Um enlace ponto a ponto, entre o dispositivo e um receptor
+próprio, pode usar a modulação LoRa sem o protocolo LoRaWAN.
+
+Três parâmetros controlam o compromisso entre alcance, taxa e consumo \cite{semtech2015}:
+
+\begin{description}
+  \item[Fator de espalhamento (SF),] de 6 a 12: cada símbolo carrega SF bits e é formado
+        por $2^{\mathrm{SF}}$ \emph{chips}. Cada incremento de SF dobra a duração do
+        símbolo e aumenta a sensibilidade do receptor.
+  \item[Largura de banda (BW),] tipicamente \SI{125}{\kilo\hertz}: banda mais larga
+        encurta o símbolo e reduz a sensibilidade.
+  \item[Taxa de codificação (CR),] de 4/5 a 4/8: fração de redundância acrescentada para
+        correção de erros.
+\end{description}
+
+A taxa de símbolos é $R_s = \mathrm{BW}/2^{\mathrm{SF}}$, e a duração do símbolo é
+$T_s = 1/R_s$. A duração total de um pacote, o \emph{tempo no ar}, é a soma da duração do
+preâmbulo e da carga útil \cite{semtech2015}:
+
+\begin{equation}
+\begin{split}
+T_{\mathrm{pacote}} = {} & (n_{\mathrm{pre}} + \num{4,25})\,T_s \\
+& + \left[ 8 + \max\!\left( \left\lceil \frac{8\,\mathrm{PL} - 4\,\mathrm{SF} + 28 + 16\,\mathrm{CRC} - 20\,\mathrm{IH}}{4(\mathrm{SF} - 2\,\mathrm{DE})} \right\rceil (\mathrm{CR} + 4),\; 0 \right) \right] T_s,
+\end{split}
+\label{eq:fund-toa}
+\end{equation}
+
+\noindent
+em que $n_{\mathrm{pre}}$ é o número de símbolos do preâmbulo, PL o número de bytes da carga
+útil, CRC vale 1 quando a verificação de redundância está habilitada, IH vale 1 quando o
+cabeçalho é omitido, DE vale 1 quando a otimização para baixa taxa está ativa, e CR vale de
+1 (para 4/5) a 4 (para 4/8).
+
+\paragraph{Aplicação ao dispositivo estudado.} O enlace do dispositivo usa SF9,
+BW~=~\SI{125}{\kilo\hertz}, CR~=~4/5, preâmbulo de 8 símbolos e carga útil de \num{21}
+bytes, com cabeçalho e CRC habilitados e sem otimização para baixa taxa. A duração do
+símbolo é $2^9/\num{125000} = \SI{4,096}{\milli\second}$; o preâmbulo ocupa
+$(8 + \num{4,25}) \times \num{4,096} \approx \SI{50,2}{\milli\second}$; a carga útil ocupa
+$8 + \lceil 176/36 \rceil \times 5 = 33$ símbolos, ou \SI{135,2}{\milli\second}. O tempo
+no ar resultante é de cerca de \SI{185}{\milli\second}. Em SF12, a mesma carga útil
+ocuparia o rádio por um tempo várias vezes maior, e é por isso que a escolha do fator de
+espalhamento é, ao mesmo tempo, uma escolha de alcance e de autonomia.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Transferência de calor e limites térmicos}
+\label{sec:fund-termica}
+
+Um dispositivo fixado à carcaça de um motor recebe calor da superfície em que está montado.
+Em regime permanente, a condução de calor por uma camada de espessura $L$, área $A$ e
+condutividade térmica $k_t$ pode ser descrita por uma \emph{resistência térmica}
+$R = L/(k_t A)$, e a diferença de temperatura através dela é o produto do fluxo de calor
+pela resistência, $\Delta T = q\,R$ \cite{bergman2011}. Camadas em série somam suas
+resistências, como resistores elétricos. O modelo permite estimar a temperatura interna do
+dispositivo a partir da temperatura da carcaça, das resistências do caminho e da potência
+dissipada internamente.
+
+A consequência para a escolha de material é direta: um invólucro de polímero, cuja
+condutividade é duas a três ordens de grandeza menor que a de um metal, oferece resistência
+térmica muito maior e isola o interior da carcaça quente; um invólucro metálico faz o
+contrário. Como a Seção~\ref{sec:fund-1gdl} mostrou, a rigidez --- e portanto a
+frequência de montagem --- também depende do material, e os dois requisitos podem apontar
+em sentidos opostos.
+
+Entre os componentes internos, a bateria é tipicamente o mais sensível à temperatura. A
+temperatura acelera os mecanismos de degradação das células de íon-lítio, e a carga em
+temperatura elevada é particularmente prejudicial, razão pela qual os fabricantes
+especificam faixas de temperatura mais estreitas para carga do que para descarga
+\cite{ma2018}. O limite térmico de um dispositivo com bateria recarregável depende, por
+isso, da fase de operação. Durante a descarga, a potência dissipada internamente é pequena
+e a temperatura interna é ditada pela carcaça. Durante a carga, surge uma fonte interna de
+calor: um carregador linear dissipa a diferença entre a tensão de entrada e a da célula
+multiplicada pela corrente de carga, $P = (V_{\mathrm{in}} - V_{\mathrm{bat}})\,I$, e essa
+potência se soma ao calor vindo da carcaça justamente na fase em que o limite admissível da
+célula é mais baixo. É comum que o carregador monitore a temperatura da célula por um
+termistor e suspenda a carga fora da faixa permitida, o que converte o limite térmico em
+uma interrupção da carga, e não em dano à célula.
+%% TODO: citar a folha de dados da célula LiPo (limites de 45 °C na carga e
+%% 60 °C na descarga) e a do carregador BQ21040 (pino TS), usados no capítulo
+%% de resultados.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Síntese do capítulo}
+\label{sec:fund-sintese}
+
+Os conceitos apresentados organizam-se na mesma sequência que a informação percorre no
+dispositivo. A vibração da máquina carrega assinaturas em duas escalas de frequência:
+defeitos síncronos com a rotação, em harmônicas de baixa frequência, e defeitos de
+rolamento, cuja informação está modulada em ressonâncias de alguns quilohertz. O caminho
+mecânico até o sensor, modelado como sistema de um grau de liberdade, pode amplificar ou
+distorcer essa vibração antes de ela ser medida. A amostragem e o filtro anti-rebatimento
+decidem que parte do espectro chega ao processamento, e o que fica de fora não é
+recuperável. A norma fixa a grandeza, a banda e os critérios com que a severidade é
+avaliada, e a integração de aceleração para velocidade é a etapa em que um erro numérico
+pode mudar a zona de classificação. O detector de anomalias converte descritores do sinal
+em escore, e o limiar converte o escore em decisão, escolha que determina a taxa de falso
+alarme; a curva ROC, a área parcial e a validação por grupos são os instrumentos que tornam
+esse desempenho mensurável sem superestimá-lo. Por fim, o rádio, a bateria e o
+comportamento térmico impõem os limites dentro dos quais o dispositivo pode operar.
+
+O capítulo seguinte examina como a literatura aplicou esses conceitos a dispositivos de
+baixo custo, e quais questões ela deixou em aberto.

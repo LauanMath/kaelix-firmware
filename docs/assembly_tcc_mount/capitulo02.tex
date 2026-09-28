@@ -1,0 +1,341 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Capítulo 2 --- Fundamentação e revisão da literatura
+%%
+%% Reordenado pela ordem de precedência da cadeia, na MESMA sequência do
+%% Capítulo 4: aquisição -> normalização -> estimação -> implantação.
+%% Os relatórios de origem organizavam a revisão por "eixos" numerados 1, 3, 4 e
+%% 5, abrindo pelo detector. A ordem aqui é a da cadeia, para que o capítulo de
+%% revisão e o de resultados possam ser lidos em paralelo.
+%%
+%% A ausência de um eixo na numeração original era deliberada e está declarada
+%% na Seção 2.1: as referências que o sustentariam não passaram na verificação.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+\@ifundefined{toprule}{%
+  \newcommand{\toprule}{\hline}%
+  \newcommand{\midrule}{\hline}%
+  \newcommand{\bottomrule}{\hline}%
+}{}
+\@ifundefined{emandamento}{%
+  \@ifundefined{textcolor}%
+    {\newcommand{\emandamento}[1]{#1}}%
+    {\newcommand{\emandamento}[1]{\textcolor{red}{#1}}}%
+}{}
+\makeatother
+
+\chapter{Trabalhos relacionados}
+\label{cap:revisao}
+
+\section{Método da revisão}
+\label{sec:rev-metodo}
+
+A revisão foi conduzida por confronto, e não por levantamento: cada seção parte de uma
+escolha de projeto ou de um resultado obtido e pergunta o que a literatura publicada diz
+sobre ele --- se o confirma, se o contradiz ou se nada diz.
+
+Todas as referências foram conferidas em fonte primária: depósito do editor, texto integral
+do artigo, amostra oficial da norma ou folha de dados do fabricante. Onde o texto integral
+não pôde ser acessado, isso consta na própria referência, e o achado correspondente é
+tratado como de menor peso. Essa verificação não é formalidade: duas auditorias sucessivas
+encontraram defeito em parcela substancial das referências inicialmente levantadas ---
+primeiro autor trocado, iniciais incorretas colapsando autores distintos, norma retirada
+citada como vigente e, em três casos, achado atribuído a uma fonte que não o continha.
+
+Um eixo temático levantado na fase inicial não integra esta revisão. Nenhuma das
+referências que o sustentariam sobreviveu à verificação em fonte primária, e a decisão foi
+não citar o que não foi conferido. O registro fica aqui porque uma revisão que apresenta
+apenas os eixos sobreviventes esconde o método que os selecionou.
+
+A organização segue a ordem de precedência da cadeia de medição, a mesma do
+Capítulo~\ref{cap:resultados}: primeiro a aquisição, que decide que informação existe;
+depois a normalização, que impõe requisitos sobre o instrumento e sobre a estimativa; em
+seguida a estimação, que decide o que se faz com a informação disponível; por fim a
+implantação, que decide por quanto tempo o dispositivo continua operando.
+
+\section{Aquisição: banda, ruído e detectabilidade de defeito de rolamento}
+\label{sec:rev-aquisicao}
+
+A tensão que organiza esta literatura é única: as frequências que se deseja medir em um
+rolamento são baixas, mas o mecanismo físico que as torna mensuráveis é alto. O defeito
+produz impactos periódicos na frequência característica da geometria, na ordem de dezenas
+a centenas de hertz, e esses impactos excitam ressonâncias estruturais de alguns
+quilohertz. A assinatura diagnóstica viaja modulada nessa portadora de alta frequência, e é
+por demodulação de envelope sobre a banda de ressonância que ela é recuperada
+\cite{randall2011,antoni2006,antoni2007}. O procedimento padrão localiza a banda ótima pela
+díade que maximiza a impulsividade do sinal filtrado \cite{antoni2007}; um dispositivo cuja
+frequência de Nyquist é de \SI{500}{\hertz} não tem díade a escolher.
+
+Os estudos de adequação de sensor convergem para o limite superior de banda como a variável
+determinante, e nenhum testa dispositivo próximo da faixa do Kaelix. A comparação de três
+acelerômetros MEMS capacitivos contra um piezoelétrico de referência reprovou o de banda
+mais estreita, de \SI{1500}{\hertz}, para monitoramento de condição \cite{albarbar2008}.
+Os grupos que se propõem a diagnosticar rolamento com MEMS escolhem sensores de dezenas de
+quilohertz \cite{landi2023,sharma2024}, e uma implementação de baixo custo publicada
+resolve o problema por projeto, reservando um acelerômetro de banda estreita para
+desbalanceamento e outro de \SI{40}{\kilo\hertz} para rolamento \cite{jakobsen2024}. Os
+produtos comerciais medem, ao menos em um eixo, uma ordem de grandeza acima do teto de uma
+IMU de consumo \cite{bentlynevada2025,erbessd2025,tractian2022}.
+
+Há uma segunda objeção, anterior à banda e independente dela: o piso de ruído. A densidade
+de ruído declarada em folha de dados para uma IMU de consumo, integrada sobre a banda
+normativa, situa o sensor acima do ruído admissível para resolver a fronteira entre as
+zonas normativas mais baixas. A literatura de MEMS levanta, de forma convergente, a
+ausência de calibração rastreável desses dispositivos \cite{albarbar2008,rodrigues2021},
+e a avaliação de sensibilidade diagnóstica de sensores digitais de catálogo chega à mesma
+leitura \cite{fidali2024}. \emandamento{O orçamento de ruído usualmente atribuído à
+literatura de fabricante não pôde ser confirmado em fonte primária \cite{looney2017}, e
+fechar essa conta com densidade medida, e não declarada, permanece pendente.}
+
+Um efeito adicional é pouco documentado e afeta diretamente dispositivos de consumo: a
+ausência de filtro anti-\emph{aliasing} configurado abaixo da frequência de Nyquist. Sem
+ele, conteúdo espectral acima da banda dobra para dentro da faixa de análise e torna-se
+indistinguível de sinal legítimo. Não se localizou, na literatura revisada por pares de
+diagnóstico de rolamento, descrição experimental do efeito desse artefato sobre descritores
+estatísticos como curtose e fator de crista; ele aparece apenas em notas de aplicação de
+fabricante, não conferidas nesta revisão.
+
+\section{Normalização: o que a norma exige do instrumento e da estimativa}
+\label{sec:rev-norma}
+
+A avaliação de severidade em velocidade eficaz não é convenção arbitrária de unidades, mas
+escolha justificada no próprio texto normativo \cite{iso208163_2022}. A norma vigente
+estabelece as zonas de severidade para máquinas acima de \SI{15}{\kilo\watt} com rotação
+entre \num{120} e \num{30000}~r/min, e exige do instrumento resposta plana em faixa de
+\emph{ao menos} \SIrange{10}{1000}{\hertz}, com limite inferior de até \SI{2}{\hertz} em
+máquinas próximas ou abaixo de \num{600}~r/min.
+
+A distinção entre requisito de instrumento e janela de análise é decisiva e frequentemente
+perdida. A exigência de resposta plana recai sobre o instrumento; é isso que torna o
+truncamento de banda uma violação de requisito, e não uma escolha de processamento
+reversível. A edição anterior da norma delega esse ``plana'' a uma norma de instrumentação
+que o torna verificável, com tolerância de banda passante de aproximadamente
+\SI{10}{\percent} entre \SI{12,6}{\hertz} e \SI{1000}{\hertz} e limitação de banda por par
+de Butterworth de terceira ordem \cite{iso2954_2012}.
+
+\emandamento{A edição de 2009 foi retirada e substituída pela de 2022
+\cite{iso108163_2009,iso208163_2022}. Os valores de zona são idênticos nas duas, de modo
+que a substituição afeta a rastreabilidade da citação e não os números.} A edição anterior
+é mantida na bibliografia por ser a que a prática industrial e parte da literatura ainda
+adotam, e por ser nela que está a delegação explícita à norma de instrumentação.
+
+A conversão de aceleração para velocidade é obrigação normativa, e é também um problema
+numérico com solução conhecida. A integração no domínio do tempo acumula qualquer
+componente contínua presente no sinal, e o erro resultante cresce sem limite; a integração
+no domínio da frequência, restrita à máscara normativa, é o método estabelecido, e a
+comparação quantitativa entre os dois está publicada \cite{brandt2014}. O que não se
+localizou publicado é a aplicação desse método ao indicador da norma em um dispositivo
+truncado --- isto é, quanto um instrumento limitado a \SI{500}{\hertz} subestima o
+indicador normativo frente à banda exigida.
+
+\section{Estimação: detector, limiar, métrica e protocolo}
+\label{sec:rev-estimacao}
+
+Esta literatura desloca a pergunta de engenharia, mas o deslocamento é condicional, e a
+condição precisa ficar à vista: \emph{dada banda de medição suficiente}, o que decide o
+desempenho não é qual detector se escolhe, e sim como o limiar é calibrado, com que métrica
+o resultado é lido e quanto do orçamento do microcontrolador o modelo consome. Sem banda,
+nada disso importa --- nenhum corte de escore transforma contraste ausente em detecção.
+
+\subsection{A escolha do detector não tem consenso}
+
+Dois comparativos de grande porte discordam, e a discordância é informativa porque medem
+coisas diferentes. O maior em cobertura de paradigmas avalia \num{30} algoritmos sobre
+\num{57} conjuntos de dados e conclui que \emph{nenhum} método não supervisionado é
+estatisticamente superior aos demais \cite{han2022}. A maior comparação restrita a métodos
+não supervisionados, com \num{33} algoritmos sobre \num{52} conjuntos tabulares reais,
+encontra vantagem para o Extended Isolation Forest, com a ressalva de que os dados se
+separam em dois regimes \cite{bouman2024}. Não há contradição, e sim escopos distintos ---
+mas há consequência: a evidência disponível recomenda uma variante que este trabalho não
+adota.
+
+A razão para permanecer no algoritmo canônico \cite{liu2008} é de custo de implementação
+embarcada, e é verificável em estrutura: um nó da variante estendida armazena um vetor
+normal com tantas componentes quantos forem os descritores, e a inferência passa de uma
+comparação para um produto interno por nó. \emandamento{É argumento de projeto, e não
+resultado de literatura; enquanto o orçamento embarcado não for medido no dispositivo, a
+escolha permanece limitação de escopo declarada, não conclusão.}
+
+O suporte específico para máquinas rotativas é, em contrapartida, o melhor que o algoritmo
+canônico tem: entre \num{11} detectores não supervisionados, atinge F1 de \num{97,19} em
+rolamento \emph{run-to-failure} e \num{97,20} em faltas mecânicas de bancada
+\cite{brito2022}. Os dois primeiros conjuntos são adquiridos a \SI{20}{\kilo\hertz}, banda
+que uma IMU de consumo não possui.
+
+\subsection{O limiar padrão não é calibração}
+
+No artigo fundador, o escore tem \num{0,5} como \emph{referência interpretativa}, e a
+robustez demonstrada está nos parâmetros do \emph{ensemble}, não no corte \cite{liu2008}.
+A implementação de referência explicita o mecanismo: o parâmetro de contaminação redefine
+apenas um deslocamento fixo, nunca o escore subjacente \cite{scikitlearn2026}. Seguem daí
+duas consequências mecânicas: o corte padrão é herdado de uma interpretação, e não estimado
+nos dados; e toda métrica de ranqueamento, área sob a curva ROC inclusive, é invariante ao
+parâmetro.
+
+Os trabalhos que reportam bom desempenho abandonam o padrão --- fixando o escore
+normalizado em \num{0,75} sob hipótese de treino limpo \cite{antonini2023}, ou derivando o
+corte da razão de contaminação conhecida \cite{brito2022}. A alternativa principiada
+dispensa hipótese sobre a distribuição do corpo dos dados e fixa o limiar a partir de um
+risco alvo, que controla diretamente o número de falsos positivos \cite{siffer2017}.
+
+O problema não é teórico. As duas implementações do mesmo detector em nó embarcado que
+reportam falso alarme, ou permitem derivá-lo, situam-se entre \num{22} e
+\SI{38}{\percent} sobre operação normal \cite{chevtchenko2023,kolok2025}. Um dispositivo que marca um terço da operação
+normal como anomalia não é utilizável em manutenção.
+
+\subsection{A métrica e o protocolo de validação}
+
+A área sob a curva ROC global não caracteriza o ponto de operação de um dispositivo de
+campo, que precisa operar em falso alarme baixo. O benchmark de referência para o mesmo
+regime de treino reporta área parcial restrita a essa faixa \cite{koizumi2020}, e a mesma
+disciplina aparece em quem reporta PR-AUC além do F1 \cite{brito2022}.
+
+Sobre o protocolo, a objeção é a mais séria, e sua identificação não é contribuição deste
+trabalho: ela está publicada.
+Janelas consecutivas de um mesmo ensaio compartilham a assinatura da montagem, e sua
+divisão aleatória entre treino e teste permite que o modelo identifique o ensaio em vez da
+falha. O fenômeno tem nome e quantificação: de \num{41} estudos revisados sobre uma base de
+referência consolidada, \num{40} adotaram delineamento suscetível a ele \cite{varejao2025},
+e a inflação medida por vazamento é da ordem de dezenas de pontos percentuais
+\cite{vieira2026}. Trabalhos que revisam abordagens de classificação de falha de rolamento
+chegam a leitura convergente \cite{abburi2023,smith2015}.
+
+\section{Implantação: nós comparáveis, invólucro e energia}
+\label{sec:rev-implantacao}
+
+A literatura de nós sem fio para manutenção preditiva divide-se em duas populações que
+raramente se citam. De um lado, produtos comerciais, com banda uma ordem de grandeza acima
+da de uma IMU de consumo, caminho mecânico rígido até o elemento sensor e alimentação por
+célula primária \cite{bentlynevada2025,erbessd2025,tractian2022}. De outro, nós acadêmicos
+de baixo custo, que convergem para a mesma arquitetura estudada aqui: microcontrolador de
+baixo consumo, IMU MEMS na ordem de \SI{1}{\kilo\hertz} e detecção não supervisionada
+\cite{kolok2025,antonini2023,bisio2025}.
+
+\subsection{O que a literatura de nós de baixo custo autoriza concluir}
+
+O análogo mais próximo em hardware e em modo de falha reporta acurácia de
+\SI{72,9}{\percent} $\pm$~\SI{2,4}{\percent}, com validação cruzada de cinco dobras sobre
+cerca de \num{900} amostras e \emph{um único} modo de falha \cite{kolok2025}. O dado valida
+a arquitetura como publicável. O que ele não faz é fixar teto de desempenho da classe: a
+amostra é de um estudo único com um modo de falha, e o trabalho encerra em valor eficaz de
+aceleração, sem integração para velocidade e sem critério normativo.
+
+A comparação mais direta é embarcada e mede três detectores no mesmo nó e no mesmo
+conjunto \cite{chevtchenko2023}. No mesmo hardware e no mesmo dado, um método baseado em
+vizinhança domina o algoritmo adotado aqui tanto em especificidade quanto em latência,
+sendo cerca de \num{26} vezes mais rápido. \emandamento{A resposta declarada é de custo de
+memória --- o método de vizinhança exige manter o conjunto de referência, enquanto a
+floresta armazena apenas limiares e índices --- mas o orçamento embarcado ainda não foi
+medido, e a permanência no detector adotado é hipótese de projeto, não conclusão.}
+
+O mesmo trabalho traz um achado que é restrição de implantação, e não detalhe: um motor com
+cerca de um ano de uso tem assinatura normal distinta da de motores novos
+\cite{chevtchenko2023}. Um modelo único com limiar fixo herda essa deriva do que conta como
+normal entre máquinas e ao longo da vida --- cenário em que a calibração por risco alvo
+deixa de ser refinamento e passa a ser requisito.
+
+A viabilidade computacional, em contrapartida, está estabelecida: o detector treina e
+executa dentro de um microcontrolador da classe \cite{antonini2023}, existe variante
+desenhada para reduzir seu custo em TinyML \cite{barbariol2022}, e dispositivos da mesma
+família comportam \emph{pipelines} consideravelmente mais caros \cite{uselis2025,kumar2026}.
+
+\subsection{Invólucro e caminho mecânico}
+
+É na física do dispositivo que a literatura contraria o projeto mais diretamente. A prática
+consolidada em acelerometria exige que a frequência natural do conjunto montado seja
+suficientemente superior à maior frequência de interesse, e os produtos comerciais obtêm
+isso por base metálica aparafusada ou colada ao ativo. Nenhum dos nós de baixo custo
+revisados publica a frequência natural do conjunto invólucro-sensor-fixação: um deles
+reporta apenas autorressonâncias de placa e estrutura entre \SIrange{6}{9}{\kilo\hertz}
+\cite{jakobsen2024}, outro adia explicitamente o invólucro \cite{antonini2023}, e para um
+terceiro o dado não foi localizado na parte acessível do texto \cite{bisio2025}.
+
+\subsection{Energia e margem térmica}
+
+Na energia, a literatura contraria o projeto com clareza. O campo adota célula primária, e
+portanto nunca carrega nada \cite{nabavi2025}; a revisão térmica disponível estabelece o
+mecanismo de degradação por temperatura, mas não o limite de carga \cite{ma2018}. O limite
+de carga de uma célula secundária vem da folha de dados e das normas de segurança
+aplicáveis, não da literatura de manutenção preditiva. \emandamento{O orçamento térmico
+completo --- carcaça quente, invólucro fechado e célula carregando --- não foi localizado
+publicado, e é ele que decide se a escolha de bateria sobrevive.}
+
+\section{Síntese}
+\label{sec:rev-sintese}
+
+Lidos em conjunto, os eixos não formam uma lista de pontos fortes e fracos: formam uma
+cadeia com ordem de precedência. Primeiro a aquisição --- piso de ruído, banda e caminho
+mecânico ---, e nenhuma decisão posterior recupera informação que o sensor não coletou.
+Depois a estimação, que decide o que se faz com a informação disponível. Por último a
+implantação, que decide por quanto tempo o dispositivo continua operando.
+
+A conclusão desta revisão é que \textbf{a literatura é mais forte onde o dispositivo é mais
+frágil, no primeiro elo, e mais frágil onde o dispositivo tem algo a dizer, no segundo.}
+
+\subsection{O que a literatura sustenta}
+
+O problema do limiar é real e não é preciosismo, e a alternativa principiada existe. A
+disciplina de reportar a métrica no ponto de operação, e não apenas de forma agregada, tem
+respaldo em benchmark de referência. A viabilidade computacional da arquitetura está
+estabelecida, e a exigência de integrar aceleração para velocidade é normativa, com método
+correto estabelecido. A forma do limite térmico durante a carga --- margem imposta pela
+célula e não pelo invólucro --- tem precedente comercial direto.
+
+\subsection{O que a literatura contesta}
+
+As objeções são de peso, e nenhuma se resolve com ajuste de \emph{software}. A banda:
+nenhum estudo de adequação revisado testou sensor com limite superior próximo ao desta
+classe, e o mecanismo físico da assinatura de rolamento não admite contorno. O piso de
+ruído: a objeção é anterior à banda e não depende de nenhuma escolha de processamento. O
+detector: a maior comparação restrita a métodos não supervisionados recomenda outra
+variante, e no mesmo hardware embarcado um método de vizinhança mostrou-se mais específico
+e mais rápido. \emandamento{Nenhuma dessas três objeções foi respondida por medição neste
+trabalho; as respostas oferecidas são critérios de projeto declarados, e permanecem
+hipóteses até que o orçamento embarcado seja medido.}
+
+\section{Lacunas identificadas}
+\label{sec:rev-lacunas}
+
+Cada lacuna abaixo declara o que foi procurado, onde, e o que não foi encontrado. Duas
+lacunas enunciadas na fase inicial caíram na verificação e estão registradas como caídas,
+porque uma revisão que apresenta apenas as lacunas sobreviventes esconde o método.
+
+\textbf{Caíram na verificação.} A afirmação de que não existiria falso alarme publicado
+para o detector em nó embarcado é falsa: dois trabalhos o reportam ou permitem derivá-lo
+\cite{chevtchenko2023,kolok2025}. A afirmação de que ninguém quantificaria a fração de
+operação normal marcada pela política de limiar padrão também é falsa, pelo mesmo motivo.
+
+\begin{enumerate}
+  \item \textbf{Efeito isolado do parâmetro de contaminação.} Não se localizou trabalho que
+        variasse o parâmetro sobre a \emph{mesma} base e o \emph{mesmo} modelo reportando a
+        fração de operação normal marcada. O experimento que falta é barato e definitivo.
+  \item \textbf{Falso alarme de detector treinado no próprio dispositivo.} O único trabalho
+        revisado que treina \emph{on-device} é justamente o que declara a avaliação de
+        acurácia fora de escopo \cite{antonini2023} --- e esse é o modo de operação exigido
+        de uma máquina sem histórico rotulado.
+  \item \textbf{Contraste diagnóstico como função contínua da banda.} A literatura discute
+        o efeito da banda qualitativamente, e o único estudo revisado que faz varredura de
+        taxa de amostragem o faz para acurácia de classificador supervisionado, não para
+        contraste do indicador \cite{elbouharrouti2024}.
+  \item \textbf{Artefato de \emph{aliasing} sobre descritores estatísticos.} Não localizado
+        em literatura revisada por pares; aparece apenas em notas de aplicação de
+        fabricante.
+  \item \textbf{Custo do truncamento sobre o indicador normativo.} O erro dos métodos de
+        integração está quantificado \cite{brandt2014}, mas não a aplicação ao indicador da
+        norma em dispositivo truncado.
+  \item \textbf{Detectabilidade limitada por piso de ruído.} Não se localizou análise de
+        defeito mínimo detectável em função da densidade de ruído para IMUs de consumo.
+  \item \textbf{Frequência natural do conjunto montado.} Nenhum nó de baixo custo revisado
+        a publica.
+  \item \textbf{Orçamento térmico de carga de célula secundária} em nó montado em carcaça
+        de motor.
+  \item \textbf{Separar efeito de banda de efeito de montagem.} Não se localizou benchmark
+        aberto com sinais gravados \emph{simultaneamente} por MEMS de banda limitada e por
+        piezoelétrico no mesmo ponto. Sem isso, os dois efeitos permanecem confundidos em
+        qualquer medição de campo, inclusive nas deste projeto.
+\end{enumerate}
+
+O Capítulo~\ref{cap:resultados} aborda a lacuna 1, em sinal sintetizado, e oferece à
+lacuna 3 apenas um par de pontos, insuficiente para constituir uma função da banda. As
+demais, incluindo a 5, permanecem abertas e reaparecem como trabalho futuro no
+Capítulo~\ref{cap:conclusoes}.

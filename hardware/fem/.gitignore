@@ -1,0 +1,5 @@
+# Tudo aqui é derivado: malha, .inp, .dat, .frd e o sólido do caminho saem de
+# hardware/fem_caminho.py, fem_modal.py e fem_montagem.py. Uma rodada completa
+# passa de 200 MB.
+v1/
+v2/

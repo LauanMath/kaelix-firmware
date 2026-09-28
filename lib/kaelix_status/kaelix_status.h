@@ -102,7 +102,7 @@ enum class Status : uint8_t {
     BrownoutResetDetected= 0x52, // queda de tensão reiniciou o dispositivo
     CycleDeadlineExceeded= 0x53, // fase ativa passou do orçamento de tempo/energia
     RtcStateCorrupt      = 0x54, // estado em RTC memory não confere (boot_count perdido)
-    PeripheralPowerFault = 0x55, // trilha comutada pelos BC337 não estabilizou
+    PeripheralPowerFault = 0x55, // rail +3V3_SW (load switch) não estabilizou
 
     // ---- 0xF0..0xFF genéricos ----------------------------------------
     NotImplemented       = 0xFE, // caminho ainda não escrito (deve falhar alto, não silenciar)

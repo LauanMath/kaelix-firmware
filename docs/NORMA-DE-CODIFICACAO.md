@@ -272,7 +272,7 @@ uma constante de compilação, ou (c) demonstrável a partir da própria variáv
 controle — e, neste último caso, o argumento fica escrito em comentário.
 
 **Por quê:** sem cota não há WCET; sem WCET, o orçamento de 3,0 s de fase ativa
-e os 346 µA médios são chute, não engenharia.
+e os 309 µA médios são chute, não engenharia.
 **Base:** Power of Ten 2; JSF++ AV-119 e AV-201; DO-178C, análise de tempo de execução.
 
 ```cpp

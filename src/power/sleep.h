@@ -12,18 +12,22 @@ namespace kaelix::power {
 inline constexpr uint32_t SLEEP_MIN_MINUTES = 1U;
 inline constexpr uint32_t SLEEP_MAX_MINUTES = 120U;
 
-// Teto do deslocamento anticolisão. 60 s sobre um período de 600 s é
-// ~10% de dispersão: suficiente para descorrelacionar dezenas de
+// Teto do deslocamento anticolisão. 60 s sobre um período de 720 s é
+// ~8% de dispersão: suficiente para descorrelacionar dezenas de
 // dispositivos com 185 ms de tempo no ar, e pequeno o bastante para não
 // atrapalhar a leitura de tendência do lado do gateway.
 inline constexpr uint32_t JITTER_MAX_SECONDS = 60U;
 
-// Corta a alimentação do MPU6050/periféricos via transistor BC337 (GPIO).
+// Liga (true) ou corta (false) o rail +3V3_SW, que alimenta o MPU6050, os
+// pull-ups do I2C e o topo do divisor do NTC. Ativo-alto, por um load
+// switch high-side: GPIO5 -> R5 -> base de Q2 (NPN) -> gate de Q1
+// (P-MOSFET). Ver o cabeçalho de sleep.cpp para a derivação.
 //
 // Devolve Status porque o `hold` do GPIO pode ser recusado pelo pino, e
-// sem `hold` a base dos BC337 flutua durante os 10 minutos em que o corte
-// precisa valer — o periférico pode continuar energizado no sono inteiro
-// sem que nada acuse (Status::PeripheralPowerFault).
+// sem `hold` a base de Q2 flutua durante os 12 minutos em que o corte
+// precisa valer. O R8 de 100k leva o rail ao estado seguro (desligado)
+// nesse caso, mas o ciclo seguinte acorda com o sensor sem alimentação —
+// por isso a falha é reportada (Status::PeripheralPowerFault).
 [[nodiscard]] kaelix::Status peripherals_power(bool on);
 
 // Prepara o sono: hold do GPIO de corte, reprogramação do WDT-1 para

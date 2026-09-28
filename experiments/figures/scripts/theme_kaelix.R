@@ -25,14 +25,28 @@ suppressPackageStartupMessages({
 # --- paleta -----------------------------------------------------------------
 # neutra para contexto, azul para a condição de referência/correta,
 # vermelho reservado a perda de desempenho e erro metodológico.
+#
+# Duas famílias por matiz, com papéis distintos:
+#   *_series : marcas de linha, ponto e barra. Contraste >= 3:1 contra o fundo.
+#   *_wash   : faixas de anotação desenhadas com alpha 0.10-0.16, onde o baixo
+#              contraste é intencional e o preenchimento não codifica série.
+# Misturar os dois papéis foi o defeito da versão anterior: teal e laranja
+# claros serviam de série em fig1/fig4/fig5/fig7/fig11 e ficavam abaixo de 3:1.
+#
+# Verificado com o validador de paletas (checagens de faixa de luminosidade,
+# piso de croma, separação sob daltonismo, piso de visão normal e contraste):
+#   #3182BD, #8C2D1E, #06775A, #8a5a00 -> todas as checagens passam
+#   pior par sob deutanopia: #06775A/#8C2D1E, dE 8.6; visão normal dE 15.4
 pal <- c(
   neutral_dark  = "#272727",
   neutral_mid   = "#767676",
   neutral_light = "#D8D8D8",
   signal_blue   = "#3182BD",
-  signal_teal   = "#33B5A5",
+  signal_teal   = "#06775A",   # série: escurecido de #33B5A5 (contraste 2.47)
   accent_red    = "#8C2D1E",   # escuro: separa de signal_blue em cinza
-  accent_orange = "#E28E2C"
+  accent_orange = "#8a5a00",   # série: escurecido de #E28E2C (contraste 2.51)
+  teal_wash     = "#33B5A5",   # faixa de anotação apenas, nunca série
+  orange_wash   = "#E28E2C"    # faixa de anotação apenas, nunca série
 )
 
 # vocabulário visual fixo, reusado em todos os painéis das duas figuras
@@ -41,7 +55,13 @@ metodo_cols <- c("correto" = pal[["signal_blue"]], "incorreto" = pal[["accent_re
 
 BASE <- 6.5
 
-theme_kaelix <- function(base_size = BASE, base_family = "Arial") {
+# A família precisa casar com o corpo do documento que consome a figura. O TCC
+# compõe em Times (pacote `times` no principal.tex); uma figura em Arial lê-se
+# como elemento colado de outro documento, e essa era a queixa visual principal.
+# Para voltar a sans, trocar a linha abaixo — nada mais depende disso.
+FAMILY <- "Times New Roman"
+
+theme_kaelix <- function(base_size = BASE, base_family = FAMILY) {
   theme_classic(base_size = base_size, base_family = base_family) +
     theme(
       axis.line    = element_line(linewidth = 0.35, colour = "black"),
@@ -76,7 +96,7 @@ save_pub <- function(plot, filename, width_mm = 183, height_mm = 120, dpi = 600)
   svglite::svglite(paste0(filename, ".svg"), width = w, height = h)
   print(plot); invisible(dev.off())
 
-  grDevices::cairo_pdf(paste0(filename, ".pdf"), width = w, height = h, family = "Arial")
+  grDevices::cairo_pdf(paste0(filename, ".pdf"), width = w, height = h, family = FAMILY)
   print(plot); invisible(dev.off())
 
   ragg::agg_tiff(paste0(filename, ".tiff"), width = w, height = h,

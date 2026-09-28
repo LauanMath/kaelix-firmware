@@ -34,7 +34,7 @@ esp <- rd("fig1a_espectro.csv") |>
 
 p_a <- ggplot(esp, aes(freq_hz, psd, colour = condicao)) +
   annotate("rect", xmin = 0, xmax = NYQ, ymin = 1e-11, ymax = 1e-1,
-           fill = pal[["accent_orange"]], alpha = 0.13) +
+           fill = pal[["orange_wash"]], alpha = 0.13) +
   geom_line(linewidth = 0.3) +
   annotate("segment", x = 3500, xend = 3500, y = 2.5e-3, yend = 6e-4,
            linewidth = 0.28, colour = pal[["neutral_dark"]],
@@ -119,7 +119,7 @@ ali <- rd("fig1d_aliasing.csv")
 
 p_d <- ggplot(ali, aes(f_real_hz, f_aparente_hz)) +
   annotate("rect", xmin = 2830, xmax = 5270, ymin = 0, ymax = NYQ,
-           fill = pal[["accent_orange"]], alpha = 0.10) +
+           fill = pal[["orange_wash"]], alpha = 0.10) +
   geom_segment(aes(xend = f_real_hz, yend = 0),
                linewidth = 0.26, colour = pal[["neutral_light"]]) +
   geom_point(size = 0.95, colour = pal[["accent_red"]]) +

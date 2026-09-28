@@ -1,0 +1,254 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Capítulo 5 --- Conclusões
+%%
+%% Par do capitulo01.tex: a Introdução estabelece a dívida, este capítulo a paga.
+%% A afirmação central, a ordem de precedência da cadeia e a declaração de
+%% procedência em três níveis são as mesmas do Capítulo 1, com a mesma força.
+%%
+%% MARCAÇÃO DE TRECHO EM ANDAMENTO --------------------------------------------
+%% \emandamento{...} destaca em vermelho os trechos cuja validade muda quando o
+%% protótipo for construído e ensaiado em ambiente real. Ver nota no capitulo01.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+\@ifundefined{emandamento}{%
+  \@ifundefined{textcolor}%
+    {\newcommand{\emandamento}[1]{#1}}%
+    {\newcommand{\emandamento}[1]{\textcolor{red}{#1}}}%
+}{}
+\makeatother
+
+\chapter{Conclusões}
+\label{cap:conclusoes}
+
+Este trabalho perguntou o que a cadeia de medição especificada para o Kaelix permite
+medir, e não se um dispositivo de baixo custo pode ser construído. A resposta é que a
+cadeia sustenta a detecção de desbalanceamento sob taxa de falso alarme fixada, e não sustenta diagnóstico de defeito de rolamento. O limite
+não decorre de escolha de processamento e não é removível por ajuste de \emph{software}:
+ele está na aquisição, e a ordem de precedência entre os elos da cadeia determina que
+nenhuma decisão posterior recupere a informação que o sensor não coletou.
+
+A contribuição verificável deste trabalho está no segundo elo. As decisões de limiar, de
+métrica e de protocolo de validação alteraram os resultados por margens maiores que o
+efeito físico sob investigação, e é sobre elas que os experimentos produziram números
+novos. Essa contribuição depende de que o primeiro elo esteja declarado: um desempenho de
+detecção reportado sem a banda e o piso de ruído que o produziram não é verificável.
+
+\section{O que a aquisição permite medir}
+\label{sec:conc-aquisicao}
+
+A taxa máxima de amostragem de \SI{1}{\kilo\hertz} do acelerômetro situa a frequência de
+Nyquist em \SI{500}{\hertz}. A frequência característica de defeito de pista externa, de
+\SI{104,6}{\hertz} na geometria considerada, cai dentro dessa banda; a ressonância
+estrutural de \SI{3,5}{\kilo\hertz} que carrega a informação diagnóstica não. Essa
+separação é o resultado central do primeiro elo: a taxa de repetição do defeito estar
+dentro da banda não significa que a evidência do defeito esteja.
+
+Sobre o sinal sintetizado, o contraste entre as condições com e sem defeito foi de
+\num{413} vezes por análise de envelope na banda de ressonância, amostrada a
+\SI{20}{\kilo\hertz}, contra \num{20} vezes por espectro direto a \SI{1}{\kilo\hertz}.
+Cabe a qualificação que a revisão já impõe a esse par: entre as duas medidas mudam duas
+variáveis, a banda e o método de demodulação, e dois pontos não constituem uma função da
+banda. O par sustenta a afirmação de que a cadeia truncada perde contraste; não sustenta a
+atribuição quantitativa dessa perda à banda isoladamente. Separá-los exige varredura com
+método fixo, e é trabalho futuro (Seção~\ref{sec:conc-futuro}).
+
+Um segundo efeito é de natureza distinta e merece registro por ser, ele próprio, um
+achado. Sem filtro passa-baixas configurado abaixo de $f_s/2$, a ressonância de
+\SI{3,5}{\kilo\hertz} não desaparece: reaparece rebatida em \SI{500}{\hertz}, uma
+frequência onde nada existe fisicamente. Descritores estatísticos medidos sobre esse sinal
+podem separar as classes por um mecanismo que nada tem a ver com a física do defeito. Uma
+medição ingênua pode, portanto, funcionar pelos motivos errados e passar em validação.
+
+O invólucro integra a cadeia de medição, e não apenas a protege. A rigidez do caminho entre
+a superfície do motor e o sensor situa a frequência de montagem do conjunto em
+\SI{557}{\hertz}, dentro da banda de medição, com transmissibilidade de aproximadamente
+cinco vezes em \SI{500}{\hertz} e erro de amplitude superior a \SI{10}{\percent} já em
+\SI{168}{\hertz}. A prática consolidada em acelerometria exigiria frequência de montagem de
+ao menos \SI{3}{\kilo\hertz} para a banda normativa. A decomposição da flexibilidade
+localiza o problema na base e no corpo, responsáveis por \SI{51,1}{\percent} e
+\SI{48,5}{\percent}, e não no ressalto, com \SI{0,4}{\percent}; a mesma geometria em
+alumínio alcançaria \SI{3273}{\hertz}. Duas hipóteses concorrentes foram testadas e
+descartadas: a curvatura da carcaça e os modos próprios dos painéis, estes situados acima
+de \SI{1300}{\hertz}.
+
+\section{O que a estimação decide}
+\label{sec:conc-estimacao}
+
+Quatro decisões do segundo elo alteraram os resultados por margens maiores que o efeito
+medido. Todos os valores desta seção provêm de sinal sintetizado.
+
+A primeira é o método de integração. A norma define as zonas de severidade em velocidade
+eficaz, e o acelerômetro entrega aceleração. Contra um sinal cuja integral é conhecida
+analiticamente, a integração no domínio do tempo errou em $+\SI{73}{\percent}$ sem filtro
+passa-alta e em $+\SI{156}{\percent}$ com ele, enquanto a integração no domínio da
+frequência, restrita à máscara normativa, recuperou o valor exato. O filtro passa-alta não
+corrige a integração no tempo e chega a piorá-la. Sob viés de
+\SI{0,02}{\meter\per\second\squared}, valor contido na especificação do sensor, a
+integração no tempo produziu \SI{55,08}{\milli\meter\per\second} onde o correto é
+\num{6,75}: o sinal seria classificado na zona D qualquer que fosse a máquina. A integração na
+frequência permanece exata sob o mesmo viés, porque o termo contínuo cai fora da máscara
+imposta pela própria norma.
+
+A segunda é a política de limiar. Treinado apenas com dados de operação normal, o detector
+com o valor padrão do parâmetro de contaminação classificou \SI{42,1}{\percent} das
+janelas normais como anomalia; com o parâmetro fixado em \num{0,01}, o falso alarme caiu
+para \SI{1,4}{\percent}. A taxa de detecção permaneceu em \SI{100}{\percent} e a área sob
+a curva ROC em \num{1,000} nos quatro valores testados. O parâmetro desloca o corte e não
+altera a qualidade do detector, o que confirma que o desempenho reportado sem a política
+de limiar declarada não é interpretável.
+
+A terceira é a métrica. Sobre defeito incipiente, com descritores e modelo idênticos, a
+área sob a curva completa caiu \SI{3,7}{\percent} entre a cadeia de referência e a do
+dispositivo, enquanto a área parcial restrita à região de falso alarme baixo caiu
+\SI{16,2}{\percent} a \SI{10}{\percent} de falso alarme e \SI{20,3}{\percent} a
+\SI{5}{\percent}. A perda na região em que um dispositivo de campo precisa operar é de
+\num{4,4} a \num{5,5} vezes a que a área global indica.
+
+A quarta é o protocolo de validação. Janelas consecutivas de um mesmo ensaio
+compartilham a assinatura da montagem, e sua divisão aleatória entre treino e teste permite
+que o modelo identifique o ensaio em vez da falha. O mesmo modelo, sobre os mesmos dados e
+os mesmos descritores, atingiu \SI{99,0}{\percent} de acurácia sob divisão aleatória por
+janela e $\num{63,2} \pm \num{19,2}\,\si{\percent}$ sob divisão por ensaio, uma inflação de
+aproximadamente \num{36} pontos percentuais. Três das cinco partições ficaram próximas de
+\num{0,50}, o nível do acerto ao acaso, informação que a média única do protocolo
+incorreto suprime.
+
+\section{O que a implantação impõe}
+\label{sec:conc-implantacao}
+
+A hipótese inicial atribuía ao material do invólucro o papel de elo térmico mais frágil. A
+análise inverteu essa leitura. A resistência térmica do caminho condutivo em ASA é de
+\SI{88,8}{\kelvin\per\watt}, contra \SI{0,074}{\kelvin\per\watt} em alumínio. Em operação,
+o invólucro mantém a eletrônica abaixo de todos os limites até \SI{90}{\celsius} de
+carcaça: o modelo tridimensional situa a placa entre \SI{35,1}{\celsius} e
+\SI{38,3}{\celsius}, e o autoaquecimento é irrelevante, pois a potência média de
+\SI{2,0}{\milli\watt} eleva a temperatura interna em \SI{0,01}{\celsius}.
+
+\emandamento{O limite que restringe é o de carga da célula, \SI{45}{\celsius}, e somente
+durante a carga. Com o carregador linear da placa v3 a \SI{200}{\milli\ampere}, sobram
+\SI{8,3}{\kelvin} com o dispositivo fora do motor; com o motor a \SI{90}{\celsius}, a
+folga, de no máximo \SI{3,9}{\kelvin} no modelo, pode ser nula. O próprio carregador
+suspende a carga acima de \SI{45}{\celsius}, e o procedimento recomendado é carregar o
+dispositivo fora do motor ou com o motor parado.}
+
+A consequência de projeto é que substituir o material do invólucro por alumínio,
+que resolveria a limitação mecânica da Seção~\ref{sec:conc-aquisicao}, agravaria a
+limitação térmica, porque elevaria a temperatura interna a \SI{79,0}{\celsius} sob a mesma
+carcaça. Os dois elos impõem requisitos opostos sobre a mesma peça.
+
+\section{Alcance dos resultados}
+\label{sec:conc-alcance}
+
+As conclusões acima têm alcances distintos, porque a procedência dos resultados não é
+uniforme, e enunciá-las sem essa distinção seria atribuir a todas a força da mais forte.
+
+Os resultados de detecção em modos de falha provêm de dado real medido em bancada
+instrumentada, submetido a decimação controlada em \emph{software} para emular a banda do
+dispositivo: a $\num{2,0} \pm \num{1,3}\,\si{\percent}$ de falso alarme medido,
+$\num{75,0} \pm \num{3,5}\,\si{\percent}$ de detecção em desbalanceamento,
+\SI{14,8}{\percent} e \SI{20,7}{\percent} em defeito de rolamento puro, sem dispersão
+registrada, e $\num{5,0} \pm \num{3,1}\,\si{\percent}$ e
+$\num{7,2} \pm \num{4,3}\,\si{\percent}$ em desalinhamento horizontal e vertical. O que é
+modelado nesses resultados é a aquisição, não o sinal. O treino dispõe de apenas \num{49}
+arquivos de operação normal, o que limita a precisão com que o limiar é estimado.
+
+Os resultados de banda, de integração, de limiar, de métrica e de protocolo provêm de sinais
+sintetizados a partir de um modelo de dois mecanismos, e valem para a cadeia de
+processamento, não para o desempenho em campo. Seus valores absolutos dependem dos
+parâmetros de simulação --- amplitude do defeito, frequência de ressonância e nível de
+ruído --- e devem ser lidos como ordens de grandeza. As relações entre métodos, que são o
+objeto deste trabalho, não dependem desses parâmetros.
+
+Os resultados mecânicos e térmicos provêm de modelagem analítica e por elementos finitos
+sobre as especificações de projeto, tomadas como dadas. A análise mecânica emprega
+fórmulas fechadas com condições de contorno idealizadas, e a rigidez real depende de
+pré-carga de parafusos, planicidade das faces impressas e orientação das camadas. A análise
+térmica não modela resistência de contato, convecção forçada pelo ventilador do motor nem
+radiação de superfícies próximas, e aplica à troca entre a placa e a cavidade o coeficiente
+de convecção da face externa, o que torna otimista a folga calculada para a carga com o
+motor quente.
+
+\emandamento{A cadeia física do próprio dispositivo não foi verificada. Nenhum ensaio
+físico foi conduzido e nenhuma medição de campo alimenta os modelos; a inicialização do
+acelerômetro permanece não implementada no firmware e o filtro passa-baixas interno do
+sensor é pendência declarada em código. A consequência é uma restrição específica, e não
+uma ressalva genérica: os resultados sustentam conclusões sobre o que a cadeia de
+aquisição especificada permite medir, e não sobre o desempenho do dispositivo montado em
+operação industrial.} Em particular, a bancada sobre a qual os dados reais foram obtidos está abaixo
+do escopo de potência e altura de eixo da norma, o que a torna adequada como fonte de
+sinal para estudar a cadeia de medição e inadequada como caso de aplicação normativa.
+
+\emandamento{Três dados externos permanecem pendentes e limitam o alcance das conclusões:
+a temperatura real de carcaça dos equipamentos-alvo, a classe normativa dos motores a
+monitorar e a validação do carregador do conjunto de dados público utilizado, o MAFAULDA.}
+
+\section{Trabalho futuro}
+\label{sec:conc-futuro}
+
+\emandamento{A construção do protótipo físico e seu ensaio em ambiente real constituem a
+etapa seguinte declarada deste trabalho, e não uma possibilidade remota. Os resultados
+apresentados aqui não substituem essa etapa: eles a preparam, ao estabelecer o que ela
+precisa verificar e quais medidas tornam essa verificação interpretável. Um ensaio de
+campo conduzido sem banda declarada, sem política de limiar explícita e sob divisão
+aleatória de janelas reproduziria, em dado real, os mesmos artefatos que este trabalho
+mediu em sinal controlado.}
+
+Cada item abaixo é enunciado junto da afirmação que ele permitiria sustentar, e não como
+lista de desejos.
+
+\begin{itemize}
+    \item \textbf{Varredura de taxa de amostragem com método fixo}, sobre a mesma gravação
+          decimada em vários $f_s$, com decomposição entre efeito de banda e efeito de
+          perda do envelope. É o que converte o par \num{413}$\times$/\num{20}$\times$ em
+          função da banda, e o que falta para atribuir a perda de contraste à banda
+          isoladamente.
+
+    \item \textbf{Medição dos mesmos descritores com e sem filtro passa-baixas
+          configurado}, no mesmo sinal. É o que estabelece experimentalmente o artefato de
+          rebatimento sobre curtose e fator de crista, efeito para o qual não se localizou
+          descrição na literatura revisada por pares.
+
+    \item \textbf{Varredura do parâmetro de contaminação contra falso alarme medido}, em
+          vibração industrial de banda limitada. É o que permite afirmar que a calibração
+          por risco alvo supera a política padrão, em vez de apenas exibir que a política
+          padrão falha.
+
+    \item \textbf{Taxa de falso alarme de detector treinado no próprio microcontrolador.}
+          É o modo de operação exigido de uma máquina sem histórico rotulado, e nenhum
+          valor publicado foi localizado para ele.
+
+    \item \textbf{Descritores de razão harmônica para desalinhamento.} O desempenho em
+          desalinhamento, de $\num{5,0} \pm \num{3,1}\,\si{\percent}$ e
+          $\num{7,2} \pm \num{4,3}\,\si{\percent}$, é o pior dos três modos
+          medidos e não é explicável por banda: o modo se manifesta em harmônicas da
+          rotação, muito abaixo de \SI{500}{\hertz}. A causa provável está nos descritores
+          adotados, que capturam energia e impulsividade e não estrutura harmônica e de
+          fase. É a pista mais acionável do conjunto, e não custa banda, sensor nem
+          dinheiro.
+
+    \item \textbf{Medição por excitação de impacto da frequência natural do conjunto
+          montado}, incluindo a ressonância da fixação magnética. É o que substitui a
+          estimativa analítica de \SI{557}{\hertz}, que depende de um amortecimento
+          arbitrado, por valor medido.
+
+    \item \emandamento{\textbf{Construção do protótipo e ensaio em ambiente real} ---
+          etapa seguinte já prevista. É a única via que converte as conclusões sobre a
+          cadeia especificada em conclusões sobre o dispositivo em operação. Três
+          verificações a precedem no próprio dispositivo: implementar a inicialização do
+          acelerômetro, configurar o filtro passa-baixas interno abaixo de $f_s/2$ e medir
+          o piso de ruído efetivo, em vez de adotar o valor de folha de dados. Sem as duas
+          primeiras, a medição de campo mede aliasing; sem a terceira, não há como separar
+          defeito não detectado de defeito abaixo do piso.}
+\end{itemize}
+
+A ordem entre esses itens não é arbitrária. Os dois primeiros pertencem ao primeiro elo da
+cadeia e condicionam a interpretação de todo o resto; os três seguintes pertencem ao
+segundo elo, onde este trabalho localizou sua contribuição; o penúltimo pertence ao
+terceiro. O último não é um item entre outros: é a continuação do trabalho, e o que este
+documento oferece a ela é o conjunto de medidas que tornam seu resultado interpretável.
+
+\emandamento{Nesse sentido, as conclusões aqui apresentadas são de uma etapa, e não de um
+ciclo fechado. Elas delimitam o que a especificação permite esperar do dispositivo antes
+que ele exista fisicamente, o que é precisamente o que permite projetar o ensaio de campo
+de modo a testar afirmações, e não a confirmá-las.}

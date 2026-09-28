@@ -1,0 +1,55 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Apêndice B --- Práticas de sistemas críticos
+%%
+%% Absorve o relatório de práticas de sistemas críticos. Justifica escolhas de
+%% engenharia de firmware; não toca a tese sobre a cadeia de medição.
+%%
+%% PENDENTE DE TRANSCRIÇÃO: a tabela de mecanismos por setor, com as colunas
+%% Limite conhecido e Situação no Kaelix, está em
+%% docs/relatorio/praticas-sistemas-criticos.tex e deve ser transportada.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\chapter{Práticas de sistemas críticos aplicadas ao firmware}
+\label{ape:praticas}
+
+Este apêndice registra a origem documentada das práticas de engenharia adotadas no
+firmware. A unidade de análise é o \emph{mecanismo}, e não a norma: uma norma aparece como
+origem de vários mecanismos.
+
+Duas ressalvas delimitam o alcance. Primeira: aviônica civil e automotivo entram como
+origem documentada de prática, não como alvo de certificação --- o dispositivo é protótipo
+acadêmico e nenhum processo de certificação é reivindicado. Segunda: para cada mecanismo
+registra-se também o que ele comprovadamente \emph{não} cobre; sem essa coluna, o
+levantamento viraria lista de recomendações.
+
+\section{Escalas de criticidade}
+\label{sec:ape-escalas}
+
+Não há equivalência normativa entre as escalas setoriais, e a correspondência citada na
+literatura é informal. A norma de aviônica classifica software pela severidade da condição
+de falha e não atribui taxa de falha ao software \cite{do178c}; a norma genérica é a única
+das três com faixa numérica direta de medida de falha alvo \cite{iec61508}; a automotiva
+compõe severidade, exposição e controlabilidade \cite{iso26262}.
+
+\section{Mecanismos adotados}
+\label{sec:ape-mecanismos}
+
+Os mecanismos concentram-se em disciplina de codificação, detecção de erro e definição de
+estado seguro --- categorias cujo custo é de projeto, e não de replicação de hardware, e
+que portanto são acessíveis a um protótipo de baixo custo.
+
+O mecanismo com consequência mais direta sobre este trabalho é a propagação explícita de
+estado não implementado. Um caminho ainda não escrito devolve erro e propaga-o até o
+receptor, em vez de retornar sucesso ou falhar silenciosamente. A justificativa é a mesma
+que a literatura de sistemas críticos oferece para a redundância diversa: falha silenciosa
+é indistinguível de operação correta, e é essa indistinguibilidade que remove a evidência
+de que algo está errado \cite{knight1986,esa1996}.
+
+\section{Limite conhecido das práticas adotadas}
+\label{sec:ape-limites}
+
+A disciplina de codificação e a propagação de erro não substituem redundância de hardware,
+e a literatura documenta que a suposição de independência entre versões diversas de
+software não se sustenta empiricamente \cite{knight1986}. \emandamento{Nenhuma das práticas
+adotadas foi exercitada em hardware real; sua eficácia é verificada apenas em teste no
+\emph{host}.}

@@ -135,7 +135,7 @@ roc <- rd("fig2e_roc.csv")
 
 p_e <- ggplot(roc, aes(fpr, tpr, colour = banda, linetype = banda)) +
   annotate("rect", xmin = 0, xmax = 0.05, ymin = 0, ymax = 1,
-           fill = pal[["accent_orange"]], alpha = 0.13) +
+           fill = pal[["orange_wash"]], alpha = 0.13) +
   geom_abline(linewidth = 0.3, linetype = "22", colour = pal[["neutral_mid"]]) +
   geom_line(linewidth = 0.45) +
   annotate("text", x = 0.10, y = 0.42, hjust = 0, size = 1.7,
