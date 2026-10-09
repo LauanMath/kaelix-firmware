@@ -32,3 +32,4 @@ data/*.csv
 data/*.mat
 data/mafaulda/
 data/cwru/
+.temp
