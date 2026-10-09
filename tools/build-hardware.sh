@@ -90,6 +90,22 @@ else
   printf 'conectividade: nenhum item solto\n'
 fi
 
+# Furação entra como falha dura, mesmo sendo AVISO no KiCad 10. O relatório
+# acima só pede --severity-error, e a v3 passou por ele com dez vias
+# empilhadas, duas vias dentro dos pinos do J2 e dois pares de furos a 0,1 e
+# 0 mm um do outro. Furo sobre furo quebra broca e a DFM da fábrica recusa;
+# não é cosmético como serigrafia sobre cobre.
+"$CLI" pcb drc --output "$PROJ/drc-furos.rpt" --severity-warning --refill-zones \
+       "$PROJ/kaelix.kicad_pcb" >/dev/null 2>&1
+furos=$(grep -cE "^\[(hole_to_hole|holes_co_located|drill_out_of_range)\]" \
+        "$PROJ/drc-furos.rpt" 2>/dev/null | tr -d ' ')
+if [ "${furos:-0}" -gt 0 ]; then
+  falhou "furação: $furos aviso(s) de furo sobre furo — ver $PROJ/drc-furos.rpt"
+else
+  printf 'furação: nenhum furo sobreposto ou encostado\n'
+  rm -f "$PROJ/drc-furos.rpt"
+fi
+
 secao "arquivos derivados"
 "$CLI" sch export netlist --output "$PROJ/kaelix.net" "$PROJ/kaelix.kicad_sch" \
   || falhou "export da netlist falhou"
