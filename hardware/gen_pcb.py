@@ -112,6 +112,13 @@ BORDA = 0.6                          # folga mínima corpo/pad -> borda da placa
 FOLGA = 0.3                          # folga mínima corpo a corpo na mesma face
 FOLGA_COBRE = 0.15                   # folga mínima cobre a cobre (netclass)
 FOLGA_FURO = 0.25                    # folga mínima furo a cobre
+# Menor furo metalizado que a placa emite, e o anel que ele precisa deixar.
+# 0,3 mm é o furo padrão de duas camadas na JLCPCB e na PCBWay; abaixo disso
+# a casa cobra à parte ou segura o pedido na revisão de engenharia. O único
+# furo menor vinha da biblioteca: as 12 vias térmicas de 0,2 mm do WROOM-1U.
+# Com pad de 0,6 mm, 0,3 deixa anel de 0,15, o mesmo das vias do roteador.
+FURO_MIN = 0.3
+ANEL_MIN = 0.15
 
 _n = [0]
 def uid():
@@ -281,8 +288,8 @@ def rect_mecanico(ref):
 
     Corpo e courtyard valem para a face de montagem: é onde a peça encosta na
     placa. Um via passante da peça NÃO torna a face oposta inutilizável — ele
-    é um furo de 0,2 mm coberto por máscara, e módulos assentam por cima disso
-    o tempo todo. Confundir as duas coisas fazia o U1 e o U3 aparecerem como
+    é um furo de 0,3 mm (0,2 na biblioteca, ver FURO_MIN) coberto por
+    máscara, e módulos assentam por cima disso o tempo todo. Confundir as duas coisas fazia o U1 e o U3 aparecerem como
     colisão só porque o pad térmico do WROOM-1U tem vias passantes.
     """
     x, y, rot, lado = POSICOES[ref]
@@ -370,7 +377,7 @@ def conflito(refA, refB):
         x, y, rot, _l = POSICOES[h]
         for pd in geom(NET[h][0])["pads"]:
             # Via térmica não é pino: as 12 do pad térmico do WROOM-1U têm pad
-            # de 0,6 mm, furo de 0,2 e máscara por cima, e na v1 o Ra-02 assenta
+            # de 0,6 mm, furo de 0,3 (FURO_MIN) e máscara por cima, e na v1 o Ra-02 assenta
             # sob elas por projeto (ver rect_mecanico). Pino de verdade começa em
             # 1,1 mm (carcaça do USB-C) e 1,7 mm (header).
             if not pd["tht"] or min(pd["w"], pd["h"]) < 0.8:
@@ -938,6 +945,26 @@ def vira_camadas(no):
     return [vira_camadas(x) for x in no]
 
 
+def alarga_furo(ref, pad):
+    """Leva o furo de um pad metalizado a FURO_MIN, se ele vier menor."""
+    if pad[2][1] != "thru_hole":
+        return pad
+    pad = [z for z in pad]
+    for k, z in enumerate(pad):
+        if not (isinstance(z, list) and head(z) == "drill") or len(z) != 2:
+            continue
+        if float(z[1][1]) >= FURO_MIN:
+            break
+        tam = find1(pad, "size")
+        anel = (min(float(tam[1][1]), float(tam[2][1])) - FURO_MIN) / 2
+        if anel < ANEL_MIN - 1e-9:
+            raise SystemExit(f"{ref}.{pad[1][1]}: furo de {FURO_MIN} mm deixa anel de "
+                             f"{anel:.3f} mm, abaixo de {ANEL_MIN}")
+        pad[k] = [sym("drill"), sym(f"{FURO_MIN:g}")]
+        break
+    return pad
+
+
 faltando = []
 for ref, (libfp, val, mapa) in NET.items():
     if ref not in POSICOES:
@@ -998,6 +1025,7 @@ for ref, (libfp, val, mapa) in NET.items():
                             e[_k] = [sym("at"), _z[1], _z[2],
                                      sym(f"{(_a + rot) % 360:g}")]
                             break
+                e = alarga_furo(ref, e)
                 net = mapa.get(num)
                 if net and net != SCH.NC:
                     e = e + [[sym("net"), sym(str(NETNUM[net])), st(net)]]
