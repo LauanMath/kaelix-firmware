@@ -152,8 +152,8 @@ título de Bacharel em Engenharia de Software.}
 \makeindex
 
 %% Listas de siglas e símbolos (definidas antes do documento)
-\input{abrev}
-\input{simbolos}
+\input{pre-textuais/abrev}
+\input{pre-textuais/simbolos}
 
 \begin{document}
 
@@ -210,8 +210,8 @@ título de Bacharel em Engenharia de Software.}
 %  ...
 %\end{agradecimentos}
 
-\input{resumo}
-\input{abstract}
+\input{pre-textuais/resumo}
+\input{pre-textuais/abstract}
 
 %% Listas
 \pdfbookmark[0]{\listfigurename}{lof}
@@ -237,24 +237,24 @@ título de Bacharel em Engenharia de Software.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \textual
 
-\include{capitulo01}
+\include{capitulos/capitulo01}
 \include{fundamentacao}
-\include{capitulo02}
-\include{capitulo03}
-\include{capitulo04}
-\include{capitulo05}
+\include{capitulos/capitulo02}
+\include{capitulos/capitulo03}
+\include{capitulos/capitulo04}
+\include{capitulos/capitulo05}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% ELEMENTOS PÓS-TEXTUAIS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \postextual
 
-\bibliography{../relatorio/referencias}
+\bibliography{referencias}
 
 \begin{apendicesenv}
   \partapendices
-  \input{appenA}
-  \input{appenB}
+  \input{apendices/appenA}
+  \input{apendices/appenB}
 \end{apendicesenv}
 
 \end{document}

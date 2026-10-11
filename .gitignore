@@ -32,3 +32,6 @@ data/*.csv
 data/*.mat
 data/mafaulda/
 data/cwru/
+.temp
+
+hardware/3dmodels/origem/*.step

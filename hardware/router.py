@@ -207,11 +207,32 @@ def _segmentos(caminho):
 CAMADA = {0: "F.Cu", 1: "B.Cu"}
 
 
+def _perto_de_via(vias):
+    """Células onde uma via nova furaria perto demais de uma que já existe.
+
+    Cada par de pads é roteado por conta própria, e duas ligações da mesma
+    net que trocavam de camada no mesmo ponto emitiam cada uma a sua via: a
+    v3 saiu com dez pares de vias empilhadas e dois pares a 0,3 e 0,4 mm,
+    furos quase encostados. O cobre de uma via da própria net é passável, e
+    nada impedia a segunda. Aqui a via nova fica a pelo menos furo + folga
+    de furo (0,55 mm de centro a centro) de qualquer outra, exceto
+    exatamente sobre uma existente, que `_liga` reaproveita sem emitir outra.
+    """
+    for (vx, vy, _n) in vias[_G["vias_vistas"]:]:
+        _G["perto_via"] |= _mask_ret(vx, vy, 0.0, 0.0, VIA_FURO + FOLGA_FURO - PASSO / 2)
+    _G["vias_vistas"] = len(vias)
+    perto = _G["perto_via"].copy()
+    for (vx, vy, _n) in vias:
+        perto[_ij(vx, vy)] = False
+    return perto
+
+
 def _liga(pa, pb, nid, pistas, vias):
     """Roteia um par de pads. Devolve True se fechou, carimbando o cobre."""
     passavel = (_G["dono"] == 0) | (_G["dono"] == nid)
     via_ok = _erode(passavel[0] & passavel[1],
                     int(math.ceil((VIA_D / 2 + FOLGA + LARGURA / 2) / PASSO)))
+    via_ok &= ~_G["sem_via"] & ~_perto_de_via(vias)
     _ra, _na, xa, ya, ca = pa
     _rb, _nb, xb, yb, cb = pb
     ia, ja = _ij(xa, ya)
@@ -235,6 +256,8 @@ def _liga(pa, pb, nid, pistas, vias):
         m = _mask_seg(x1, y1, x2, y2, LARGURA / 2)
         (_G["gnd"] if nid == _G.get("nid_gnd") else _G["cobre"])[l] |= m
     for (vx, vy) in vs:
+        if (vx, vy, nid) in vias:
+            continue            # troca de camada sobre via da própria net
         vias.append((vx, vy, nid))
         _carimba(_mask_ret(vx, vy, 0.0, 0.0, VIA_D / 2 + INFLA), (0, 1), nid)
         m = _mask_ret(vx, vy, 0.0, 0.0, VIA_D / 2)
@@ -291,6 +314,14 @@ def _monta_grade(net, posicoes, netnum, pads_abs, centro, contorno, nc):
     _G["sob_fino"] = np.zeros((2, N, N), dtype=bool)
     _G["centro"] = (CXc, CYc)
     _G["nid_gnd"] = netnum["GND"]
+    # Onde uma via de sinal não pode nascer, além da folga de cobre que o
+    # `passavel` já garante. O mapa de donos deixa a pista de uma net passar
+    # sobre o próprio pad, e com isso o A* trocava de camada em cima dos
+    # pinos passantes do J2: furo de via a 0,2 mm do furo do pino, que o DRC
+    # acusa como hole_to_hole e a fábrica recusa. Ver `_perto_de_via`.
+    _G["sem_via"] = np.zeros((N, N), dtype=bool)
+    _G["perto_via"] = np.zeros((N, N), dtype=bool)
+    _G["vias_vistas"] = 0
 
     fora = _fora_do_contorno(FOLGA_BORDA + LARGURA / 2)
     for c in (0, 1):
@@ -318,6 +349,10 @@ def _monta_grade(net, posicoes, netnum, pads_abs, centro, contorno, nc):
             valor = netnum[rede] if (rede and rede != nc) else -1
             camadas = [LADO[f] for f in p["faces"]]
             _carimba(_mask_ret(p["x"], p["y"], p["w"], p["h"], INFLA), camadas, valor)
+            if len(camadas) == 2:
+                # Pino passante: já liga as duas camadas. Via encostada nele
+                # não acrescenta nada e põe dois furos um sobre o outro.
+                _G["sem_via"] |= _mask_ret(p["x"], p["y"], p["w"], p["h"], VIA_D / 2)
             m = _mask_ret(p["x"], p["y"], p["w"], p["h"], 0.0)
             for c in camadas:
                 (_G["gnd"] if rede == "GND" else _G["cobre"])[c] |= m

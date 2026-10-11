@@ -30,9 +30,9 @@ roteamento — consequência do vão do invólucro correspondente
 | folga no vão | 0,50 mm/lado em X e Y | 0,50 mm/lado em X e Y | 0,50 mm/lado; em −X o USB-C passa 0,07 mm para dentro do furo da parede, por projeto |
 | componentes | 32 + 3 furos M2 | 32 + 3 furos M2 | 41 + 3 furos M2 |
 | nets · pads com net | 24 · 118 | 24 · 118 | 30 · 149 |
-| segmentos | 485 (327 F.Cu / 159 B.Cu) | 501 (419 F.Cu / 83 B.Cu) | 637 (488 F.Cu / 150 B.Cu) |
-| vias de sinal | 68 | 68 | 108 |
-| vias de costura de terra | 71 | 234 | 220 |
+| segmentos | 485 (327 F.Cu / 159 B.Cu) | 501 (419 F.Cu / 83 B.Cu) | 647 (495 F.Cu / 152 B.Cu) |
+| vias de sinal | 68 | 68 | 96 |
+| vias de costura de terra | 71 | 234 | 222 |
 | triedro M2 | 63°, 206°, 326° — menor separação **97°** | 79°, 199°, 319° — menor separação **120°** | 64°, 184°, 304° — menor separação **120°** |
 | ângulos legais para furo | 89 de 360 | 171 de 360 | 181 de 360 |
 | deslocamento máx. no placement | 13,50 mm | 4,00 mm | 11,25 mm |
@@ -149,6 +149,8 @@ pads, a linha "PCB Edge" do footprint tem de cair na borda (desvio medido
 | 27 | Pino passante de peça não contava como obstáculo na face oposta. Só furo de fixação contava | DRC da v3: 3 `pth_inside_courtyard` — pinos de carcaça do J3 sob U5, R13 e C14 | a regra de furo passou a valer para pino (pad ≥ 0,8 mm). Via térmica de 0,6 mm continua de fora: o Ra-02 da v1 assenta sob as do WROOM-1U por projeto |
 | 28 | O roteador contava como plano a faixa entre as fileiras de pads de um QFN de passo fino | DRC da v3: grupo de GND solto — o escape do U2.1 terminava numa ilha sob o MPU6050 | sob o corpo de peça de passo fino, na face dela, o plano não conta como caminho (`router.py`, `sob_fino`). Mudou o roteamento da v1 e da v2 também; as duas continuam com DRC limpo |
 | 29 | Os furos de USB-C e SMA nunca foram cortados no modelo do invólucro | o cilindro começava fora do corpo, em −cx em vez de −cx/2 | ver `hardware/involucro/README.md` |
+| 35 | O roteador punha via sobre via e via dentro de pino passante. Cada par de pads era roteado à parte, e duas ligações da mesma net que trocavam de camada no mesmo ponto emitiam duas vias; nada impedia trocar de camada sobre o pad de um pino passante | DRC da v3 com avisos: 10 pares de vias empilhadas, vias de UART_TX e UART_RX a 0,2 mm do centro dos pinos 3 e 4 do J2, e pares de VBUS e VBAT com furos a 0 e 0,1 mm. O `build-hardware.sh` só lia erros, e no KiCad 10 isso é aviso | via nova a pelo menos furo + folga de furo (0,55 mm) de outra, reaproveitando a que está exatamente no ponto, e nunca sobre pino passante (`router.py`, `_perto_de_via` e `sem_via`). A v3 caiu de 108 para 96 vias de sinal. O `build-hardware.sh` agora reprova `hole_to_hole` e `holes_co_located` mesmo como aviso. **A v1 e a v2 não foram regeradas**: os arquivos versionados ainda têm 5 e 9 avisos de furo, e regerá-las muda o roteamento das duas |
+| 36 | As 12 vias térmicas do pad do WROOM-1U vinham da biblioteca com furo de 0,2 mm, o único da placa abaixo de 0,3 | furo de 0,2 mm em placa de 2 camadas: a JLCPCB e a PCBWay cobram à parte ou seguram o pedido na revisão de engenharia | todo furo metalizado sai com pelo menos `FURO_MIN` = 0,3 mm, e o gerador aborta se o anel ficar abaixo de 0,15 mm (`gen_pcb.py`, `alarga_furo`). Pad de 0,6 mm com furo de 0,3 dá o mesmo anel das vias; entre as vias térmicas sobram 0,69 mm de furo a furo. Roteamento inalterado |
 
 ### Abertos
 
@@ -179,6 +181,8 @@ pads, a linha "PCB Edge" do footprint tem de cair na borda (desvio medido
 - ERC com aviso tratado como erro
 - DRC com zonas preenchidas; violação de regra é falha dura, item desconectado
   é contado contra linha de base declarada (**zero** nas três versões)
+- furação: furo sobre furo ou encostado (`hole_to_hole`, `holes_co_located`)
+  é falha dura, mesmo sendo aviso no KiCad 10
 - contenção no contorno e colisão entre peças, separadas em mecânica e cobre
 - distância de cada capacitor de desacoplamento ao pino que serve
 - existência e validade de cada modelo 3D referenciado
