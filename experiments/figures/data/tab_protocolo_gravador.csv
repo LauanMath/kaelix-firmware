@@ -1,0 +1,12 @@
+item,valor
+registro_cabecalho_bytes,12
+leitura_bytes,131
+janela_cabecalho_bytes,161
+janela_amostras_bytes,6144
+por_ciclo_bytes,6460
+particao_bytes,10354688
+segmento_bytes,262144
+capacidade_bytes,9319219
+ciclos,1442
+intervalo_s,11
+horas,4.41

@@ -1,0 +1,32 @@
+\chapter{Dados por ensaio}\label{ap:tabelas}
+
+As Tabelas~\ref{tab:ap-descritores} e~\ref{tab:ap-velocidade} reúnem, para cada ensaio com o motor em operação, a mediana dos descritores da seção~\ref{sec:descritores} e a velocidade eficaz de \SIrange{10}{184}{\hertz} em cada eixo do sensor. Os trechos analisados estão na Tabela~\ref{tab:ensaios}. Os valores foram calculados janela a janela pelas mesmas análises que produzem os resultados da seção~\ref{cap:resultados}.
+
+\begin{table}[!htb]
+\centering\small
+\caption{Mediana dos descritores em cada ensaio da coleta de 2 de novembro de 2026}\label{tab:ap-descritores}
+\begin{tabular}{@{}lcrrrrrrrr@{}}
+\toprule
+Máquina & Rodada & Janelas & Rotação & $d_1$ & $d_2$ & $d_3$ & $d_4$ & $d_5$ & $d_6$ \\
+ & & & (r/min) & (mm/s) & (mg) & & & (mm/s) & (mm/s) \\
+\midrule
+\linhasDescritoresEnsaio
+\bottomrule
+\end{tabular}
+\fonte{elaborada pelo próprio autor.}
+\nota{mediana entre as janelas de cada ensaio. $d_1$: velocidade eficaz de \SIrange{10}{184}{\hertz}, a maior entre os três eixos; $d_2$: valor eficaz total da aceleração; $d_3$: curtose em excesso, a maior entre os eixos; $d_4$: fator de crista, o maior entre os eixos; $d_5$ e $d_6$: velocidade eficaz na rotação e no dobro da rotação, com os três eixos combinados (seção~\ref{sec:descritores}). A rotação é a mediana da rotação estimada.}
+\end{table}
+
+\begin{table}[!htb]
+\centering\small
+\caption{Velocidade eficaz de 10~Hz a 184~Hz em cada eixo do sensor, nos ensaios da coleta de 2 de novembro de 2026}\label{tab:ap-velocidade}
+\begin{tabular}{@{}lclll@{}}
+\toprule
+Máquina & Rodada & Axial (mm/s) & Radial 1 (mm/s) & Radial 2 (mm/s) \\
+\midrule
+\linhasVelocidadeEnsaio
+\bottomrule
+\end{tabular}
+\fonte{elaborada pelo próprio autor.}
+\nota{em cada célula, o eixo do sensor, a mediana entre as janelas do ensaio e, entre parênteses, o primeiro e o terceiro quartis. A direção de cada eixo em relação ao eixo do motor está na seção~\ref{sec:ensaios}.}
+\end{table}

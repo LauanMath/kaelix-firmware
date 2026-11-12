@@ -1,0 +1,8 @@
+ensaio,maquina,rodada,inicio_local,fim_local,rotacao_busca_hz
+0,Dobradeira,1,12:48:00,13:00:26,29.8
+1,Guilhotina,1,13:05:55,13:08:56,30.0
+2,Motor parado,1,13:11:00,13:14:50,
+3,Calandra,1,13:18:45,13:25:00,29.8
+4,Compressor,1,13:40:11,13:48:15,59.8
+5,Calandra,2,15:47:15,15:55:50,29.8
+6,Guilhotina,2,16:00:05,16:06:27,30.0

@@ -1,0 +1,214 @@
+Verbosity level can be increased via `-v, -vv, or -vvv` option
+Collected 11 tests
+
+Processing test_gateway_v3 in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_gateway_v3/test_gateway_v3.cpp:208: test_reading_json_matches_contract_fields	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:209: test_reading_without_gateway_clock_has_null_reception_time	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:210: test_wave_prefix_lists_missing_fragments_and_is_valid_json	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:211: test_wave_prefix_fits_worst_case_buffer	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:212: test_device_config_from_api_json	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:213: test_device_config_invalid_or_too_many_windows_is_refused	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:214: test_unknown_command_is_ignored	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:215: test_device_table_relays_until_telemetry_confirms	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:216: test_device_table_records_what_was_radiated_and_ignores_repeated_set	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:217: test_device_table_is_bounded	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:218: test_assembler_rebuilds_window_with_retransmission	[PASSED]
+test/test_gateway_v3/test_gateway_v3.cpp:219: test_assembler_rejects_wrong_size_and_counts_duplicate_once	[PASSED]
+-------------- native:test_gateway_v3 [PASSED] Took 5.66 seconds --------------
+
+Processing test_signal_processing in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_signal_processing/test_signal_processing.cpp:128: test_rms_of_sine_wave	[PASSED]
+test/test_signal_processing/test_signal_processing.cpp:129: test_rms_of_constant_signal	[PASSED]
+test/test_signal_processing/test_signal_processing.cpp:130: test_crest_factor_of_sine_wave	[PASSED]
+test/test_signal_processing/test_signal_processing.cpp:131: test_kurtosis_of_two_point_distribution	[PASSED]
+test/test_signal_processing/test_signal_processing.cpp:132: test_kurtosis_of_uniform_like_signal	[PASSED]
+test/test_signal_processing/test_signal_processing.cpp:133: test_dominant_frequency_of_sine_wave	[PASSED]
+test/test_signal_processing/test_signal_processing.cpp:134: test_dominant_frequency_uses_velocity_not_acceleration	[PASSED]
+test/test_signal_processing/test_signal_processing.cpp:135: test_dominant_frequency_ignores_below_band	[PASSED]
+test/test_signal_processing/test_signal_processing.cpp:136: test_dominant_frequency_ignores_above_band	[PASSED]
+----------- native:test_signal_processing [PASSED] Took 3.43 seconds -----------
+
+Processing test_crc16 in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_crc16/test_crc16.cpp:152: test_crc16_check_vector	[PASSED]
+test/test_crc16/test_crc16.cpp:153: test_crc16_empty_is_initial_value	[PASSED]
+test/test_crc16/test_crc16.cpp:154: test_crc16_detects_single_bit_flip	[PASSED]
+test/test_crc16/test_crc16.cpp:155: test_crc16_detects_byte_swap	[PASSED]
+test/test_crc16/test_crc16.cpp:156: test_crc16_valores_de_referencia_do_pacote_de_20_bytes	[PASSED]
+test/test_crc16/test_crc16.cpp:157: test_crc16_no_comprimento_maximo_ainda_calcula	[PASSED]
+test/test_crc16/test_crc16.cpp:158: test_crc16_ponteiro_nulo_com_n_maior_que_zero_viola_contrato	[PASSED]
+test/test_crc16/test_crc16.cpp:159: test_crc16_acima_da_cota_de_comprimento_viola_contrato	[PASSED]
+----------------- native:test_crc16 [PASSED] Took 2.47 seconds -----------------
+
+Processing test_spool in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_spool/test_spool.cpp:226: test_records_read_back_in_order_with_kind	[PASSED]
+test/test_spool/test_spool.cpp:227: test_unacknowledged_records_survive_reboot	[PASSED]
+test/test_spool/test_spool.cpp:228: test_acknowledged_position_survives_reboot	[PASSED]
+test/test_spool/test_spool.cpp:229: test_new_records_after_reboot_follow_old_ones	[PASSED]
+test/test_spool/test_spool.cpp:230: test_record_cut_by_power_loss_is_skipped_on_next_boot	[PASSED]
+test/test_spool/test_spool.cpp:231: test_corrupted_payload_is_not_delivered	[PASSED]
+test/test_spool/test_spool.cpp:232: test_capacity_drops_oldest_and_counts_loss	[PASSED]
+test/test_spool/test_spool.cpp:233: test_ack_frees_space_of_finished_segments	[PASSED]
+test/test_spool/test_spool.cpp:234: test_record_larger_than_buffer_is_reported_not_consumed	[PASSED]
+test/test_spool/test_spool.cpp:235: test_record_larger_than_capacity_is_refused	[PASSED]
+test/test_spool/test_spool.cpp:236: test_append_recovers_when_descriptor_is_closed_behind_it	[PASSED]
+----------------- native:test_spool [PASSED] Took 4.05 seconds -----------------
+
+Processing test_vibration in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_vibration/test_vibration.cpp:43: test_frozen_window_does_not_publish_features	[PASSED]
+test/test_vibration/test_vibration.cpp:44: test_nonfinite_window_does_not_publish_features	[PASSED]
+test/test_vibration/test_vibration.cpp:45: test_window_in_g_has_expected_rms_and_frequency	[PASSED]
+--------------- native:test_vibration [PASSED] Took 2.57 seconds ---------------
+
+Processing test_remote_logs in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_remote_logs/test_remote_logs.cpp:20: test_snapshot_retains_pending_logs_and_exposes_overflow_gap	[PASSED]
+test/test_remote_logs/test_remote_logs.cpp:20: test_diagnostic_messages_are_bounded_and_utf8_boundary_preserved	[PASSED]
+-------------- native:test_remote_logs [PASSED] Took 2.26 seconds --------------
+
+Processing test_packet_decode in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_packet_decode/test_packet_decode.cpp:40: test_decode_independent_v2_frame_and_missing_temperature	[PASSED]
+test/test_packet_decode/test_packet_decode.cpp:41: test_corruption_does_not_publish_packet	[PASSED]
+test/test_packet_decode/test_packet_decode.cpp:42: test_truncated_and_unsupported_frames_are_rejected	[PASSED]
+------------- native:test_packet_decode [PASSED] Took 2.56 seconds -------------
+
+Processing test_thermistor in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_thermistor/test_thermistor.cpp:325: test_celsius_at_nominal_resistance	[PASSED]
+test/test_thermistor/test_thermistor.cpp:326: test_celsius_decreases_as_resistance_increases	[PASSED]
+test/test_thermistor/test_thermistor.cpp:327: test_celsius_sanity_bounds	[PASSED]
+test/test_thermistor/test_thermistor.cpp:328: test_resistance_from_adc_midscale	[PASSED]
+test/test_thermistor/test_thermistor.cpp:329: test_resistance_from_adc_quarter_scale	[PASSED]
+test/test_thermistor/test_thermistor.cpp:330: test_resistance_from_millivolts_matches_divider	[PASSED]
+test/test_thermistor/test_thermistor.cpp:331: test_from_adc_extremos_da_faixa_util_convertem_e_reportam_ok	[PASSED]
+test/test_thermistor/test_thermistor.cpp:333: test_from_adc_curto_reporta_thermistor_shorted	[PASSED]
+test/test_thermistor/test_thermistor.cpp:334: test_from_adc_aberto_reporta_thermistor_open	[PASSED]
+test/test_thermistor/test_thermistor.cpp:335: test_from_adc_acima_do_fundo_de_escala_reporta_thermistor_open	[PASSED]
+test/test_thermistor/test_thermistor.cpp:336: test_from_adc_falha_de_campo_nao_produz_temperatura_plausivel	[PASSED]
+test/test_thermistor/test_thermistor.cpp:337: test_from_millivolts_extremos_sao_defeito_de_campo	[PASSED]
+test/test_thermistor/test_thermistor.cpp:338: test_to_celsius_entrada_nao_finita_propaga_sem_abortar	[PASSED]
+test/test_thermistor/test_thermistor.cpp:340: test_from_adc_adc_max_zero_viola_contrato	[PASSED]
+test/test_thermistor/test_thermistor.cpp:341: test_from_adc_r_fixed_nao_positivo_viola_contrato	[PASSED]
+test/test_thermistor/test_thermistor.cpp:342: test_from_millivolts_vcc_zero_viola_contrato	[PASSED]
+test/test_thermistor/test_thermistor.cpp:343: test_to_celsius_resistencia_nao_positiva_viola_contrato	[PASSED]
+test/test_thermistor/test_thermistor.cpp:344: test_to_celsius_r_nominal_nao_positivo_viola_contrato	[PASSED]
+test/test_thermistor/test_thermistor.cpp:345: test_to_celsius_beta_zero_viola_contrato	[PASSED]
+test/test_thermistor/test_thermistor.cpp:346: test_to_celsius_t_nominal_no_zero_absoluto_viola_contrato	[PASSED]
+test/test_thermistor/test_thermistor.cpp:347: test_parametros_nao_finitos_violam_contrato	[PASSED]
+-------------- native:test_thermistor [PASSED] Took 2.96 seconds --------------
+
+Processing test_gateway_delivery in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_gateway_delivery/test_gateway_delivery.cpp:81: test_confirmed_batch_accepts_out_of_order_duplicates	[PASSED]
+test/test_gateway_delivery/test_gateway_delivery.cpp:82: test_incomplete_repeated_foreign_confirmations_are_rejected	[PASSED]
+test/test_gateway_delivery/test_gateway_delivery.cpp:83: test_wrong_session_schema_status_and_sequence_type_are_rejected	[PASSED]
+test/test_gateway_delivery/test_gateway_delivery.cpp:84: test_fifo_keeps_pending_batch_when_new_events_arrive	[PASSED]
+test/test_gateway_delivery/test_gateway_delivery.cpp:85: test_null_measurements_and_uint32_are_preserved	[PASSED]
+test/test_gateway_delivery/test_gateway_delivery.cpp:86: test_anomaly_and_original_reception_time_survive_retries	[PASSED]
+test/test_gateway_delivery/test_gateway_delivery.cpp:87: test_confirmation_requires_valid_utc_and_known_fields	[PASSED]
+----------- native:test_gateway_delivery [PASSED] Took 4.90 seconds -----------
+
+Processing test_protocol in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_protocol/test_protocol.cpp:254: test_telemetry_roundtrip_and_nan_is_preserved	[PASSED]
+test/test_protocol/test_protocol.cpp:255: test_telemetry_rejects_bit_flip_length_and_wrong_type	[PASSED]
+test/test_protocol/test_protocol.cpp:256: test_telemetry_rejects_infinite_measurement	[PASSED]
+test/test_protocol/test_protocol.cpp:257: test_config_roundtrip_with_full_routine	[PASSED]
+test/test_protocol/test_protocol.cpp:258: test_factory_config_is_valid	[PASSED]
+test/test_protocol/test_protocol.cpp:259: test_config_validation_rejects_each_out_of_range_field	[PASSED]
+test/test_protocol/test_protocol.cpp:260: test_reply_carries_config_and_command	[PASSED]
+test/test_protocol/test_protocol.cpp:261: test_reply_without_config_has_documented_size	[PASSED]
+test/test_protocol/test_protocol.cpp:262: test_reply_for_other_device_is_ignored	[PASSED]
+test/test_protocol/test_protocol.cpp:263: test_invalid_config_in_reply_keeps_ack_and_flags_rejection	[PASSED]
+test/test_protocol/test_protocol.cpp:264: test_fragment_roundtrip_and_counts	[PASSED]
+test/test_protocol/test_protocol.cpp:265: test_burst_map_covers_largest_window	[PASSED]
+test/test_protocol/test_protocol.cpp:266: test_airtime_matches_lora_formula	[PASSED]
+test/test_protocol/test_protocol.cpp:267: test_routine_inside_and_outside_window	[PASSED]
+test/test_protocol/test_protocol.cpp:268: test_routine_end_is_exclusive_and_skips_weekend	[PASSED]
+test/test_protocol/test_protocol.cpp:269: test_routine_crossing_midnight_uses_start_day	[PASSED]
+test/test_protocol/test_protocol.cpp:270: test_empty_routine_is_always_active	[PASSED]
+test/test_protocol/test_protocol.cpp:271: test_link_loss_reverts_tentative_then_enters_fallback_and_recovers	[PASSED]
+test/test_protocol/test_protocol.cpp:272: test_link_heard_commits_tentative_config	[PASSED]
+--------------- native:test_protocol [PASSED] Took 3.75 seconds ---------------
+
+Processing test_isolation_forest in native environment
+--------------------------------------------------------------------------------
+Building...
+Testing...
+test/test_isolation_forest/test_isolation_forest.cpp:530: test_path_length_correction_known_values	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:531: test_path_length_correction_regression_bit_exact	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:532: test_tree_path_length_left_leaf	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:533: test_tree_path_length_right_leaf	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:534: test_tree_path_length_regression_bit_exact	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:536: test_forest_score_matches_manual_formula	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:537: test_shorter_path_scores_higher_than_longer_path	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:538: test_forest_score_regression_bit_exact	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:540: test_tree_path_length_self_referencing_child_returns_depth_exceeded	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:541: test_tree_path_length_corrupt_max_depth_still_terminates	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:542: test_tree_path_length_child_beyond_n_nodes_returns_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:543: test_tree_path_length_negative_child_returns_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:544: test_tree_path_length_root_out_of_range_returns_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:545: test_tree_path_length_feature_index_beyond_vector_returns_index_out_of_range	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:546: test_tree_path_length_corrupt_leaf_marker_returns_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:547: test_tree_path_length_null_array_returns_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:548: test_tree_path_length_zero_nodes_returns_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:550: test_forest_score_zero_trees_returns_model_absent	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:551: test_forest_score_negative_trees_returns_model_absent	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:552: test_forest_score_malformed_tree_propagates_error	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:553: test_forest_score_cyclic_tree_propagates_depth_exceeded	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:555: test_validate_accepts_wellformed_forest	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:556: test_validate_rejects_zero_trees_as_model_absent	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:557: test_validate_rejects_backward_child_as_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:558: test_validate_rejects_child_beyond_n_nodes_as_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:559: test_validate_rejects_feature_index_beyond_n_features	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:560: test_validate_rejects_non_finite_threshold	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:561: test_validate_rejects_non_finite_leaf_correction	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:562: test_validate_rejects_null_array_as_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:563: test_validate_rejects_zero_nodes_as_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:564: test_validate_rejects_root_out_of_range_as_malformed	[PASSED]
+test/test_isolation_forest/test_isolation_forest.cpp:565: test_validate_rejects_max_depth_beyond_project_limit	[PASSED]
+----------- native:test_isolation_forest [PASSED] Took 4.06 seconds -----------
+
+=================================== SUMMARY ===================================
+Environment    Test                    Status    Duration
+-------------  ----------------------  --------  ------------
+native         test_gateway_v3         PASSED    00:00:05.659
+native         test_signal_processing  PASSED    00:00:03.428
+native         test_crc16              PASSED    00:00:02.470
+native         test_spool              PASSED    00:00:04.048
+native         test_vibration          PASSED    00:00:02.568
+native         test_remote_logs        PASSED    00:00:02.260
+native         test_packet_decode      PASSED    00:00:02.564
+native         test_thermistor         PASSED    00:00:02.959
+native         test_gateway_delivery   PASSED    00:00:04.895
+native         test_protocol           PASSED    00:00:03.750
+native         test_isolation_forest   PASSED    00:00:04.058
+================ 127 test cases: 127 succeeded in 00:00:38.661 ================
+real 39.69
+user 23.51
+sys 10.22

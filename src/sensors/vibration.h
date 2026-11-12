@@ -38,11 +38,13 @@ struct VibrationFeatures {
     float dominant_freq_hz;
 };
 
-// Inicializa o MPU6050 via I2C (endereço 0x68).
+// Inicializa MPU6050 (ID 0x68) ou MPU6515 (ID 0x74) via I2C no endereço
+// 0x68, pinagem em device_pins.h, +/-4 g, DLPF 184 Hz.
+// Perfis possuem FIFOs distintos.
 [[nodiscard]] kaelix::Status vibration_init();
 
-// Preenche `dst` com `n` amostras do acelerômetro e escreve em
-// `out_sample_rate_hz` a taxa EFETIVA medida durante a rajada.
+// Preenche `dst` com `n` amostras do eixo Z em g, sem a média da janela, e escreve em
+// `out_sample_rate_hz` a taxa estimada pela observação do FIFO na rajada.
 //
 // Em erro, `dst` NÃO é escrito. Esta é a regra que motivou partir a
 // função em duas: a versão anterior preenchia o buffer com zeros e

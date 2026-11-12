@@ -1,0 +1,5 @@
+codigo,sf,bw_khz,taxa_kbps,fragmento_ms,mapa_ms,rajada_no_ar_ms,rajada_com_intervalos_ms,ciclo_api_s,intervalo_minimo_s
+0,9,125.0,1.76,1251,288,32096,33346,35.612,36
+1,7,125.0,5.47,400,93,10257,11507,13.781,14
+2,7,250.0,10.94,200,47,5129,6379,8.657,9
+3,7,500.0,21.88,100,24,2565,3815,6.096,7

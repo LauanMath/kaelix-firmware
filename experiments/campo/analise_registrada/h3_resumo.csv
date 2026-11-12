@@ -1,0 +1,49 @@
+maquina,assinatura,detector,semente,n_treino,n_teste,fracao_A0,A50_mm_s,spearman,principal
+Dobradeira,1x,Isolation Forest,0,25,25,0.04,nan,-0.3295765308015309,True
+Dobradeira,1x,Isolation Forest,1,25,25,0.08,nan,0.07009284572853854,False
+Dobradeira,1x,Isolation Forest,2,25,25,0.04,nan,-0.7264966110222969,False
+Dobradeira,1x,Isolation Forest,3,25,25,0.0,nan,0.7456771974243418,False
+Dobradeira,1x,Isolation Forest,4,25,25,0.04,nan,-0.0661008472314572,False
+Dobradeira,1x,Isolation Forest,5,25,25,0.04,nan,0.5985447484988482,False
+Dobradeira,1x,Isolation Forest,6,25,25,0.04,nan,-0.11770590385768959,False
+Dobradeira,1x,Isolation Forest,7,25,25,0.04,nan,nan,False
+Dobradeira,1x,Isolation Forest,8,25,25,0.0,nan,0.8869352486728362,False
+Dobradeira,1x,Isolation Forest,9,25,25,0.04,nan,0.8334181402589127,False
+Dobradeira,1x,MAD,0,25,25,0.32,2.725,0.6828098110554063,False
+Dobradeira,2x,Isolation Forest,0,25,25,0.04,nan,0.5213047164715471,False
+Guilhotina,1x,Isolation Forest,0,13,35,0.0,nan,0.569570156643923,True
+Guilhotina,1x,Isolation Forest,1,13,35,0.0,nan,nan,False
+Guilhotina,1x,Isolation Forest,2,13,35,0.0,nan,0.38682107216634565,False
+Guilhotina,1x,Isolation Forest,3,13,35,0.0,nan,0.791695947586535,False
+Guilhotina,1x,Isolation Forest,4,13,35,0.0,nan,0.8821906290237144,False
+Guilhotina,1x,Isolation Forest,5,13,35,0.0,nan,0.7784030640030016,False
+Guilhotina,1x,Isolation Forest,6,13,35,0.0,nan,0.807583321944115,False
+Guilhotina,1x,Isolation Forest,7,13,35,0.0,nan,0.8750162041538205,False
+Guilhotina,1x,Isolation Forest,8,13,35,0.0,nan,0.7784030640030016,False
+Guilhotina,1x,Isolation Forest,9,13,35,0.0,nan,0.7062354231461375,False
+Guilhotina,1x,MAD,0,13,35,0.0,nan,0.5326700297961082,False
+Guilhotina,2x,Isolation Forest,0,13,35,0.0,2.1977272727272728,0.895480977447129,False
+Calandra,1x,Isolation Forest,0,25,47,0.1702127659574468,nan,0.40633542854951726,True
+Calandra,1x,Isolation Forest,1,25,47,0.10638297872340426,nan,0.6655801317735767,False
+Calandra,1x,Isolation Forest,2,25,47,0.0851063829787234,nan,0.9383632082537174,False
+Calandra,1x,Isolation Forest,3,25,47,0.14893617021276595,nan,0.9688990400847091,False
+Calandra,1x,Isolation Forest,4,25,47,0.0,nan,0.3187490944640861,False
+Calandra,1x,Isolation Forest,5,25,47,0.1276595744680851,nan,0.6875812756405363,False
+Calandra,1x,Isolation Forest,6,25,47,0.0851063829787234,nan,0.6120707000599858,False
+Calandra,1x,Isolation Forest,7,25,47,0.06382978723404255,nan,0.6618174472010815,False
+Calandra,1x,Isolation Forest,8,25,47,0.10638297872340426,nan,0.8923240511675693,False
+Calandra,1x,Isolation Forest,9,25,47,0.0851063829787234,nan,0.5211877258349293,False
+Calandra,1x,MAD,0,25,47,0.0,nan,0.8649582124933007,False
+Calandra,2x,Isolation Forest,0,25,47,0.1702127659574468,nan,0.12345892563401573,False
+Compressor,1x,Isolation Forest,0,17,16,0.0,nan,-0.19615408497602016,True
+Compressor,1x,Isolation Forest,1,17,16,0.0,nan,-0.35496289658035857,False
+Compressor,1x,Isolation Forest,2,17,16,0.0,nan,0.30392200166435834,False
+Compressor,1x,Isolation Forest,3,17,16,0.0,nan,nan,False
+Compressor,1x,Isolation Forest,4,17,16,0.0,nan,nan,False
+Compressor,1x,Isolation Forest,5,17,16,0.0,nan,-0.07310231134510854,False
+Compressor,1x,Isolation Forest,6,17,16,0.0625,nan,-0.4335332543164778,False
+Compressor,1x,Isolation Forest,7,17,16,0.0,nan,nan,False
+Compressor,1x,Isolation Forest,8,17,16,0.0,nan,0.6153208855434987,False
+Compressor,1x,Isolation Forest,9,17,16,0.0,nan,0.17286814000677247,False
+Compressor,1x,MAD,0,17,16,0.0,nan,nan,False
+Compressor,2x,Isolation Forest,0,17,16,0.0,nan,0.6867623084004862,False

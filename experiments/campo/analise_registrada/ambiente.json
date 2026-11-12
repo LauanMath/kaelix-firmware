@@ -1,0 +1,13 @@
+{
+  "python": "3.12.14",
+  "numpy": "2.5.2",
+  "scipy": "1.18.0",
+  "sklearn": "1.9.0",
+  "registro": "registro_v1.md",
+  "registro_sha256": "fd0afc8941d16b3a54405489172938302b7687f25b8596e17cbd719b0013e39d",
+  "vereditos": {
+    "H1": "indeterminada",
+    "H2": "refutada",
+    "H3": "refutada"
+  }
+}

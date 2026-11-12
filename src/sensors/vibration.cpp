@@ -6,11 +6,19 @@
 #include <cmath>
 #include <cstring>
 
-// TODO (passo 2 do roteiro): implementar a leitura I2C real do MPU6050
-// (I2Cdevlib-MPU6050, endereço 0x68) dentro de `vibration_acquire`. O
-// restante deste arquivo já está no formato final: enquanto a aquisição
-// não existir, ela devolve Status::NotImplemented e NADA é escrito no
-// buffer — nenhum caminho produz features a partir de dado fabricado.
+#if defined(ARDUINO)
+#include <Arduino.h>
+#include "../device_pins.h"
+#include "../serial_log.h"
+#include <Wire.h>
+#include <esp_timer.h>
+#endif
+
+// MPU6050 register map: https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
+// MPU6515 (ID 0x74) usa ACCEL_CONFIG2 e FIFO de 512 bytes, conforme
+// https://github.com/torvalds/linux/blob/master/drivers/iio/imu/inv_mpu6050/inv_mpu_core.c
+// FIFO de aceleração XYZ; análise no eixo Z, em g, removendo a média
+// da janela para excluir gravidade/bias. Não equivale à calibração de campo.
 
 namespace kaelix::sensors {
 namespace {
@@ -34,10 +42,47 @@ float s_samples[VIBRATION_MAX_SAMPLES];
 float s_fft_re[VIBRATION_MAX_SAMPLES];
 float s_fft_im[VIBRATION_MAX_SAMPLES];
 
-// O init ainda não tem o que inicializar, mas o estado existe para que
-// `vibration_read_features` possa recusar uma leitura antes dele — a
-// ordem init → read é contrato, e contrato não verificado é convenção.
+// A aquisição só é permitida após conferir identidade e configuração.
 bool s_initialized = false;
+
+#if defined(ARDUINO)
+constexpr uint8_t MPU_ADDRESS = 0x68;
+constexpr uint8_t FIFO_EN = 0x23;
+constexpr uint8_t USER_CTRL = 0x6A;
+float s_acquired[VIBRATION_MAX_SAMPLES];
+bool s_i2c_started = false;
+uint16_t s_fifo_capacity = 1024U;
+
+kaelix::Status write_register(uint8_t reg, uint8_t value) {
+    Wire.beginTransmission(MPU_ADDRESS);
+    Wire.write(reg);
+    Wire.write(value);
+    const uint8_t error = Wire.endTransmission();
+    if (error == 5U) return kaelix::Status::BusTimeout;
+    return error == 0U ? kaelix::Status::Ok : kaelix::Status::BusSilent;
+}
+
+kaelix::Status read_registers(uint8_t reg, uint8_t* bytes, uint8_t count) {
+    Wire.beginTransmission(MPU_ADDRESS);
+    Wire.write(reg);
+    const uint8_t error = Wire.endTransmission(false);
+    if (error == 5U) return kaelix::Status::BusTimeout;
+    if (error != 0U) return kaelix::Status::BusSilent;
+    if (Wire.requestFrom(MPU_ADDRESS, count) != count) return kaelix::Status::BusTimeout;
+    for (uint8_t i = 0U; i < count; ++i) bytes[i] = static_cast<uint8_t>(Wire.read());
+    return kaelix::Status::Ok;
+}
+
+int16_t signed_word(const uint8_t* bytes) {
+    const int32_t value = (static_cast<uint16_t>(bytes[0]) << 8U) | bytes[1];
+    return static_cast<int16_t>(value >= 32768 ? value - 65536 : value);
+}
+
+// Mesmo em falha, tentar parar o FIFO. Não publicar uma janela incompleta.
+kaelix::Status stop_fifo(kaelix::Status status) {
+    return kaelix::status_first_error(status, write_register(FIFO_EN, 0x00));
+}
+#endif
 
 constexpr bool is_power_of_two(uint16_t n) {
     return n != 0U && (static_cast<uint32_t>(n) & static_cast<uint32_t>(n - 1U)) == 0U;
@@ -48,18 +93,68 @@ constexpr bool is_power_of_two(uint16_t n) {
 kaelix::Status vibration_init() {
     s_initialized = false;
 
-    // TODO (Fase 2): reset do MPU6050, conferência do WHO_AM_I (0x68),
-    // fundo de escala do acelerômetro, sample-rate divider e — decisivo —
-    // o DLPF ABAIXO de fs/2. Sem filtro anti-aliasing configurado, todo
-    // conteúdo acima de 500 Hz dobra para dentro da banda de análise e
-    // fica indistinguível de sinal legítimo; a validade da feature
-    // `dominant_freq_hz` depende dessa configuração, que é decisão de
-    // projeto e não detalhe de driver.
-    //
-    // Devolver NotImplemented (e não `false`, e muito menos Ok) é o que
-    // impede o ciclo de seguir como se houvesse acelerômetro: o código
-    // ainda não escrito precisa falhar alto, não silenciar.
+#if defined(ARDUINO)
+    if (!s_i2c_started) {
+        if (!Wire.begin(kaelix::device::MPU_SDA, kaelix::device::MPU_SCL, 400000U))
+            return kaelix::Status::BusSilent;
+        Wire.setTimeOut(20);
+        s_i2c_started = true;
+    }
+    Wire.beginTransmission(MPU_ADDRESS);
+    const uint8_t probe = Wire.endTransmission();
+    if (probe == 5U) return kaelix::Status::BusTimeout;
+    if (probe != 0U) return kaelix::Status::SensorAbsent;
+    uint8_t identity = 0U;
+    KAELIX_CHECK(read_registers(0x75, &identity, 1));
+#if defined(KAELIX_BENCH) && KAELIX_BENCH
+    kaelix::logging::log("kaelix", "DEBUG", "IMU", "mpu addr=0x%02X who_am_i=0x%02X supported=0x68/0x74",
+                  MPU_ADDRESS, identity);
+#endif
+    if (identity != 0x68 && identity != 0x74) return kaelix::Status::SensorIdentity;
+    const bool is_mpu6515 = identity == 0x74;
+    s_fifo_capacity = is_mpu6515 ? 512U : 1024U;
+#if defined(KAELIX_BENCH) && KAELIX_BENCH
+    kaelix::logging::log("kaelix", "DEBUG", "IMU", "imu profile=%s fifo=%u bytes",
+                  is_mpu6515 ? "MPU6515" : "MPU6050", static_cast<unsigned>(s_fifo_capacity));
+#endif
+    KAELIX_CHECK(write_register(0x6B, 0x80)); // DEVICE_RESET
+    delay(100);
+    KAELIX_CHECK(write_register(0x6B, 0x01)); // PLL X gyro, awake
+    KAELIX_CHECK(write_register(0x6C, 0x00));
+    KAELIX_CHECK(write_register(0x1A, 0x01)); // DLPF accel 184 Hz; clock 1 kHz
+    KAELIX_CHECK(write_register(0x19, 0x00)); // divider 0 -> 1 kHz
+    KAELIX_CHECK(write_register(0x1C, 0x08)); // +/-4 g, 8192 LSB/g
+    if (is_mpu6515) {
+        // A_DLPF_CFG=1 (184 Hz), ACCEL_FCHOICE_B=0: filtro ativo, 1 kHz.
+        KAELIX_CHECK(write_register(0x1D, 0x01));
+    }
+    KAELIX_CHECK(write_register(FIFO_EN, 0x00));
+    KAELIX_CHECK(write_register(USER_CTRL, 0x00));
+    delay(100); // cobre também o tempo de partida do giroscópio MPU6515
+    uint8_t identity_after_reset = 0U;
+    KAELIX_CHECK(read_registers(0x75, &identity_after_reset, 1));
+    if (identity_after_reset != identity) return kaelix::Status::SensorIdentity;
+    uint8_t config[4]{};
+    KAELIX_CHECK(read_registers(0x19, config, 4));
+#if defined(KAELIX_BENCH) && KAELIX_BENCH
+    kaelix::logging::log("kaelix", "DEBUG", "IMU", "mpu div=0x%02X dlpf=0x%02X accel=0x%02X expected=00/01/08",
+                  config[0], config[1], config[3]);
+#endif
+    if (config[0] != 0x00 || config[1] != 0x01 || config[3] != 0x08)
+        return kaelix::Status::SensorIdentity;
+    if (is_mpu6515) {
+        uint8_t accel_filter = 0U;
+        KAELIX_CHECK(read_registers(0x1D, &accel_filter, 1));
+#if defined(KAELIX_BENCH) && KAELIX_BENCH
+        kaelix::logging::log("kaelix", "DEBUG", "IMU", "mpu accel_config2=0x%02X expected=0x01", accel_filter);
+#endif
+        if (accel_filter != 0x01) return kaelix::Status::SensorIdentity;
+    }
+    s_initialized = true;
+    return kaelix::Status::Ok;
+#else
     return kaelix::Status::NotImplemented;
+#endif
 }
 
 kaelix::Status vibration_acquire(float* dst, uint16_t n, float* out_sample_rate_hz) {
@@ -70,16 +165,65 @@ kaelix::Status vibration_acquire(float* dst, uint16_t n, float* out_sample_rate_
     KAELIX_REQUIRE(is_power_of_two(n), kaelix::Status::LengthNotPowerOfTwo);
     KAELIX_REQUIRE(s_initialized, kaelix::Status::NotInitialized);
 
-    // TODO (Fase 2): rajada de `n` amostras pelo FIFO do MPU6050, com o
-    // sample-rate divider do próprio sensor (clock do sensor, não do
-    // ESP32) ou por timer de hardware — não por laço de polling, que fica
-    // sujeito à preempção do FreeRTOS e à latência variável do I2C.
-    // Medir o intervalo real com esp_timer_get_time() nas duas pontas,
-    // escrever fs_efetivo = (n-1)/Δt em *out_sample_rate_hz e devolver
-    // Status::SampleRateMissed se o desvio exceder
-    // VIBRATION_SAMPLE_RATE_TOLERANCE. O laço tem cota superior provável:
-    // `n`, já validado acima.
+#if defined(ARDUINO)
+    KAELIX_CHECK(write_register(FIFO_EN, 0x00));
+    KAELIX_CHECK(write_register(USER_CTRL, 0x00));
+    KAELIX_CHECK(write_register(USER_CTRL, 0x04)); // reset FIFO while disabled
+    KAELIX_CHECK(write_register(USER_CTRL, 0x40)); // enable FIFO engine
+    const int64_t started = esp_timer_get_time();
+    KAELIX_CHECK(write_register(FIFO_EN, 0x08)); // XYZ, 6 bytes/sample
+    uint16_t acquired = 0U;
+    int64_t first_sample_us = 0;
+    int64_t last_sample_us = 0;
+    double sum = 0.0;
+    while (acquired < n) {
+        if (esp_timer_get_time() - started > 1500000LL)
+            return stop_fifo(kaelix::Status::BusTimeout);
+        uint8_t interrupt = 0U;
+        kaelix::Status status = read_registers(0x3A, &interrupt, 1);
+        if (kaelix::is_error(status)) return stop_fifo(status);
+        uint8_t count_bytes[2]{};
+        status = read_registers(0x72, count_bytes, 2);
+        if (kaelix::is_error(status)) return stop_fifo(status);
+        const uint16_t count = (static_cast<uint16_t>(count_bytes[0]) << 8U) | count_bytes[1];
+        if ((interrupt & 0x10U) != 0U || count >= s_fifo_capacity)
+            return stop_fifo(kaelix::Status::SampleRateMissed);
+        if (count < 6U) {
+            delayMicroseconds(100);
+            yield();
+            continue;
+        }
+        // Timestamp da observação do FIFO, antes da leitura I2C.
+        // Desconta a fila: o registro mais antigo precede os demais por 1 ms.
+        const int64_t observed = esp_timer_get_time() - (count / 6U - 1U) * 1000LL;
+        uint8_t xyz[6]{};
+        status = read_registers(0x74, xyz, 6);
+        if (kaelix::is_error(status)) return stop_fifo(status);
+        const int16_t z = signed_word(xyz + 4);
+        if (z <= -32760 || z >= 32760)
+            return stop_fifo(kaelix::Status::SensorSaturated);
+        if (acquired == 0U) first_sample_us = observed;
+        last_sample_us = observed;
+        s_acquired[acquired++] = static_cast<float>(z) / 8192.0f;
+        sum += s_acquired[acquired - 1U];
+    }
+    KAELIX_CHECK(stop_fifo(kaelix::Status::Ok));
+    const int64_t elapsed = last_sample_us - first_sample_us;
+    if (elapsed <= 0) return kaelix::Status::SampleRateMissed;
+    const float rate = static_cast<float>(n - 1U) * 1000000.0f / static_cast<float>(elapsed);
+    if (std::fabs(rate - VIBRATION_SAMPLE_RATE_HZ) >
+        VIBRATION_SAMPLE_RATE_HZ * VIBRATION_SAMPLE_RATE_TOLERANCE)
+        return kaelix::Status::SampleRateMissed;
+    const float mean = static_cast<float>(sum / n);
+    for (uint16_t i = 0U; i < n; ++i) dst[i] = s_acquired[i] - mean;
+    *out_sample_rate_hz = rate;
+#if defined(KAELIX_BENCH) && KAELIX_BENCH
+    kaelix::logging::log("kaelix", "DEBUG", "IMU", "mpu fs=%.2f Hz z_mean=%.5f g", rate, mean);
+#endif
+    return kaelix::Status::Ok;
+#else
     return kaelix::Status::NotImplemented;
+#endif
 }
 
 kaelix::Status vibration_features_from_samples(const float* samples, uint16_t n,

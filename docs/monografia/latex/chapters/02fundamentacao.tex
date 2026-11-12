@@ -1,0 +1,434 @@
+\chapter{Fundamentação e trabalhos relacionados}\label{cap:fundamentacao}
+
+A detecção de falhas numa máquina sem histórico de falhas compara cada medição com a operação normal registrada da própria máquina, e um detector treinado só com essa operação indica que a vibração mudou, sem identificar o defeito. Num motor de indução de quatro polos alimentado em \SI{60}{\hertz}, como os dois motores de placa legível da coleta, o desbalanceamento e o desalinhamento produzem componentes na rotação, perto de \SI{30}{\hertz}, e no dobro dela, dentro da banda de \SI{184}{\hertz} do filtro interno do sensor usado. As ressonâncias excitadas por defeitos localizados de rolamento ficam na faixa de alguns quilohertz, acima dessa banda. A ISO 20816-3, norma da Organização Internacional de Normalização (ISO), avalia a severidade da vibração pela velocidade eficaz de \SIrange{10}{1000}{\hertz}, e, segundo \citeonline{schwirzer2002}, na série de normas que ela substituiu, uma mudança de \SI{25}{\percent} do limite superior da zona B é considerada significativa. Entre os nós sensores de baixo custo consultados, com microcontrolador ESP32, acelerômetro microeletromecânico e Isolation Forest, os dois que informam o falso alarme em operação normal, ou permitem calculá-lo, marcam de \SI{22}{\percent} a \SI{38}{\percent} dela, e o de componentes mais próximos dos deste trabalho calcula o valor eficaz da aceleração, sem o critério da norma.
+
+\section{Manutenção baseada em condição e detecção de falhas}\label{sec:fund-manutencao}
+
+A manutenção de equipamentos industriais é classificada em três estratégias, conforme o momento da intervenção \cite{mobley2002}. Na manutenção corretiva, o equipamento opera até falhar e só então é reparado. A falha ocorre em momento não escolhido e pode danificar componentes íntegros. Na manutenção preventiva, a intervenção ocorre em intervalos fixos de tempo ou de uso, definidos pela vida média esperada dos componentes; componentes em bom estado são trocados sem necessidade, e um defeito que surge antes do fim do intervalo continua sem aviso. Na manutenção preditiva, ou baseada em condição, a intervenção é decidida pelo estado medido do equipamento. Uma grandeza física que reflete a condição da máquina é acompanhada, e a intervenção é programada quando essa grandeza indica degradação.
+
+\citeonline{jardine2006} descrevem um programa de manutenção baseada em condição em três etapas: aquisição de dados, processamento dos dados e tomada de decisão. Na aquisição, escolhem-se a grandeza, o sensor, o ponto de medição e a taxa de amostragem. No processamento, extraem-se indicadores dos dados brutos, e, na decisão, esses indicadores definem se a máquina precisa de intervenção. No sistema deste trabalho, a aquisição é feita por um transmissor colado à carcaça do motor, que envia janelas de sinal bruto a um \textit{gateway}, e o \textit{gateway} as repassa a uma interface de programação de aplicações (API), que as grava num banco de dados (seção~\ref{cap:sistema}). O processamento corresponde aos descritores $d_1$ a $d_6$ calculados em cada janela (seção~\ref{sec:descritores}), e a decisão, ao detector e ao limiar (seção~\ref{sec:detectores}).
+
+Entre as grandezas usadas no monitoramento de máquinas rotativas, a vibração é a mais difundida, porque a maior parte dos defeitos mecânicos, como desbalanceamento, desalinhamento, folga e desgaste de rolamentos e de engrenagens, altera as forças dinâmicas no interior da máquina, e essas forças se transmitem à carcaça, onde podem ser medidas sem interromper a operação \cite{randall2011livro}. Neste trabalho, a decisão é tomada para cada janela. O detector atribui um escore à janela, e ela é marcada quando o escore passa de um limiar calculado na operação normal da própria máquina (seção~\ref{sec:detectores}). A marcação indica que a vibração se afastou da operação normal registrada, sem identificar o defeito presente (seção~\ref{sec:fund-deteccao}).
+
+\section{Vibração de máquinas rotativas}\label{sec:fund-vibracao}
+
+Os defeitos ligados à rotação produzem componentes em múltiplos da frequência de rotação, e, num motor de quatro polos em \SI{60}{\hertz}, as seis primeiras ordens ficam abaixo de \SI{200}{\hertz}.
+
+\subsection{Deslocamento, velocidade e aceleração}
+
+Vibração é o movimento oscilatório de um ponto em torno de uma posição de equilíbrio, descrito pelo deslocamento $x(t)$, pela velocidade $v(t) = \mathrm{d}x/\mathrm{d}t$ ou pela aceleração $a(t) = \mathrm{d}v/\mathrm{d}t$. Para um movimento senoidal de frequência $f$ e amplitude de deslocamento $X$, com $\omega = 2\pi f$,
+\begin{equation}
+x(t) = X \sin(\omega t), \qquad v(t) = \omega X \cos(\omega t), \qquad a(t) = -\omega^2 X \sin(\omega t).
+\label{eq:fund-senoide}
+\end{equation}
+As amplitudes das três grandezas diferem por fatores de $\omega$. Para um mesmo deslocamento, a velocidade cresce na proporção da frequência, e a aceleração, na proporção do quadrado dela. Por isso, o deslocamento dá mais peso às baixas frequências, a aceleração, às altas, e a velocidade fica entre as duas. Um acelerômetro mede $a(t)$, e a velocidade é obtida por integração (seção~\ref{sec:fund-integracao}).
+
+\subsection{Descritores escalares de um sinal}\label{sec:fund-descritores}
+
+Um trecho de sinal de vibração pode ser resumido por descritores escalares. Para uma janela de $N$ amostras $x_n$, com média $\bar{x}$ e desvio-padrão $\sigma$, o valor eficaz $x_{\mathrm{ef}}$, o valor de pico $x_{\mathrm{p}}$, o fator de crista $F_c$ e a curtose $\kappa$ são \cite{randall2011livro}
+\begin{equation}
+x_{\mathrm{ef}} = \sqrt{\frac{1}{N}\sum_{n=1}^{N} x_n^2}, \qquad
+x_{\mathrm{p}} = \max_n |x_n|, \qquad
+F_c = \frac{x_{\mathrm{p}}}{x_{\mathrm{ef}}}, \qquad
+\kappa = \frac{1}{N\sigma^4}\sum_{n=1}^{N} (x_n-\bar{x})^4.
+\label{eq:fund-descritores}
+\end{equation}
+
+O valor eficaz mede a energia média do sinal e é a base da avaliação de severidade (seção~\ref{sec:fund-norma}). Com a média da janela removida, como na seção~\ref{sec:descritores}, ele é igual ao desvio-padrão da janela. O fator de crista e a curtose medem a impulsividade, isto é, quanto o sinal concentra a energia em eventos breves e intensos. Uma senoide pura tem $F_c = \sqrt{2} \approx \num{1,41}$ e $\kappa = \num{1,5}$, e um ruído gaussiano tem $\kappa = 3$. A curtose em excesso, $\kappa - 3$, vale 0 para o ruído gaussiano e $-\num{1,5}$ para a senoide. Um sinal formado por impactos espaçados tem fator de crista e curtose maiores, porque poucos valores extremos dominam a média da quarta potência.
+
+Num sensor de três eixos, a soma dos quadrados das três acelerações em cada instante é o quadrado do módulo do vetor aceleração e não muda quando os eixos do sensor giram. Por isso, o valor eficaz total $\sqrt{a_{x,\mathrm{ef}}^2 + a_{y,\mathrm{ef}}^2 + a_{z,\mathrm{ef}}^2}$, em que $a_{x,\mathrm{ef}}$ é o valor eficaz da aceleração no eixo X, não depende da orientação do sensor na carcaça. O descritor $d_2$ deste trabalho é esse valor eficaz total, e $d_3$ e $d_4$, a maior curtose em excesso e o maior fator de crista entre os três eixos, não dependem do sentido nem da ordem dos eixos (seção~\ref{sec:descritores}). A distribuição da energia por frequência, que os descritores escalares não informam, é obtida pela análise espectral (seção~\ref{sec:fund-espectro}).
+
+\subsection{Defeitos síncronos com a rotação e ordens}\label{sec:fund-ordens}
+
+Desbalanceamento e desalinhamento produzem forças que se repetem a cada volta do eixo e, por isso, geram componentes em múltiplos inteiros da frequência de rotação $f_r$ \cite{randall2011livro}. No desbalanceamento, o centro de massa do rotor não coincide com o eixo de rotação, e a força centrífuga resultante gira com o eixo. A assinatura dominante é a componente em $f_r$, cuja amplitude cresce com a massa desbalanceada. No desalinhamento, os eixos acoplados não são colineares, e o acoplamento impõe esforços que variam mais de uma vez por volta. A assinatura típica é o aumento da componente em $2 f_r$ em relação à de $f_r$ \cite{randall2011livro}.
+
+A componente em $k f_r$ é chamada de ordem $k$ da rotação, ou ordem $k$x, e o espectro expresso em ordens permite comparar máquinas que giram em rotações diferentes \cite{randall2011livro}. Os descritores $d_5$ e $d_6$ deste trabalho são as amplitudes eficazes das ordens 1x e 2x em velocidade (seção~\ref{sec:descritores}), e a assinatura de desbalanceamento injetada é uma senoide na ordem 1x, somada aos dois eixos radiais (seção~\ref{sec:injecao}). Num motor a \SI{1760}{r/min}, rotação nominal da placa da guilhotina (Tabela~\ref{tab:ensaios}), $f_r = \SI{29,33}{\hertz}$, e as seis primeiras ordens, até \SI{176,0}{\hertz}, estão abaixo do filtro de \SI{184}{\hertz} do sensor (seção~\ref{sec:fund-sensor}).
+
+\subsection{Rotação do motor de indução}\label{sec:fund-motor}
+
+Num motor de indução trifásico, a rotação depende da frequência da rede elétrica e do número de polos. O campo magnético do estator gira na velocidade síncrona
+\begin{equation}
+n_s = \frac{120\, f_e}{P},
+\label{eq:fund-sincrona}
+\end{equation}
+em rotações por minuto, com $f_e$ a frequência da rede, em hertz, e $P$ o número de polos do enrolamento \cite{chapman2012}. O rotor gira abaixo dessa velocidade, porque a diferença entre as duas induz corrente nas barras do rotor e produz torque. A diferença relativa é o escorregamento,
+\begin{equation}
+s = \frac{n_s - n_m}{n_s},
+\label{eq:fund-escorregamento}
+\end{equation}
+em que $n_m$ é a rotação do eixo. O escorregamento cresce com a carga do motor \cite{chapman2012}.
+
+Na rede de \SI{60}{\hertz}, um motor de quatro polos tem velocidade síncrona de \SI{1800}{r/min}, ou \SI{30}{\hertz}, e um de dois polos, de \SI{3600}{r/min}, ou \SI{60}{\hertz}. Os motores da guilhotina e da calandra têm rotação nominal de \SI{1760}{r/min} e de \SI{1715}{r/min} (Tabela~\ref{tab:ensaios}), abaixo dos \SI{1800}{r/min} de quatro polos, com escorregamentos nominais de \SI{2,2}{\percent} e \SI{4,7}{\percent} pela Equação~\eqref{eq:fund-escorregamento}. Como a rotação real fica abaixo da síncrona e muda com a carga, a rotação de um motor sem tacômetro pode ser estimada pelo maior pico do espectro numa faixa estreita em torno do valor esperado, como na seção~\ref{sec:descritores}.
+
+\subsection{Defeitos de rolamento e o limite da banda}\label{sec:fund-rolamento}
+
+Um defeito localizado numa pista de rolamento é atingido periodicamente pelos elementos rolantes, e cada passagem produz um impacto. A taxa de repetição dos impactos depende da geometria do rolamento e da rotação \cite{randall2011}. Pelas expressões de \citeonline{randall2011}, no rolamento SKF~6205 a \SI{1750}{r/min}, as frequências de passagem dos elementos rolantes pela pista externa e pela pista interna são de \SI{104,6}{\hertz} e \SI{157,9}{\hertz}, abaixo de \SI{184}{\hertz}. A maior parte da energia do defeito, porém, está em outras frequências. Cada impacto excita as ressonâncias da estrutura entre o rolamento e o ponto de medição, na faixa de alguns quilohertz, e a frequência de repetição surge no espectro como modulação dessa portadora de alta frequência \cite{randall2011}. Nos estágios iniciais do defeito, as linhas na própria frequência de repetição são fracas diante das demais componentes da máquina.
+
+Por isso, o diagnóstico de rolamentos usa a análise de envelope. O sinal é filtrado numa banda em torno da ressonância, e o espectro da amplitude instantânea do sinal filtrado mostra linhas na frequência de repetição dos impactos \cite{randall2011}. A curtose espectral, calculada em função da frequência, localiza a banda em que o sinal é mais impulsivo \cite{antoni2006,antoni2007}. Com o filtro de \SI{184}{\hertz}, o sensor usado não adquire a banda de ressonância, e este trabalho não avalia defeitos de rolamento. O nó de \citeonline{jakobsen2024} usa um acelerômetro ADXL1002, amostrado a \SI{40}{\kilo\hertz}, para defeitos de rolamento e outro, ADXL362, amostrado a \SI{400}{\hertz}, para desbalanceamento e rotação abaixo de \SI{200}{\hertz}.
+
+\section{Aquisição com acelerômetros MEMS}\label{sec:fund-aquisicao}
+
+A taxa de amostragem fixa a maior frequência representável, a duração da janela fixa a resolução do espectro, e o sensor determina a banda e o ruído da medição. No transmissor deste trabalho, a taxa é de \SI{1}{\kilo\hertz}, a janela tem \num{512} amostras por canal e o filtro do sensor tem banda de \SI{184}{\hertz} (seção~\ref{sec:sistema}).
+
+\subsection{Amostragem, frequência de Nyquist e rebatimento}\label{sec:fund-amostragem}
+
+Um sistema digital registra amostras $a_n = a(n/f_s)$ do sinal contínuo $a(t)$, tomadas à taxa de amostragem $f_s$. Pelo teorema da amostragem, um sinal pode ser reconstruído a partir das amostras se não tiver componentes acima de $f_s/2$, a frequência de Nyquist \cite{brandt2011}. Uma componente acima desse limite produz amostras idênticas às de uma componente de frequência mais baixa, na faixa de 0 a $f_s/2$. O fenômeno é chamado de rebatimento (\textit{aliasing}), e a frequência aparente de uma componente em $f$ é
+\begin{equation}
+f_{\mathrm{ap}} = \left| f - f_s \, \mathrm{arred}\!\left(\frac{f}{f_s}\right) \right|,
+\label{eq:fund-rebatimento}
+\end{equation}
+em que $\mathrm{arred}$ indica o arredondamento para o inteiro mais próximo.
+
+Depois da amostragem, uma componente rebatida não pode ser separada de uma componente real na mesma frequência. Para evitar o rebatimento, o conteúdo acima de $f_s/2$ é removido antes da amostragem, por um filtro passa-baixas chamado de filtro antirrebatimento \cite{brandt2011}. Com $f_s = \SI{1}{\kilo\hertz}$, a frequência de Nyquist é de \SI{500}{\hertz}. A ordem 20 de uma rotação de \SI{29,5}{\hertz}, em \SI{590}{\hertz}, seria observada, pela Equação~\eqref{eq:fund-rebatimento}, em $|590 - 1000| = \SI{410}{\hertz}$, e uma componente em \SI{1,6}{\kilo\hertz}, em $|1600 - 2000| = \SI{400}{\hertz}$.
+
+\subsection{Análise espectral}\label{sec:fund-espectro}
+
+A representação de um sinal em função da frequência é obtida pela transformada discreta de Fourier. Para uma janela de $N$ amostras multiplicadas por uma janela de ponderação $w_n$,
+\begin{equation}
+X_k = \sum_{n=0}^{N-1} w_n\, x_n\, e^{-\mathrm{j}2\pi k n / N}, \qquad k = 0, 1, \ldots, N-1,
+\label{eq:fund-dft}
+\end{equation}
+e o coeficiente $X_k$ corresponde à frequência $f_k = k f_s/N$ \cite{brandt2011}; sem ponderação, $w_n = 1$ em todas as amostras. Para a aceleração, o coeficiente é escrito $A_k$, como na seção~\ref{sec:descritores}. A resolução em frequência é $\Delta f = f_s/N$, o inverso da duração da janela, e duas componentes mais próximas que $\Delta f$ não são separadas. Com $f_s = \SI{1}{\kilo\hertz}$ e \num{512} amostras, a janela dura \SI{0,512}{\second}, e a resolução é de \SI{1,95}{\hertz}. As ordens de uma rotação de \SI{29}{\hertz}, espaçadas de \SI{29}{\hertz}, são separadas, mas a rotação de um motor de dois polos, um pouco abaixo de \SI{60}{\hertz}, e uma componente na frequência da rede, de \SI{60}{\hertz}, podem ficar a menos de \SI{1,95}{\hertz} uma da outra.
+
+A janela finita provoca vazamento espectral, em que uma componente cuja frequência não coincide com uma das frequências $f_k$ espalha energia pelos coeficientes vizinhos. O vazamento diminui quando o sinal é multiplicado por uma janela que o leve suavemente a zero nas bordas, como a de Hann, $w_n = \sin^2(\pi n/N)$ \cite{brandt2011}. A ponderação também reduz a altura do pico. Uma senoide de amplitude $A_0$ cuja frequência coincide com $f_k$ produz $|X_k| = A_0 \sum_n w_n/2$, e a amplitude é recuperada por
+\begin{equation}
+A_0 = \frac{2\,|X_k|}{\sum_{n=0}^{N-1} w_n},
+\label{eq:fund-amplitude}
+\end{equation}
+com valor eficaz $A_0/\sqrt{2}$. A soma das ponderações é $N$ sem janela e $N/2$ com a janela de Hann, e a divisão por $N/2$ corrige a perda de amplitude da janela na leitura de $d_5$ e $d_6$ (seção~\ref{sec:descritores}).
+
+O preenchimento com zeros acrescenta amostras nulas ao fim da janela antes da transformada. Com $M$ amostras no total, as linhas do espectro passam a ficar espaçadas de $f_s/M$, e o pico de uma componente pode ser localizado entre as linhas do espectro original \cite{brandt2011}. Quando a frequência da componente fica entre duas linhas, o pico do espectro sem preenchimento é menor que o da Equação~\eqref{eq:fund-amplitude}, e o preenchimento aproxima uma linha do máximo. A resolução continua sendo $f_s/N$, porque os zeros não trazem informação sobre o sinal, e duas componentes mais próximas que esse valor continuam sem separação \cite{brandt2011}. Com preenchimento até \num{16} vezes o tamanho da janela, como na estimativa da rotação da seção~\ref{sec:descritores}, o espaçamento entre linhas passa de \SI{1,95}{\hertz} para \SI{0,12}{\hertz}, e a resolução continua de \SI{1,95}{\hertz}.
+
+Para um sinal aleatório, o espectro de uma única janela tem variância alta, e a densidade espectral de potência é estimada pela média dos espectros de várias janelas \cite{brandt2011}, como na medição do ruído em repouso (seção~\ref{sec:res-aquisicao}).
+
+\subsection{Acelerômetros piezoelétricos e MEMS}\label{sec:fund-mems}
+
+O transdutor de referência no monitoramento de máquinas é o acelerômetro piezoelétrico, em que uma massa sísmica apoiada sobre um cristal gera carga elétrica proporcional à força e, portanto, à aceleração. A frequência de ressonância interna é elevada, o que dá ao sensor resposta plana até vários quilohertz, e o ruído é baixo. Em contrapartida, o sensor exige condicionamento de sinal dedicado e tem custo alto \cite{albarbar2008}.
+
+Os acelerômetros capacitivos de sistemas microeletromecânicos (MEMS) são fabricados pelos processos dos circuitos integrados. Uma microestrutura suspensa por molas se desloca sob aceleração, e o deslocamento altera a capacitância entre eletrodos. O conversor analógico-digital fica no mesmo encapsulamento, e o sensor entrega amostras digitais por um barramento serial. Nos preços de varejo sem imposto reunidos por \citeonline[p.~3]{komarizadehasl2021}, os acelerômetros piezoelétricos custam de \num{380} a \num{1610} euros, e os quatro MEMS mais baratos, de \num{5,4} a \num{12,0} euros, uma diferença de uma a duas ordens de grandeza. O mais barato dessa lista é o MPU-6050, usado neste trabalho. A banda e o ruído dos MEMS variam entre modelos. Há MEMS projetados para monitoramento de condição, com banda de dezenas de quilohertz, e MEMS de consumo, projetados para orientação e movimento humano, com banda de algumas centenas de hertz \cite{albarbar2008,fidali2024}.
+
+Os estudos de adequação de MEMS ao monitoramento de condição compararam sensores com banda de quilohertz a um piezoelétrico de referência. \citeonline{albarbar2008} reprovaram, entre três MEMS capacitivos, o de banda mais estreita, de \SI{1500}{\hertz}, por sensibilidade instável, ruído e desvio de fase, e \citeonline{fidali2024} observaram curtose menos sensível em dois MEMS digitais que no piezoelétrico, em rolamentos novos e com defeitos, sem concluir de forma inequívoca pela vantagem do piezoelétrico. \citeonline{albarbar2008} e \citeonline{rodrigues2021} apontam também a falta de calibração rastreável desses sensores.
+
+A densidade espectral de ruído, em µg/$\sqrt{\text{Hz}}$, indica o ruído por unidade de banda. Para ruído branco de densidade $\rho_a$, o ruído eficaz de aceleração numa banda de largura $B$ é $\rho_a\sqrt{B}$. Em velocidade, a densidade em cada frequência é dividida por $2\pi f$ (seção~\ref{sec:fund-integracao}), e o ruído eficaz de $f_1$ a $f_2$ é
+\begin{equation}
+\sigma_v = \frac{\rho_a}{2\pi}\sqrt{\frac{1}{f_1} - \frac{1}{f_2}}.
+\label{eq:fund-ruido-velocidade}
+\end{equation}
+De \SIrange{10}{184}{\hertz}, o termo $1/f_2$ reduz o resultado em menos de \SI{3}{\percent}, e o limite inferior determina o ruído de velocidade.
+
+\subsection{O sensor do transmissor}\label{sec:fund-sensor}
+
+O transmissor usa um módulo MPU-6050, unidade de medição inercial de consumo que reúne acelerômetro e giroscópio de três eixos e entrega as amostras por um barramento de circuito interintegrado (I2C) \cite{invensense2011ps}. O sensor do módulo respondeu ao registrador de identificação (\texttt{WHO\_AM\_I}) com o valor \texttt{0x74}, e o mapa de registradores do MPU-6050 indica \texttt{0x68} \cite{invensense2012rm}. A marcação do chip não foi conferida. Os valores da Tabela~\ref{tab:fund-sensor} são os dos documentos do MPU-6050 e valem para o sensor usado se o chip do módulo seguir esses documentos.
+
+\begin{table}[!htb]
+\centering\small
+\caption{Características do acelerômetro do MPU-6050 usadas neste trabalho}\label{tab:fund-sensor}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Característica & Valor \\
+\midrule
+Faixa de medição & $\pm2$, $\pm4$, $\pm8$ ou $\pm\SI{16}{g}$, programável \\
+Resolução do conversor & \num{16} bits \\
+Taxa de saída de dados & \SIrange{4}{1000}{\hertz}, programável \\
+Banda do filtro passa-baixas digital & \SIrange{5}{260}{\hertz}, programável \\
+Densidade espectral de ruído & \ruidoDatasheet~µg/$\sqrt{\text{Hz}}$ a \SI{10}{\hertz} \\
+Tolerância de zero, eixos X e Y & $\pm\SI{50}{mg}$ \\
+\bottomrule
+\end{tabular}
+\fonte{elaborada pelo próprio autor, com dados de InvenSense (\citeyear{invensense2011ps}, \citeyear{invensense2012rm}).}
+\end{table}
+
+A taxa máxima de saída do acelerômetro, de \SI{1}{\kilo\hertz}, põe a frequência de Nyquist em \SI{500}{\hertz}, e a banda efetiva é fixada pelo filtro passa-baixas digital interno, configurado pelo campo \texttt{DLPF\_CFG} em sete níveis, de \SIrange{260}{5}{\hertz}, com atraso de \SIrange{0}{19}{\milli\second} \cite{invensense2012rm}. Na configuração de banda mais larga, \texttt{DLPF\_CFG}~=~0, a banda do acelerômetro é de \SI{260}{\hertz}, e não há configuração em que o acelerômetro opere sem o filtro \cite{invensense2012rm}. O \textit{firmware} usa \texttt{DLPF\_CFG}~=~1, com banda de \SI{184}{\hertz} e atraso de \SI{2,0}{\milli\second} (seção~\ref{sec:sistema}).
+
+O mapa de registradores informa a banda e o atraso de cada configuração, mas não a ordem do filtro nem a atenuação acima da banda, e a proteção contra rebatimento não é especificada pelo fabricante \cite{invensense2012rm}. Como o filtro é digital, ele atua depois da conversão analógico-digital. Uma componente acima de \SI{500}{\hertz} que não seja atenuada antes da conversão pode, por isso, ser observada na frequência dada pela Equação~\eqref{eq:fund-rebatimento}.
+
+Pela densidade da Tabela~\ref{tab:fund-sensor}, tratada como ruído branco, o ruído eficaz de aceleração na banda de \SI{184}{\hertz} é de $\ruidoDatasheet\sqrt{184}~\si{\micro g} \approx \SI{5,4}{mg}$ por eixo, e, pela Equação~\eqref{eq:fund-ruido-velocidade}, o ruído de velocidade de \SIrange{10}{184}{\hertz} é de \SI{0,19}{\milli\meter\per\second} por eixo. Na faixa de $\pm\SI{4}{g}$ usada pelo \textit{firmware}, o menor degrau do conversor de \num{16} bits é de $8\,g/2^{16} \approx \SI{0,12}{mg}$, abaixo do ruído. A tolerância de zero de $\pm\SI{50}{mg}$ permite uma componente contínua de até \SI{0,49}{\meter\per\second\squared} dentro da especificação, e o efeito dela sobre a velocidade depende do método de integração (seção~\ref{sec:fund-integracao}).
+
+\section{Severidade e critério de mudança pela norma}\label{sec:fund-norma}
+
+A avaliação da vibração de máquinas industriais medida em partes não rotativas foi normalizada pela ISO 20816-3:2022, que substituiu a ISO 10816-3:2009 \citemesmoautor{International Organization for Standardization}{iso108163_2009}{iso208163_2022}. Em 28 de outubro de 2026, a segunda edição, ISO 20816-3:2026, cancelou e substituiu a de 2022 \cite{iso208163_2026}. Só o resumo do escopo da edição de 2026 foi consultado, e as afirmações desta seção sobre o conteúdo da norma referem-se à edição de 2022, salvo indicação. A edição de 2022 se aplica a máquinas com potência acima de \SI{15}{\kilo\watt} e rotação de \SIrange{120}{30000}{r/min} e usa como grandeza de avaliação a velocidade eficaz de banda larga. Segundo o texto dessa edição, vibrações com o mesmo valor eficaz de velocidade na faixa de \SIrange{10}{1000}{\hertz} podem, em geral, ser consideradas de mesma severidade, ao passo que critérios em deslocamento ou em aceleração variariam com a frequência \cite{iso208163_2022}.
+
+Pela mesma razão, a norma exige do instrumento resposta plana ao menos de \SI{10}{\hertz} a \SI{1000}{\hertz}, com limite inferior de até \SI{2}{\hertz} para máquinas com rotação próxima de \SI{600}{r/min} ou abaixo, e determina que o sinal de acelerômetros montados na carcaça seja integrado para fornecer velocidade, sem prescrever o método de integração \cite{iso208163_2022}. O descritor $d_1$ deste trabalho é a velocidade eficaz de \SIrange{10}{184}{\hertz} e não atende a essa banda (seção~\ref{sec:descritores}). Pelo teorema de Parseval, o quadrado do valor eficaz de um sinal é a soma das potências das suas componentes de frequência, e, no mesmo sinal, o valor eficaz numa faixa contida em outra não passa do valor eficaz na faixa maior. A velocidade de \SIrange{10}{184}{\hertz} é, portanto, um limite inferior da velocidade de \SIrange{10}{1000}{\hertz} no mesmo sinal. Um valor de $d_1$ acima de um limite de zona indica que o valor de banda larga também está acima dele, e um valor abaixo do limite não indica a zona.
+
+O valor medido é comparado com quatro zonas de avaliação \cite{iso208163_2022}:
+\begin{alineas}
+  \item zona A: vibração típica de máquinas recém-comissionadas;
+  \item zona B: vibração aceitável para operação de longo prazo sem restrição;
+  \item zona C: vibração insatisfatória para operação contínua de longo prazo, em que a máquina pode operar por período limitado, até haver oportunidade de ação corretiva;
+  \item zona D: vibração severa o suficiente para causar dano à máquina.
+\end{alineas}
+
+Os limites entre as zonas dependem do porte da máquina e do tipo de fundação (Tabela~\ref{tab:fund-zonas}). A fundação é rígida quando a primeira frequência natural do conjunto formado pela máquina e pela fundação está suficientemente acima da frequência de excitação principal, e flexível no caso contrário \cite{iso208163_2022}. Os valores de zona são iguais nas edições de 2009 e de 2022.
+
+\begin{table}[!htb]
+\centering\small
+\caption{Limites entre as zonas de avaliação para máquinas industriais, em velocidade eficaz de banda larga}\label{tab:fund-zonas}
+\begin{tabular}{@{}ll*{3}{>{\centering\arraybackslash}p{15mm}}@{}}
+\toprule
+Grupo & Fundação & \multicolumn{3}{c}{Limite entre zonas (\si{\milli\meter\per\second})} \\
+\cmidrule(l){3-5}
+ & & A/B & B/C & C/D \\
+\midrule
+1 & rígida & \num{2,3} & \num{4,5} & \num{7,1} \\
+1 & flexível & \num{3,5} & \num{7,1} & \num{11,0} \\
+2 & rígida & \num{1,4} & \num{2,8} & \num{4,5} \\
+2 & flexível & \num{2,3} & \num{4,5} & \num{7,1} \\
+\bottomrule
+\end{tabular}
+\fonte{elaborada pelo próprio autor, com dados de \citeonline{iso208163_2022}.}
+\nota{grupo 1: potência acima de \SI{300}{\kilo\watt}, ou máquinas elétricas com altura de eixo de pelo menos \SI{315}{\milli\meter}; grupo 2: potência de \SIrange{15}{300}{\kilo\watt}, ou máquinas elétricas com altura de eixo de \SIrange{160}{315}{\milli\meter}.}
+\end{table}
+
+Segundo \citeonline{schwirzer2002}, a série ISO 10816, que a ISO 20816-3 substituiu, avalia também a mudança do valor medido. Um aumento ou uma diminuição da vibração de \SI{25}{\percent} do limite superior da zona B é considerado significativo e pede a investigação da causa \cite{schwirzer2002}. O critério de \SI{25}{\percent} foi tirado dessa fonte secundária e não foi conferido no texto da ISO 20816-3. No grupo 2 em fundação rígida, o limite B/C é de \SI{2,8}{\milli\meter\per\second}, o menor da Tabela~\ref{tab:fund-zonas}, e \SI{25}{\percent} dele são \SI{0,7}{\milli\meter\per\second}, o tamanho de mudança de referência das hipóteses deste trabalho (seção~\ref{sec:hipoteses}). Pelo resumo do escopo, a edição de 2026 continua a dar diretrizes para o valor da vibração em regime e para as mudanças desse valor \cite{iso208163_2026}.
+
+Pela edição de 2022, o compressor da coleta, com \SI{22}{\kilo\watt}, está no grupo 2, e a guilhotina e a calandra, com \SI{9,2}{\kilo\watt} e \SI{2,2}{\kilo\watt}, ficam abaixo da potência mínima da norma (Tabela~\ref{tab:ensaios}). O escopo da edição de 2026 não fixa potência mínima e inclui os motores elétricos de qualquer tipo com acoplamento flexível \cite{iso208163_2026}, mas os limites de zona dessa edição não foram consultados. Na guilhotina e na calandra, os \SI{0,7}{\milli\meter\per\second} servem só como referência de tamanho de mudança.
+
+\subsection{Integração de aceleração para velocidade}\label{sec:fund-integracao}
+
+A velocidade pode ser obtida da aceleração por integração no domínio do tempo ou no domínio da frequência \cite{brandt2014}. No domínio do tempo, a velocidade é aproximada pela soma acumulada das amostras de aceleração multiplicadas pelo intervalo de amostragem. Uma componente contínua na aceleração, como um desvio de zero do sensor, é integrada como uma rampa, e o erro cresce com a duração do registro. Uma componente contínua de \SI{50}{mg}, a tolerância de zero do MPU-6050, integrada durante \SI{0,512}{\second}, produziria uma rampa de velocidade de \SI{0,25}{\meter\per\second} no fim da janela.
+
+No domínio da frequência, cada componente de frequência $f$ da velocidade é a componente correspondente da aceleração dividida por $\mathrm{j}2\pi f$, pela relação da Equação~\eqref{eq:fund-senoide}. Com os coeficientes $A_k$ da transformada discreta de Fourier da aceleração,
+\begin{equation}
+V_k =
+\begin{cases}
+\dfrac{A_k}{\mathrm{j}2\pi f_k}, & f_1 \le |f_k| \le f_2,\\[2ex]
+0, & \text{fora dessa faixa},
+\end{cases}
+\label{eq:fund-integracao}
+\end{equation}
+em que, para $k > N/2$, $f_k = (k - N)\,f_s/N$ é a frequência negativa correspondente, e a velocidade no tempo é obtida pela transformada inversa. Anular os coeficientes fora da faixa elimina a componente contínua e a divisão por zero em $f = 0$. Pelo teorema de Parseval, o valor eficaz da velocidade, sem janela de ponderação, pode ser calculado direto dos coeficientes, como $v_{\mathrm{ef}} = \sqrt{\textstyle\sum_k |V_k|^2}/N$. \citeonline{brandt2014} compararam os dois métodos e concluíram que a regra do trapézio, no domínio do tempo, produz resultados enviesados, sobretudo nas frequências mais altas, e que a integração no domínio da frequência é a mais exata para registros longos, de mais de cerca de 16 mil amostras. As janelas deste trabalho têm \num{512} amostras e foram integradas no domínio da frequência, sem janela de ponderação, de \SIrange{10}{184}{\hertz} (seção~\ref{sec:descritores}).
+
+Uma componente de \SI{0,7}{\milli\meter\per\second} eficazes na ordem 1x de um motor a \SI{1760}{r/min}, com $f_r = \SI{29,33}{\hertz}$, corresponde a $2\pi f_r \cdot \SI{0,7}{\milli\meter\per\second} = \SI{0,129}{\meter\per\second\squared}$, ou \SI{13,2}{mg} eficazes de aceleração. A parcela do ruído do sensor contida numa linha do espectro sem ponderação, com a densidade da Tabela~\ref{tab:fund-sensor}, é de $\rho_a\sqrt{\Delta f} \approx \SI{0,56}{mg}$, e o ruído de toda a banda de \SI{184}{\hertz} é de \SI{5,4}{mg} (seção~\ref{sec:fund-sensor}).
+
+\section{Detecção por afastamento da operação normal}\label{sec:fund-deteccao}
+
+A condição de uma máquina pode ser avaliada de modos diferentes, conforme os dados disponíveis para treinar o modelo \cite{chandola2009}. Na abordagem supervisionada, o modelo aprende com exemplos rotulados de cada condição, a normal e cada tipo de falha, e classifica novos dados numa dessas classes. Na abordagem semissupervisionada, ou de classe única, o modelo aprende apenas com exemplos da condição normal e marca o que se afasta dela. Na abordagem não supervisionada, não há rótulo, e o modelo supõe que as anomalias são raras e diferentes da maioria dos dados.
+
+Uma máquina recém-instalada não tem histórico de falhas, e reunir exemplos rotulados de cada defeito exige que eles ocorram. Os dados de operação normal existem desde o primeiro dia, e um dispositivo instalado numa máquina sem histórico é treinado só com eles \cite{chandola2009}. O modelo resultante detecta o afastamento da operação normal, sem identificar o defeito presente.
+
+Neste trabalho, a linha de base de cada máquina é o conjunto de janelas de treino da operação normal, e o detector compara cada janela nova com ela (seção~\ref{sec:detectores}). O detector principal é o Isolation Forest, e a regra por mediana e desvio absoluto mediano (MAD) é usada só como descrição.
+
+Na literatura de monitoramento de condição, essa abordagem é chamada de detecção de novidade, definida como o reconhecimento de que os dados de teste diferem, em algum aspecto, dos dados disponíveis no treino \cite{pimentel2014}. O modelo descreve só a classe normal, numa classificação de classe única, e a abordagem é usada quando os dados anormais não bastam para modelar as outras classes. Cada dado novo recebe um escore de novidade, e um limiar sobre esse escore define a fronteira entre o normal e o anormal \cite{pimentel2014}. \citeonline[p.~647]{worden2000} trataram o nível mais baixo da detecção de dano, em que o método só sinaliza o desvio da condição normal, e mediram esse desvio pela discordância da análise de valores discrepantes. Na análise de valores discrepantes, o limiar da discordância depende do número de observações e do número de dimensões do problema \cite[p.~650]{worden2000}.
+
+\citeonline{worden2007} reuniram em axiomas os princípios do monitoramento de integridade estrutural. Pelo axioma II, a avaliação do dano exige a comparação entre dois estados do sistema, e mesmo a detecção sem exemplos de dano depende de um conjunto de treino que represente o estado normal \cite[p.~1640, 1642]{worden2007}. Pelo axioma III, a existência e a localização do dano podem ser identificadas sem exemplos rotulados, mas o tipo e a severidade em geral só são identificados com aprendizado supervisionado. Pelo axioma IVb, sem uma extração de descritores feita para isso, quanto mais sensível uma medida é ao dano, mais sensível ela é às mudanças das condições de operação e de ambiente. Pelo axioma VI, há um compromisso entre a sensibilidade de um algoritmo ao dano e a sua capacidade de rejeitar ruído \cite[p.~1640]{worden2007}.
+
+A estabilidade da condição normal ao longo do tempo foi medida por \citeonline{manson2000}. Os autores acompanharam por pouco mais de \num{11} dias uma placa de compósito sem dano, inspecionada por ondas de Lamb, e usaram como condição normal os dados de uma hora ou de um dia. Quando a temperatura da sala passou de \SI{20}{\celsius} para \SI{31}{\celsius}, os dados da mesma placa sem dano se afastaram da condição normal e passaram do limiar, e uma condição normal formada por um período curto marcou como valores discrepantes parte dos dados de um período mais longo da mesma placa \cite[p.~330--331]{manson2000}. Os autores concluíram que uma condição normal que não representa a variação da estrutura pode marcar como defeituosa uma estrutura sem defeito \cite[p.~333]{manson2000}.
+
+\subsection{Isolation Forest}\label{sec:fund-iforest}
+
+O Isolation Forest parte de que as anomalias são poucas e diferentes e, por isso, mais fáceis de isolar do restante dos dados do que os pontos normais \cite{liu2008}. O algoritmo constrói um conjunto de árvores de isolamento. Cada árvore usa uma subamostra aleatória do treino e a divide recursivamente. Em cada nó, um atributo e um valor de corte entre o mínimo e o máximo desse atributo são sorteados, até que cada ponto fique isolado numa folha ou que a árvore atinja um limite de profundidade. Um ponto numa região de baixa densidade é isolado em poucas divisões, perto da raiz, e um ponto normal exige mais divisões.
+
+O comprimento do caminho $h(x)$ entre a raiz e a folha em que o ponto $x$ chega mede a facilidade de isolá-lo. Para comparar árvores construídas com subamostras de tamanho $\psi$, essa medida é normalizada pelo comprimento médio do caminho numa árvore binária de busca com $\psi$ pontos,
+\begin{equation}
+c(\psi) = 2H(\psi-1) - \frac{2(\psi-1)}{\psi}, \qquad H(i) \approx \ln i + \num{0,5772},
+\label{eq:fund-cpsi}
+\end{equation}
+e o escore de anomalia é
+\begin{equation}
+s(x, \psi) = 2^{-\mathrm{E}[h(x)]/c(\psi)},
+\label{eq:fund-escore}
+\end{equation}
+em que $\mathrm{E}[h(x)]$ é a média do comprimento do caminho entre as árvores \cite{liu2008}. O escore fica entre 0 e 1. Valores próximos de 1 indicam ponto fácil de isolar, candidato a anomalia, e valores bem abaixo de \num{0,5}, ponto normal. Os autores recomendam $t = 100$ árvores e subamostras de $\psi = 256$ pontos, para as quais $c(256) \approx \num{10,2}$ \cite{liu2008}.
+
+Na implementação do scikit-learn, o método \texttt{score\_samples} devolve o oposto do escore da Equação~\eqref{eq:fund-escore} \cite{scikitlearn2026}. O escore usado neste trabalho é o oposto desse valor, de modo que um escore maior indica janela mais afastada da linha de base, e o detector principal usa \num{100} árvores e subamostras de até \num{256} janelas (seção~\ref{sec:detectores}). Com uma linha de base de menos de \num{256} janelas, cada árvore usa todas as janelas do treino, e a diferença entre as árvores decorre só dos atributos e dos cortes sorteados.
+
+Dois comparativos amplos chegaram a conclusões diferentes sobre o melhor detector não supervisionado. Uma avaliação de \num{30} algoritmos em \num{57} conjuntos de dados não encontrou método não supervisionado estatisticamente superior aos demais \cite{han2022}, e uma comparação de \num{33} algoritmos não supervisionados em \num{52} conjuntos tabulares reais encontrou vantagem para o Extended Isolation Forest, com a ressalva de que os dados se separam em dois regimes \cite{bouman2024}. Em máquinas rotativas, entre \num{11} detectores não supervisionados, o Isolation Forest atingiu F1 de \SI{97,19}{\percent} num conjunto de rolamentos levados até a falha, de \SI{99,71}{\percent} numa caixa de engrenagens e de \SI{97,20}{\percent} em falhas mecânicas de bancada, com os dois primeiros conjuntos adquiridos a \SI{20}{\kilo\hertz} \cite{brito2022}.
+
+\subsection{Regra por mediana e MAD}\label{sec:fund-mad}
+
+A regra por mediana e MAD compara cada descritor com a sua distribuição na linha de base por estatísticas pouco sensíveis a valores extremos. A média e o desvio-padrão de uma amostra podem ser deslocados por um único valor extremo, e um limiar baseado neles se alarga justamente quando a amostra contém valores anômalos. A mediana e o MAD,
+\begin{equation}
+\mathrm{MAD} = \operatorname{mediana}_i \left| x_i - \operatorname{mediana}_j\, x_j \right|,
+\label{eq:fund-mad}
+\end{equation}
+são pouco afetados por esses valores \cite{leys2013}. Para dados com distribuição normal, $\num{1,4826}\,\mathrm{MAD}$ estima o desvio-padrão, e um valor é marcado quando se afasta da mediana por mais de $k$ vezes essa estimativa. \citeonline{leys2013} sugerem $k = \num{2,5}$ como valor padrão, menos conservador que $k = 3$.
+
+Neste trabalho, o escore de uma janela na regra por mediana e MAD é o maior valor, entre os seis descritores, de $|x - \tilde{x}|/(\num{1,4826}\,\mathrm{MAD})$, com a mediana $\tilde{x}$ e o MAD calculados na linha de base, e o limiar é obtido como o do Isolation Forest (seção~\ref{sec:detectores}). A regra avalia cada descritor separadamente e não marca uma combinação incomum de valores que, isolados, estão na faixa da linha de base. O Isolation Forest divide o espaço de todos os descritores ao mesmo tempo e pode isolar essa combinação.
+
+\subsection{Limiar, falso alarme e menor mudança detectável}\label{sec:fund-limiar}
+
+O escore contínuo é convertido em decisão por um limiar, e a janela com escore acima dele é marcada. Um limiar baixo marca mais janelas com falha e também mais janelas normais, e um limiar alto faz o contrário. Com a falha como classe positiva, a taxa de detecção é a fração das janelas com falha que o detector marca, e a taxa de falso alarme é a fração das janelas normais que ele marca \cite{fawcett2006}. Neste trabalho, a fração marcada nas janelas de operação normal estima a taxa de falso alarme, e a fração marcada nas janelas com a assinatura injetada estima a taxa de detecção daquela assinatura (seção~\ref{sec:injecao}).
+
+Em monitoramento contínuo, o número de alarmes falsos cresce com o número de janelas avaliadas. Um dispositivo que avalia uma janela por minuto e marca \SI{5}{\percent} das janelas normais emite, em média, \num{72} alarmes falsos por dia. A acurácia, fração de decisões corretas, informa pouco quando as janelas com falha são raras, porque um detector que nunca marca alcança acurácia alta.
+
+Na implementação do scikit-learn, o limiar padrão do Isolation Forest, com o parâmetro \texttt{contamination} em \texttt{'auto'}, corresponde ao escore de \num{0,5} da Equação~\eqref{eq:fund-escore}, sem calibração para os dados \cite{liu2008,scikitlearn2026}. Dois dos trabalhos consultados usam outro limiar. \citeonline{antonini2023} fixam o escore normalizado em \num{0,75}, supondo treino só com operação normal, e \citeonline{brito2022} calculam o limiar pela fração de anomalias conhecida nos dados, informação que não existe numa máquina sem histórico. Quando o treino contém só operação normal, o limiar pode ser calibrado pela taxa de falso alarme desejada. Se o limiar é o quantil de ordem $1-\alpha$ dos escores de janelas normais que não participaram do ajuste do modelo, espera-se que uma fração $\alpha$ da operação normal fique acima dele. Na seção~\ref{sec:detectores}, $\alpha = \num{0,05}$, e os escores de cada um dos cinco blocos de janelas da linha de base são calculados por um modelo ajustado nos outros quatro.
+
+A menor mudança detectável de um descritor depende da dispersão dele na operação normal e do limiar. Para uma regra de alarme que marca a janela quando o descritor passa do quantil de \SI{95}{\percent} da linha de base, um aumento da mediana igual à diferença entre esse quantil e a mediana, com a dispersão mantida, leva metade das janelas acima do limiar. Neste trabalho, essa diferença é a menor mudança detectável de $d_1$ (Quadro~\ref{tab:hipoteses}). Se o descritor tivesse distribuição normal com desvio-padrão $\sigma$, o quantil de \SI{95}{\percent} estaria $\num{1,645}\,\sigma$ acima da mediana, e a menor mudança detectável seria $\num{1,645}\,\sigma$. Com o sensor em repouso, a dispersão de $d_1$ entre janelas decorre só do ruído do sensor. Numa máquina em operação, ela reúne o ruído e a variação da vibração da própria máquina de uma janela para outra.
+
+Quando cada medição é a média de $k$ janelas, a dispersão diminui se as janelas variam de forma independente. Para $k$ valores independentes com desvio-padrão $\sigma$, o desvio-padrão da média é $\sigma/\sqrt{k}$. Quando janelas vizinhas variam juntas, com autocorrelação positiva, a redução é menor, porque a média de valores correlacionados conserva parte da variação comum.
+
+\citeonline{hermansa2022} mediram falsos alarmes de detectores não supervisionados em sensores de britadores de carvão e de pórticos da indústria pesada. Os autores compararam quatro detectores, entre eles o Isolation Forest, e adotaram como base um detector de agrupamento por densidade. Com esse detector isolado, a medida de falsos alarmes dos autores ficou entre \num{0,457} e \num{0,939}, e, com a adaptação do modelo somada a um modelo de correção, entre \num{0,026} e \num{0,115}, uma redução média de \SI{90,25}{\percent} \cite{hermansa2022}.
+
+\subsection{Separação entre treino e teste}\label{sec:fund-validacao}
+
+O desempenho de um detector é medido em dados que não participaram do treino, e a medida só vale se os dados de treino e de teste forem independentes. Quando não são, ocorre vazamento de informação, em que o modelo tem acesso, no treino, a informação que não estaria disponível na aplicação, e o desempenho medido fica acima do verdadeiro \cite{kaufman2012}. Em sinais de vibração, a forma mais comum de vazamento decorre da segmentação. Um ensaio é dividido em dezenas ou centenas de janelas, e janelas do mesmo ensaio compartilham características que não dependem da condição da máquina, como o nível de ruído, a fixação e o ganho do sensor. Se as janelas são sorteadas entre treino e teste, o modelo pode acertar porque reconhece o ensaio, efeito que \citeonline{varejao2025} chamam de viés de similaridade. De \num{41} estudos revisados por esses autores sobre uma mesma base pública de rolamentos, \num{40} usaram delineamento sujeito a esse vazamento \cite{varejao2025}.
+
+Neste trabalho, o teste de H1 é a segunda rodada de uma máquina, medida horas depois da primeira, e, nas máquinas com uma só rodada, o teste da assinatura injetada é a segunda metade das janelas em ordem de tempo (seção~\ref{sec:injecao}). O limiar e os intervalos de confiança usam blocos de janelas consecutivas, porque janelas próximas no tempo não são independentes (seções~\ref{sec:detectores} e~\ref{sec:analise}).
+
+\subsection{Avaliação com falhas injetadas}\label{sec:fund-injecao}
+
+Sem máquina com falha conhecida, a taxa de detecção não pode ser medida diretamente. Uma estimativa é obtida pela soma de uma assinatura sintética da falha, com amplitude conhecida, a janelas reais de operação normal que não participaram do treino, com a fração marcada medida em cada amplitude. A curva da fração marcada em função da amplitude indica a amplitude com \SI{50}{\percent} das janelas marcadas, que pode ser comparada com o tamanho de mudança da norma (seção~\ref{sec:fund-norma}). Para o desbalanceamento, a assinatura é uma senoide na ordem 1x, nos eixos radiais, perpendiculares ao eixo do motor, em que a força centrífuga atua (seção~\ref{sec:fund-ordens}).
+
+A assinatura injetada é somada às amostras digitais e, por isso, não passa pelo caminho mecânico entre a carcaça e o sensor, que inclui a fita dupla face, o invólucro e as espumas (seção~\ref{sec:ensaios}), nem pelo filtro do sensor. Ela também tem amplitude e frequência constantes, sem a modulação e a variação de fase ao longo do tempo de uma falha real. Num desbalanceamento real, a massa acrescentada fica num ponto do rotor, e a força que ela produz tem fase fixa em relação à do desbalanceamento já existente; na assinatura injetada, a fase é uma escolha do método (seção~\ref{sec:injecao}). Uma falha real pode, assim, ser mais fácil ou mais difícil de detectar que a assinatura, e uma base pública com desbalanceamento real, medida em bancada, complementa a avaliação (seção~\ref{sec:base-publica}).
+
+\section{Nós sensores de baixo custo}\label{sec:fund-nos}
+
+Os nós acadêmicos de baixo custo consultados usam microcontrolador da família ESP32 e acelerômetro MEMS \cite{antonini2023,chevtchenko2023,kolok2025}, e os produtos comerciais medem, ao menos num eixo, uma banda pelo menos uma ordem de grandeza acima da de um acelerômetro MEMS de consumo \cite{bentlynevada2025,erbessd2025,tractian2022}. O que cada nó transmite varia entre o resultado da detecção, indicadores calculados no nó e o sinal bruto (seção~\ref{sec:fund-posicao}).
+
+\subsection{Sistemas embarcados e TinyML}\label{sec:fund-embarcados}
+
+Um nó sensor é um sistema embarcado construído em torno de um microcontrolador, que reúne processador, memória e periféricos num único circuito integrado. O \textit{gateway} deste trabalho usa um ESP32-S3, com dois núcleos de até \SI{240}{\mega\hertz}, \SI{512}{\kilo\byte} de memória estática e rádios Wi-Fi e Bluetooth integrados \cite{espressif2026}, e o transmissor usa um ESP32-C3 (seção~\ref{sec:sistema}).
+
+A execução de modelos de aprendizado de máquina em microcontroladores, com memória de centenas de quilobytes e consumo de miliwatts, é chamada de TinyML \cite{antonini2023,barbariol2022}. Executar a detecção no próprio nó reduz o uso do rádio, porque o resultado ocupa poucos bytes e a janela de sinal ocupa milhares. No sistema deste trabalho, a telemetria tem \num{71} bytes, e a janela, \num{6144} bytes (seção~\ref{sec:sis-protocolo}). A janela é transmitida inteira, e os descritores e os detectores foram calculados depois, sobre os dados exportados (seção~\ref{sec:dados}), o que permite recalcular a detecção com outro descritor ou outro detector sobre o mesmo sinal.
+
+\subsection{Nós publicados com ESP32 e acelerômetro MEMS}\label{sec:fund-nos-publicados}
+
+\citeonline{antonini2023} treinaram e executaram o Isolation Forest no próprio ESP32, em MicroPython, com a unidade de medição inercial ICM20948 amostrada a \SI{1125}{\hertz} e limiar fixo de \num{0,75} no escore normalizado, sob a hipótese de que o treino contém só operação normal. O nó é instalado dentro de uma bomba submersa e se comunica com um \textit{gateway} pela própria rede elétrica, a \SIrange{2}{4}{kbaud}, e envia a notificação de cada anomalia detectada, registrada como transação assinada. Os autores deixaram a avaliação da acurácia de detecção fora do escopo do trabalho \cite{antonini2023}.
+
+O nó de \citeonline{bisio2025} reúne um ESP32 e uma unidade de medição inercial e transmite por LoRa, em tempo real, os dados dos acelerômetros, dos giroscópios e dos magnetômetros. O resumo do trabalho, única parte consultada, trata da calibração do nó e de ensaios do enlace em ambiente urbano e não menciona detector \cite{bisio2025}.
+
+\citeonline{kolok2025} montaram um protótipo com ESP32-C6, MPU-6050 e um microfone MEMS e usaram um Isolation Forest de \num{100} árvores, treinado só com dados saudáveis, com o parâmetro \texttt{contamination} em \texttt{'auto'}. Para um único modo de falha, a obstrução deliberada de uma roda, que produz desbalanceamento, a acurácia foi de \SI{72,9 \pm 2,4}{\percent} em validação cruzada de cinco partições sobre cerca de \num{900} amostras, com precisão de \num{0,755} e revocação de \num{0,679}. O ESP32-C6 enviava a um computador portátil, por Wi-Fi, uma linha de dados a cada \SI{0,5}{\second}, e o Isolation Forest era executado no computador \cite[p.~5, 13]{kolok2025}. O protótipo custou menos de \num{30} euros \cite[p.~4]{kolok2025}. O trabalho calcula o valor eficaz da aceleração e o espectro, sem integração para velocidade, sem critério em \si{\milli\meter\per\second} e sem menção à ISO 10816 nem à ISO 20816 \cite{kolok2025}. A taxa de falso alarme não é informada no artigo. Pela acurácia, pela precisão e pela revocação publicadas, as amostras com falha são metade do conjunto, e a taxa de falso alarme é de \SI{22}{\percent}.
+
+\citeonline{chevtchenko2023} compararam três detectores sobre os dados de um nó com ESP32, uma unidade de medição inercial ISM330DLCTR amostrada a \SI{1}{\kilo\hertz} e dois microfones amostrados a \SI{20}{\kilo\hertz}, fixado por ímã de neodímio. O nó envia os dados por MQTT a um serviço em nuvem, e os detectores foram executados num processador de computador, sobre \num{3750} amostras normais e \num{2250} anômalas de três motores de indução de 1~hp a \SI{1000}{r/min}. O Isolation Forest teve sensibilidade de \SI{88,9}{\percent} na validação e de \SI{86,3}{\percent} no teste e especificidade de \SI{61,6}{\percent} e \SI{67,4}{\percent}, isto é, marcou de \SI{32,6}{\percent} a \SI{38,4}{\percent} da operação normal. Nos mesmos dados, um método baseado em vizinhança teve especificidade de \SI{74,5}{\percent} e \SI{72,1}{\percent}. Os autores também observaram que o terceiro motor, com cerca de um ano de uso, tinha assinatura normal diferente da dos motores novos \cite{chevtchenko2023}.
+
+Os dois trabalhos com Isolation Forest que informam o falso alarme, ou permitem calculá-lo, marcam de \SI{22}{\percent} a \SI{38}{\percent} da operação normal \cite{chevtchenko2023,kolok2025}. O nó de \citeonline{jakobsen2024} usa um microcontrolador Apollo3, de núcleo ARM, e os dois acelerômetros descritos na seção~\ref{sec:fund-rolamento}, funciona com bateria e tem dois rádios. Pelo Bluetooth Low Energy, envia o sinal bruto e recebe a configuração e as atualizações do \textit{firmware}, e, pela rede de longa distância LoRa (LoRaWAN), envia indicadores calculados no nó a partir do sinal \cite[p.~1, 3]{jakobsen2024}. A lista de materiais do nó custa \num{180} dólares \cite[p.~1]{jakobsen2024}.
+
+Entre os nós consultados, o de \citeonline{antonini2023} envia a notificação de cada anomalia detectada no próprio nó, o de \citeonline{jakobsen2024} envia o sinal bruto por Bluetooth Low Energy e indicadores por LoRaWAN, o de \citeonline{bisio2025} envia por LoRa os dados das grandezas medidas, e o de \citeonline{chevtchenko2023} envia os dados a um serviço em nuvem por MQTT. O Quadro~\ref{tab:ap-sistemas} compara os nós pelo meio de transmissão, pelo que cada nó envia, pelo lugar em que o detector é executado, pela proteção dos dados e pela atualização remota.
+
+\begin{quadro}[!htb]
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{Arquitetura dos nós de baixo custo consultados}\label{tab:ap-sistemas}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{20mm}>{\raggedright\arraybackslash}p{22mm}>{\raggedright\arraybackslash}p{24mm}>{\raggedright\arraybackslash}p{17mm}>{\raggedright\arraybackslash}p{21mm}>{\raggedright\arraybackslash}p{20mm}>{\raggedright\arraybackslash}p{18mm}@{}}
+\toprule
+Trabalho & Meio de transmissão & O que o nó envia & Onde o detector é executado & Proteção dos dados & Atualização remota & Custo informado \\
+\midrule
+\citeonline{antonini2023} & rede elétrica, de \numrange{2}{4}~kbaud, até um \textit{gateway} & notificação de cada anomalia & no ESP32, em MicroPython & anomalia registrada como transação assinada & modelos e configuração, pela plataforma & n.~c. \\
+\addlinespace
+\citeonline{bisio2025} & LoRa & dados de acelerômetros, giroscópios e magnetômetros, em tempo real & não mencionado & n.~c. & n.~c. & n.~c. \\
+\addlinespace
+\citeonline{chevtchenko2023} & MQTT até um serviço em nuvem; rádio n.~c. & dados de vibração, ruído e temperatura & processador de computador & n.~c. & n.~c. & n.~c. \\
+\addlinespace
+\citeonline{jakobsen2024} & Bluetooth Low Energy e LoRaWAN & sinal bruto, pelo Bluetooth; indicadores, pela LoRaWAN & n.~c. & n.~c. & \textit{firmware} e configuração, pelo Bluetooth & \num{180} dólares (lista de materiais) \\
+\addlinespace
+\citeonline{kolok2025} & Wi-Fi até um computador portátil & uma linha de dados a cada \SI{0,5}{\second} & computador portátil & n.~c. & n.~c. & menos de \num{30} euros \\
+\addlinespace
+Este trabalho & LoRa ponto a ponto até o \textit{gateway}, e Wi-Fi com HTTPS até a API & janela de sinal bruto dos seis canais e telemetria de \num{71} bytes com indicadores & computador, sobre os dados exportados & CRC de \num{16} bits por quadro de rádio, número de sequência e resumo SHA-256 da janela & \textit{firmware} do \textit{gateway}; o transmissor é regravado pela porta USB & R\$~\num{78,11} o transmissor e R\$~\num{97,93} o \textit{gateway}, com imposto \\
+\bottomrule
+\end{tabular}
+\fonte{elaborado pelo próprio autor.}
+\nota{n.~c.: não conferido no texto da fonte. Na linha de \citeonline{bisio2025}, o conteúdo foi conferido só no resumo do trabalho. O custo deste trabalho inclui o imposto de importação e o imposto estadual sobre a compra (Tabela~\ref{tab:custo}).}
+\end{quadro}
+
+\subsection{Enlace LoRa}\label{sec:fund-lora}
+
+LoRa é uma técnica de modulação de rádio para enlaces de longo alcance, baixo consumo e baixa taxa de dados \cite{augustin2016}. Ela usa espalhamento espectral por \textit{chirp}, em que cada símbolo é um sinal cuja frequência varia linearmente ao longo de toda a largura de banda do canal, e o espalhamento permite demodular sinais abaixo do nível de ruído, o que aumenta o alcance \cite{augustin2016}. O enlace entre o transmissor e o \textit{gateway} deste trabalho é ponto a ponto, com protocolo próprio sobre a modulação LoRa, sem a LoRaWAN, protocolo de rede definido sobre essa modulação (seção~\ref{sec:sis-protocolo}).
+
+O compromisso entre alcance, taxa e consumo é definido por três parâmetros \cite{semtech2015}. Com fator de espalhamento $S$, de 6 a 12, cada símbolo carrega $S$ bits e é formado por $2^S$ \textit{chips}, e cada incremento de $S$ dobra a duração do símbolo e melhora a sensibilidade do receptor. Uma largura de banda $B$ maior encurta o símbolo e piora a sensibilidade. A taxa de codificação, de 4/5 a 4/8, representada aqui pelo índice $n_c$, de 1 a 4, acrescenta redundância para correção de erros.
+
+A duração do símbolo é $T_s = 2^S/B$, e a duração de um pacote, o tempo no ar, é a soma das durações do preâmbulo e da carga útil \cite{semtech2015},
+\begin{equation}
+\begin{split}
+T_{\mathrm{pac}} = {} & (n_p + \num{4,25})\,T_s \\
+& + \left[ 8 + \max\!\left( \left\lceil \frac{8L - 4S + 28 + 16r - 20h}{4(S - 2e)} \right\rceil (n_c + 4),\; 0 \right) \right] T_s,
+\end{split}
+\label{eq:fund-toa}
+\end{equation}
+em que $n_p$ é o número de símbolos do preâmbulo, $L$ é o número de bytes da carga útil, $r$ vale 1 quando a verificação cíclica de redundância (CRC) do pacote está habilitada, $h$ vale 1 quando o cabeçalho é omitido e $e$ vale 1 quando a otimização para baixa taxa está ativa. A taxa de bits decorre dos mesmos parâmetros \cite{semtech2015},
+\begin{equation}
+R_b = S\,\frac{B}{2^S}\,\frac{4}{4 + n_c}.
+\label{eq:fund-taxa}
+\end{equation}
+
+No canal de controle deste trabalho, com fator de espalhamento 9, banda de \SI{125}{\kilo\hertz}, taxa de codificação 4/5, preâmbulo de 8 símbolos, cabeçalho e CRC habilitados e sem otimização para baixa taxa, o símbolo dura $2^9/\num{125000} = \SI{4,096}{\milli\second}$, e a taxa é de \SI{1,76}{kbit/s}. A telemetria de \num{71} bytes ocupa $8 + \lceil 576/36 \rceil \cdot 5 = 88$ símbolos de carga útil, e o tempo no ar é de \SI{411}{\milli\second}. No perfil dos fragmentos, com fator de espalhamento 7 e banda de \SI{250}{\kilo\hertz}, o símbolo dura \SI{0,512}{\milli\second}, e a taxa é de \SI{10,94}{kbit/s}. Cada fragmento leva até \num{240} bytes de amostras, com cabeçalho e CRC, num pacote de \num{254} bytes, que ocupa o rádio por \SI{200}{\milli\second}, e os \num{26} fragmentos de uma janela somam \SI{5,1}{\second} de tempo no ar, sem contar os intervalos entre fragmentos e os reenvios.
+
+Reduzir o fator de espalhamento de 9 para 7 multiplica a taxa por $(7/128)/(9/512) \approx \num{3,1}$, e dobrar a banda dobra a taxa. Cada uma dessas mudanças piora a sensibilidade do receptor, e o enlace passa a exigir sinal mais forte para a mesma taxa de perda \cite{semtech2015}. A intensidade do sinal recebido (RSSI), em dBm, é a potência que o receptor mede em cada pacote. Como o perfil dos fragmentos exige sinal mais forte que o da telemetria, a telemetria de um ciclo pode chegar enquanto fragmentos da mesma janela se perdem.
+
+\subsection{Transferência em blocos e retransmissão seletiva}\label{sec:fund-blocos}
+
+Um bloco de dados maior que a carga útil máxima do rádio é dividido em fragmentos. A carga útil de um pacote LoRa vai até \num{255} bytes \cite{semtech2015}, e a janela de \num{6144} bytes ocupa \num{26} pacotes.
+
+Os esquemas de repetição automática tratam dessas perdas e diferem pelo que é reenviado \cite{lin1984}. Na parada e espera, o transmissor envia um pacote e espera a confirmação antes de enviar o seguinte. No retorno a $N$ (\textit{go-back-N}), uma perda obriga a reenviar o pacote perdido e todos os posteriores. Na repetição seletiva, só os pacotes perdidos são reenviados, e o canal é mais bem aproveitado, à custa de memória no receptor para guardar os pacotes que chegam fora de ordem \cite{lin1984}.
+
+O rádio do transmissor e o do \textit{gateway} não transmitem e recebem ao mesmo tempo, e cada confirmação obriga os dois lados a trocar de sentido. Uma confirmação por fragmento custaria uma troca de sentido por fragmento. Com uma confirmação por tentativa, na forma de um mapa com um bit por fragmento, há uma troca por tentativa, e o transmissor reenvia na tentativa seguinte só os fragmentos marcados como ausentes. A rajada deste trabalho, o envio dos \num{26} fragmentos de uma janela com os reenvios, usa esse esquema, com no máximo três tentativas: o envio inicial e dois reenvios (seção~\ref{sec:sis-protocolo}).
+
+\subsection{Entrega idempotente e integridade dos dados}\label{sec:fund-entrega}
+
+Entre o rádio e o banco de dados, uma telemetria ou uma janela passa pela memória \textit{flash} do \textit{gateway}, pela rede Wi-Fi e pela conexão com a API, e cada etapa pode perder, corromper ou duplicar o dado. No modo de armazenar e encaminhar (\textit{store and forward}), cada dado é gravado em memória não volátil e enviado quando houver conexão, e o \textit{gateway} perde dados só quando a queda da rede dura mais do que a memória consegue guardar.
+
+O reenvio pode duplicar um lote. Se a conexão se interrompe depois que a API gravou um lote e antes que a confirmação chegue ao \textit{gateway}, o \textit{gateway} não sabe se o lote foi gravado e o envia de novo. No protocolo de transferência de hipertexto (HTTP), cuja semântica vale também para o protocolo de transferência de hipertexto sobre conexão cifrada (HTTPS), usado entre o \textit{gateway} e a API, um método é idempotente quando várias requisições idênticas têm, sobre o servidor, o mesmo efeito de uma só \cite{fielding2022}. O método \texttt{POST}, que o \textit{gateway} usa para enviar telemetrias e janelas, não é idempotente pela especificação \cite{fielding2022}, e a idempotência fica a cargo da aplicação. Na API deste trabalho, cada telemetria e cada janela são identificadas pelo \textit{gateway}, pela sessão de inicialização do \textit{gateway} e por um número de ordem atribuído pelo \textit{gateway}, e um identificador já gravado não é gravado de novo (seção~\ref{sec:sis-api}).
+
+A verificação cíclica de redundância detecta erros acidentais num bloco de dados. Os bits do bloco são tratados como coeficientes de um polinômio, dividido por um polinômio gerador fixo, e o resto da divisão acompanha o bloco. O receptor refaz a conta e descarta o bloco quando o resto difere. A capacidade de detecção depende do polinômio e do tamanho do bloco, e \citeonline{koopman2002} mostrou, para polinômios de \num{32} bits, que a menor quantidade de bits errados capaz de passar sem detecção muda entre polinômios e com o tamanho da mensagem. No sistema deste trabalho, cada quadro de rádio termina num CRC de \num{16} bits, e os blocos gravados na \textit{flash} do \textit{gateway}, num CRC de \num{32} bits (seções~\ref{sec:sis-protocolo} e~\ref{sec:sis-gateway}).
+
+O algoritmo de resumo seguro SHA-256 produz, para uma mensagem, um resumo de \num{256} bits projetado para que seja computacionalmente inviável encontrar uma mensagem com um resumo dado ou duas mensagens com o mesmo resumo \cite{nist2015}. Cada janela é gravada na API com o resumo SHA-256 das amostras, e a conferência desse resumo na exportação indica se as amostras analisadas são as que foram gravadas (seção~\ref{sec:dados}). Uma lacuna nos números de sequência das telemetrias indica telemetria perdida, e a contagem de inicializações, enviada em cada telemetria, registra os reinícios do transmissor (seção~\ref{sec:sis-transmissor}).
+
+O resumo não usa chave e, sozinho, não autentica a origem, porque quem troca a mensagem pode trocar também o resumo. A proteção depende de o resumo chegar por um canal em que o receptor confia. No sistema deste trabalho, a imagem de \textit{firmware} do \textit{gateway} leva resumo SHA-256, que chega ao \textit{gateway} pela conexão cifrada com a API, e os comandos enviados pelo rádio ao transmissor têm apenas CRC.
+
+\subsection{Atualização remota do \textit{firmware}}\label{sec:fund-atualizacao}
+
+A atualização remota troca o \textit{firmware} de um dispositivo instalado sem acesso físico a ele. O RFC~9019, documento de padronização que descreve uma arquitetura de atualização para dispositivos da Internet das Coisas, exige que a imagem seja autenticada e tenha a integridade protegida e que o dispositivo tenha uma estratégia de recuperação para o caso de falha na atualização \cite{moran2021}. O documento descreve duas estratégias. Na primeira, o dispositivo guarda mais de uma imagem de aplicação, e a imagem nova é gravada sem apagar a anterior, que fica como reserva caso a nova não inicie ou não funcione. Na segunda, uma imagem de recuperação, com função reduzida, só consegue obter uma imagem nova \cite{moran2021}.
+
+O \textit{gateway} deste trabalho usa a primeira estratégia, com dois espaços de aplicação, e só confirma a imagem nova depois da primeira sincronização com a API (seção~\ref{sec:sis-gateway}). O RFC~9019 prevê também uma assinatura da imagem, conferida pelo próprio dispositivo antes de executá-la \cite{moran2021}. A imagem do \textit{gateway} não é assinada. O \textit{gateway} a confere pelo tamanho e pelo resumo SHA-256 recebidos da API, e a origem da imagem depende da conexão autenticada com a API.
+
+\subsection{Autenticação do servidor e cifra dos segredos}\label{sec:fund-tls}
+
+O protocolo de segurança da camada de transporte (TLS) protege a conexão entre um cliente e um servidor contra leitura e alteração por terceiros e autentica o servidor ao cliente \cite{rescorla2018}. A versão atual do protocolo é a 1.3, e a API deste trabalho aceita conexões a partir da 1.2. Na autenticação usual, o servidor apresenta um certificado assinado por uma autoridade certificadora em que o cliente confia, e o cliente confere a assinatura e o nome do servidor. Um servidor identificado só por endereço de rede local não obtém certificado de autoridade certificadora pública, que certifica nomes de domínio e endereços públicos. Uma alternativa é a fixação (\textit{pinning}), em que o cliente guarda de antemão o resumo da chave ou do certificado do servidor e recusa a conexão quando o resumo recebido é outro. O RFC~7469 define esse mecanismo para navegadores, com o resumo da chave pública \cite{evans2015}. O \textit{gateway} aplica a mesma ideia ao resumo SHA-256 do certificado da API (seção~\ref{sec:sis-gateway}). A fixação dispensa a autoridade certificadora, mas uma troca do certificado no servidor obriga a gravar o resumo novo em cada cliente.
+
+Segredos guardados pelo servidor, como as senhas das redes Wi-Fi do local, podem ser cifrados com cifra autenticada. O modo de contador com autenticação de Galois (GCM), aplicado ao padrão de cifra avançada (AES), produz o texto cifrado e uma etiqueta de autenticação, e a decifração recusa um texto cifrado ou uma etiqueta alterados \cite{dworkin2007}. A segurança do modo depende de o vetor de inicialização não se repetir com a mesma chave. Quando o vetor de \num{96} bits é sorteado, a recomendação limita a $2^{32}$ o número de cifrações com uma mesma chave \cite{dworkin2007}. A API deste trabalho sorteia um vetor novo de \num{96} bits a cada cifração, e cada senha gravada usa uma das $2^{32}$ cifrações permitidas.
+
+\section{Verificação de \textit{software} embarcado}\label{sec:fund-verificacao}
+
+Os meios de verificação usados neste trabalho atuam em momentos diferentes do desenvolvimento. A norma de codificação atua na escrita do código, a análise de modos de falha atua no projeto, e os testes e a rastreabilidade conferem os requisitos.
+
+\subsection{Normas de codificação}\label{sec:fund-norma-codigo}
+
+Uma norma de codificação restringe a linguagem a um subconjunto de construções com comportamento previsível e verificável por ferramenta ou revisão. Em C++, as duas normas mais usadas em sistemas críticos são a MISRA C++:2008, da associação britânica \textit{Motor Industry Software Reliability Association} (MISRA) \cite{misra2008}, e o padrão de codificação do programa Joint Strike Fighter \cite{jsf2005}. Boa parte das regras evita comportamento indefinido ou dependente do compilador e limita recursos cujo efeito varia durante a execução. Um exemplo é a alocação dinâmica de memória, que a MISRA C++:2008 proíbe \cite{misra2008} e que o padrão do Joint Strike Fighter proíbe depois da inicialização do programa \cite{jsf2005}, porque a fragmentação da memória e a falha de alocação em operação são difíceis de prever e de testar. \citeonline{holzmann2006} reduziu as regras para código crítico a dez, verificáveis por ferramenta, entre elas a de que todo laço tenha um limite superior fixo e a de que não haja alocação dinâmica depois da inicialização.
+
+As duas normas classificam as regras pela obrigatoriedade. Na MISRA C++:2008, uma regra é obrigatória, recomendada ou de documentação, e o descumprimento de uma regra obrigatória exige um desvio registrado, com a justificativa \cite{misra2008}. No padrão do Joint Strike Fighter, as regras do tipo \textit{shall} são obrigatórias e precisam ser verificadas, as do tipo \textit{will} são obrigatórias sem exigência de verificação, e as do tipo \textit{should} são recomendações \cite{jsf2005}. Uma norma própria pode selecionar regras dessas fontes e manter a mesma exigência, com cada exceção registrada e visível na revisão.
+
+\subsection{Análise de modos de falha e efeitos}\label{sec:fund-fmea}
+
+A análise de modos de falha e efeitos (FMEA) percorre os componentes ou as funções de um sistema e registra, para cada um, os modos como pode falhar, o efeito de cada modo, a causa e os meios de detecção. A IEC 60812:2018 descreve o planejamento, a execução, a documentação e a manutenção da análise e a aplica a \textit{hardware}, a \textit{software}, a processos e às interfaces entre eles \cite{iec60812}.
+
+Uma forma usual de ordenar os modos é o número de prioridade de risco (RPN), produto de notas de severidade, de ocorrência e de detecção. A revisão de \citeonline{liu2013} reúne críticas a esse produto. Combinações diferentes das três notas podem dar o mesmo número com riscos diferentes, e o produto dá às três o mesmo peso. A edição de 2018 da IEC 60812 acrescentou formas alternativas de calcular o RPN e um método por matriz de criticidade \cite{iec60812}. A FMEA deste trabalho não usa o produto. Cada modo recebe uma classe de severidade e uma classe de detectabilidade, e a prioridade decorre das duas (seção~\ref{sec:sis-falhas}).
+
+\subsection{Rastreabilidade de requisitos e testes}\label{sec:fund-rastreabilidade}
+
+A rastreabilidade de requisitos é a capacidade de descrever e seguir a vida de um requisito nos dois sentidos, da origem à implantação e ao uso, e de volta \cite{gotel1994}. \citeonline{gotel1994} separam a rastreabilidade anterior à especificação, que liga o requisito à sua origem, da posterior, que o liga ao projeto, ao código e aos testes. Na verificação, a segunda forma é registrada numa matriz que liga cada requisito aos testes que o conferem. Um requisito sem teste fica registrado na matriz como lacuna, e um teste reprovado aponta o requisito afetado.
+
+Os testes automatizados que rodam no computador de desenvolvimento conferem as funções que não dependem do \textit{hardware} a cada alteração do código, em segundos. O que depende do sensor, do rádio e da \textit{flash} só pode ser conferido no dispositivo, por ensaio. Por isso, a matriz da seção~\ref{sec:sis-rastreabilidade} liga cada requisito aos testes no computador e aos ensaios no \textit{hardware}, e um requisito pode estar coberto por um, pelos dois ou por nenhum.
+
+\section{Posição do trabalho}\label{sec:fund-posicao}
+
+Entre os trabalhos consultados, os nós de baixo custo com ESP32 e acelerômetro MEMS informam a acurácia ou o falso alarme em conjuntos de dados próprios \cite{chevtchenko2023,kolok2025}, ou deixam a acurácia fora do escopo \cite{antonini2023}. Nenhum deles avaliou o falso alarme de um detector treinado numa rodada de medição e aplicado a outra rodada da mesma máquina, horas depois, numa instalação industrial, fração que este trabalho mede na calandra e na guilhotina (H1, seção~\ref{sec:hipoteses}). \citeonline{hermansa2022} mediram falsos alarmes em campo, na indústria pesada, com outro detector e outra medida de falso alarme.
+
+O trabalho de componentes mais próximos, com ESP32-C6, MPU-6050 e Isolation Forest, calcula o valor eficaz da aceleração, sem integração para velocidade e sem critério em \si{\milli\meter\per\second} \cite{kolok2025}. Neste trabalho, a menor mudança detectável e a amplitude da assinatura injetada são expressas em velocidade eficaz e comparadas com os \SI{0,7}{\milli\meter\per\second} derivados do critério de mudança da série ISO 10816 (H2 e H3, seção~\ref{sec:hipoteses}). Os estudos de adequação de MEMS consultados testaram sensores com limite superior de \SI{1500}{\hertz} ou mais \cite{albarbar2008,fidali2024}. O sensor deste trabalho opera com banda de \SI{184}{\hertz}, o que restringe a detecção às componentes ligadas à rotação, e os defeitos de rolamento não são observáveis nessa banda (seção~\ref{sec:fund-rolamento}).
+
+O sistema deste trabalho transmite a janela de sinal bruto pelo enlace LoRa, com retransmissão seletiva dos fragmentos, número de sequência e resumo SHA-256, e a integridade dos dados foi medida antes da detecção (seção~\ref{sec:res-aquisicao}). O \textit{gateway} grava as janelas e as entrega à API, e o Quadro~\ref{tab:ap-sistemas} compara essa arquitetura com a dos nós consultados (seção~\ref{sec:fund-nos-publicados}). O mesmo detector foi aplicado também a uma base pública de laboratório com desbalanceamento real em quatro níveis (\citeauthoronline{mey2020}, \citeyear{mey2020}, \citeyear{mey2022dados}), com o sinal limitado à banda de \SI{184}{\hertz} do transmissor (H4, seção~\ref{sec:base-publica}). O Quadro~\ref{tab:ap-quadro} compara os trabalhos relacionados pelo sensor, pela banda, pelo detector, pelo limiar, pelo falso alarme e pela origem dos dados, com o que este trabalho mede na última linha. Cada célula contém apenas o que foi conferido no texto da fonte.
+
+\begin{quadro}[p]
+\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{Nós de baixo custo e detectores por afastamento da operação normal}\label{tab:ap-quadro}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{20mm}>{\raggedright\arraybackslash}p{27mm}>{\raggedright\arraybackslash}p{21mm}>{\raggedright\arraybackslash}p{26mm}>{\raggedright\arraybackslash}p{24mm}>{\raggedright\arraybackslash}p{26mm}@{}}
+\toprule
+Trabalho & Sensor e taxa & Detector & Limiar & Falso alarme & Origem dos dados \\
+\midrule
+\citeonline{antonini2023} & ICM20948 a \SI{1125}{\hertz}, ESP32 & Isolation Forest no ESP32 & escore normalizado fixo em \num{0,75} & avaliação da acurácia fora do escopo & n.~c. \\
+\addlinespace
+\citeonline{chevtchenko2023} & ISM330DLCTR a \SI{1}{\kilo\hertz} e dois microfones a \SI{20}{\kilo\hertz}, ESP32, fixação por ímã & Isolation Forest e outros dois detectores, executados em computador & n.~c. & \SIrange{32,6}{38,4}{\percent} da operação normal & três motores de indução de 1~hp a \SI{1000}{r/min} \\
+\addlinespace
+\citeonline{kolok2025} & MPU-6050 e microfone MEMS, ESP32-C6, uma linha a cada \SI{0,5}{\second} & Isolation Forest de \num{100} árvores, treino só saudável, executado em computador portátil & \texttt{contamination} em \texttt{'auto'} & \SI{22}{\percent}, calculado & protótipo, com obstrução deliberada de uma roda \\
+\addlinespace
+\citeonline{jakobsen2024} & ADXL1002 a \SI{40}{\kilo\hertz} e ADXL362 a \SI{400}{\hertz}, LoRa e Bluetooth Low Energy & n.~c. & n.~c. & n.~c. & n.~c. \\
+\addlinespace
+\citeonline{brito2022} & dois dos três conjuntos adquiridos a \SI{20}{\kilo\hertz} & \num{11} detectores, entre eles o Isolation Forest & fração de anomalias conhecida nos dados & n.~c. & rolamentos levados até a falha, caixa de engrenagens e falhas de bancada \\
+\addlinespace
+\citeonline{hermansa2022} & sensores de britadores de carvão e de pórticos & quatro detectores; base: agrupamento por densidade & n.~c. & medida própria de \numrange{0,457}{0,939}, e de \numrange{0,026}{0,115} com adaptação e correção & campo, indústria pesada \\
+\addlinespace
+Este trabalho & módulo MPU-6050 a \SI{1}{\kilo\hertz}, banda de \SI{184}{\hertz}, ESP32-C3 e LoRa & Isolation Forest de \num{100} árvores, treino só em operação normal & quantil de \SI{95}{\percent} dos escores em cinco blocos & \hUmCalandraIFDireto~\% e \hUmGuilhotinaIFDireto~\% entre rodadas (H1); \hQuatroFracaoZero~\% na base pública (H4) & campo, instalação industrial, e base pública de laboratório \\
+\bottomrule
+\end{tabular}
+\fonte{elaborado pelo próprio autor.}
+\nota{n.~c.: não conferido no texto da fonte. No trabalho de \citeonline{kolok2025}, o falso alarme foi calculado a partir da acurácia, da precisão e da revocação publicadas (seção~\ref{sec:fund-nos-publicados}).}
+\end{quadro}
+
+\plano{Registrar as bases, os termos e a data da busca bibliográfica. Até lá, o que esta seção diz que os trabalhos relacionados não mediram vale só para os trabalhos citados nela.}

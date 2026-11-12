@@ -35,3 +35,18 @@ data/cwru/
 .temp
 
 hardware/3dmodels/origem/*.step
+
+# Configuração privada do gateway
+include/gateway_config.local.h
+
+# Modelo original do iCEV, guardado sem alterações só como referência local
+docs/TCC/monografia-tcc/
+
+# Registro de trabalho local
+ANDAMENTO.md
+
+# Guias de escrita, só para uso local
+docs/guias/
+
+# Estudos e código que nem o artigo nem a monografia usam, guardados só localmente
+lixo/

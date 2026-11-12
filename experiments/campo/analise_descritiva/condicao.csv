@@ -1,0 +1,21 @@
+treino,alvo,fracao_marcada
+Dobradeira,Dobradeira,0.04
+Dobradeira,Guilhotina,1.0
+Dobradeira,Calandra,0.8297872340425532
+Dobradeira,Compressor,1.0
+Dobradeira,Motor desligado,1.0
+Guilhotina,Dobradeira,1.0
+Guilhotina,Guilhotina,0.0
+Guilhotina,Calandra,1.0
+Guilhotina,Compressor,1.0
+Guilhotina,Motor desligado,0.0
+Calandra,Dobradeira,1.0
+Calandra,Guilhotina,1.0
+Calandra,Calandra,0.1702127659574468
+Calandra,Compressor,1.0
+Calandra,Motor desligado,1.0
+Compressor,Dobradeira,0.08
+Compressor,Guilhotina,0.4
+Compressor,Calandra,0.7021276595744681
+Compressor,Compressor,0.0
+Compressor,Motor desligado,0.8

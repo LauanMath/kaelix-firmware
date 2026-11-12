@@ -5,7 +5,7 @@
 #include "kaelix_status.h"
 
 // =====================================================================
-// Política de watchdog do Kaelix (docs/ANALISE-DE-FALHAS.md §6)
+// Política de watchdog do Kaelix (docs/engenharia/ANALISE-DE-FALHAS.md §6)
 // =====================================================================
 //
 // Dois níveis, com papéis distintos:
