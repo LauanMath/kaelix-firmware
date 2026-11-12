@@ -45,5 +45,8 @@ docs/TCC/monografia-tcc/
 # Registro de trabalho local
 ANDAMENTO.md
 
+# Guias de escrita, só para uso local
+docs/guias/
+
 # Estudos e código que nem o artigo nem a monografia usam, guardados só localmente
 lixo/
