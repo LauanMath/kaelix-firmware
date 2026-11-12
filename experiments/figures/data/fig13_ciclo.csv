@@ -1,0 +1,35 @@
+lado,evento,canal,inicio_ms,fim_ms,rotulo,perdido,rodada
+transmissor,aquisição,nenhum,0,512,512 amostras,0,0
+transmissor,telemetria,controle,512,923,71 B,0,0
+transmissor,escuta,controle,923,1223,janela de escuta,0,0
+gateway,resposta,controle,943,1149,22 B,0,0
+transmissor,fragmento,rajada,1269,1469,0,0,1
+transmissor,fragmento,rajada,1519,1719,1,0,1
+transmissor,fragmento,rajada,1769,1969,2,0,1
+transmissor,fragmento,rajada,2019,2219,3,0,1
+transmissor,fragmento,rajada,2269,2469,4,0,1
+transmissor,fragmento,rajada,2519,2719,5,0,1
+transmissor,fragmento,rajada,2769,2969,6,0,1
+transmissor,fragmento,rajada,3019,3219,7,1,1
+transmissor,fragmento,rajada,3269,3469,8,0,1
+transmissor,fragmento,rajada,3519,3719,9,0,1
+transmissor,fragmento,rajada,3769,3969,10,0,1
+transmissor,fragmento,rajada,4019,4219,11,0,1
+transmissor,fragmento,rajada,4269,4469,12,0,1
+transmissor,fragmento,rajada,4519,4719,13,0,1
+transmissor,fragmento,rajada,4769,4969,14,0,1
+transmissor,fragmento,rajada,5019,5219,15,0,1
+transmissor,fragmento,rajada,5269,5469,16,0,1
+transmissor,fragmento,rajada,5519,5719,17,0,1
+transmissor,fragmento,rajada,5769,5969,18,1,1
+transmissor,fragmento,rajada,6019,6219,19,0,1
+transmissor,fragmento,rajada,6269,6469,20,0,1
+transmissor,fragmento,rajada,6519,6719,21,0,1
+transmissor,fragmento,rajada,6769,6969,22,0,1
+transmissor,fragmento,rajada,7019,7219,23,0,1
+transmissor,fragmento,rajada,7269,7469,24,0,1
+transmissor,fragmento,rajada,7519,7648,25,0,1
+gateway,mapa,rajada,7668,7715,44 B,0,1
+transmissor,fragmento,rajada,7715,7915,7,0,2
+transmissor,fragmento,rajada,7965,8165,18,0,2
+gateway,mapa,rajada,8185,8232,44 B,0,2

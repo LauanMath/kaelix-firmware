@@ -1,0 +1,8 @@
+quadro,tipo,bytes,tempo_no_ar_controle_ms,tempo_no_ar_rajada_padrao_ms
+telemetria,1,71,411,
+resposta sem configuração,2,22,206,
+resposta com configuração sem rotina,2,45,309,
+resposta com configuração e 6 janelas,2,75,432,
+fragmento cheio,3,254,,200
+último fragmento da janela padrão,3,158,,129
+mapa da rajada,4,44,,47

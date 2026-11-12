@@ -49,6 +49,20 @@ pal <- c(
   orange_wash   = "#E28E2C"    # faixa de anotação apenas, nunca série
 )
 
+# --- cores de Paul Tol, com papel fixo em toda a monografia ------------------------------------
+# Tol, P. Colour Schemes. SRON/EPS/TN/09-002, versão 3.2, 18/08/2021. A cor segue o tipo de dado, como a
+# nota recomenda, e cada cor tem um só significado no documento (as figuras de resultados, em Python, usam
+# as mesmas, em docs/monografia/latex/figuras_src/resultados.py):
+#   máquinas, dados qualitativos: esquema bright (o amarelo dele fica de fora: 1,95:1 sobre o branco);
+#   rádio LoRa: par amarelo do esquema medium-contrast, feito para pares de cores e para impressão em
+#     cinza; o escuro marca o canal de controle e as setas LoRa, o claro a rajada e os dados que ela leva;
+#   o resto (HTTPS, rede local, grupos, referências): preto e os cinzas de Tol.
+tol <- c(
+  maq_dobradeira = "#4477AA", maq_guilhotina = "#EE6677", maq_calandra = "#228833", maq_compressor = "#AA3377",
+  lora = "#997700", lora_claro = "#EECC66",
+  preto = "#000000", cinza_escuro = "#555555", cinza = "#BBBBBB", cinza_claro = "#DDDDDD"
+)
+
 # vocabulário visual fixo, reusado em todos os painéis das duas figuras
 cond_cols   <- c("sadio" = pal[["signal_blue"]], "defeito" = pal[["accent_red"]])
 metodo_cols <- c("correto" = pal[["signal_blue"]], "incorreto" = pal[["accent_red"]])

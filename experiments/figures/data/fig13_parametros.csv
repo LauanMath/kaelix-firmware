@@ -1,0 +1,18 @@
+parametro,valor
+intervalo_ciclo_ms,11000
+fim_ms,8232
+controle_sf,9
+controle_bw_khz,125.0
+rajada_sf,7
+rajada_bw_khz,250.0
+fragmentos,26
+perdidos_exemplo,7 18
+telemetria_ms,411
+resposta_ms,206
+fragmento_ms,200
+ultimo_fragmento_ms,129
+mapa_ms,47
+intervalo_fragmentos_ms,50
+inicio_rajada_ms,120
+volta_ms,20
+escuta_ms,300
