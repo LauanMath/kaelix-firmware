@@ -364,3 +364,27 @@ pouco além do boot.
   500 Hz, contra os 1000 Hz que a norma exige. Conformidade plena não é
   possível com o MPU6050.
 - **Alcance LoRa e taxa de perda** nunca testados em campo.
+
+## Licença
+
+O código está sob a licença MIT ([LICENSE](LICENSE)). Os dados e os
+resultados das análises estão sob a licença Creative Commons Atribuição 4.0
+Internacional ([LICENSE-DADOS](LICENSE-DADOS)):
+
+- `experiments/campo/dados/`: dados da coleta em campo de 2 de novembro de 2026;
+- `experiments/campo/analise_registrada/`, `analise_descritiva/`,
+  `analise_posterior/` e `analise_posterior_v4/`: resultados das análises da
+  coleta;
+- `experiments/fraunhofer/analise_registrada/`: descritores e resultados
+  derivados da base pública da Fraunhofer, também CC BY 4.0; a atribuição e as
+  modificações estão em `LICENSE-DADOS`;
+- `docs/monografia/registro/`: registro das hipóteses e das emendas.
+
+Mantêm a licença de origem:
+
+- `docs/monografia/latex/abntex2-alf-2025.bst`: cópia modificada de
+  `abntex2-alf.bst`, do abnTeX2, sob a LaTeX Project Public License 1.3 ou
+  posterior;
+- `docs/monografia/latex/imagens/logo-icev.jpg` e
+  `docs/monografia/latex/preambulo/estilo-icev.tex`: logo e estilo do modelo de
+  monografia do iCEV, que pertencem à instituição.
