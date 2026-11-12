@@ -1,0 +1,20 @@
+\chapter{Telas do aplicativo de mesa}\label{ap:telas}
+
+O aplicativo de mesa consulta a API no computador da coleta (etapa 6 da Figura~\ref{fig:implantacao}). A Figura~\ref{fig:ap-telas} reproduz, sem recorte, sete capturas da janela do aplicativo feitas em 2 de novembro de 2026, dia da coleta, na ordem das áreas do aplicativo. As capturas das 8h52 e das 8h53 foram feitas antes da ida a campo, e as das 13h20 e das 15h06, no local da coleta. Em todas, a API rodava no mesmo computador, no endereço local 127.0.0.1, porta 8080, e o nome da rede Wi-Fi do local foi coberto por um retângulo cinza.
+
+% Um painel de captura: letra acima, à esquerda, e a tela inteira na largura do painel.
+\newcommand{\aptela}[2]{%
+\begin{minipage}[t]{0.32\textwidth}%
+\textbf{#1}\par\vspace{0.5mm}%
+\includegraphics[width=\linewidth]{campo/#2}%
+\end{minipage}}
+
+\begin{figure}[!htb]
+\centering
+\caption{Telas do aplicativo de mesa no dia da coleta}\label{fig:ap-telas}
+\aptela{a}{apB_1_monitoramento.jpg}\hfill\aptela{b}{apB_2_logs.jpg}\hfill\aptela{c}{apB_3_motores.jpg}\par\vspace{2.5mm}
+\aptela{d}{apB_4_gateways.jpg}\hfill\aptela{e}{apB_5_transmissores.jpg}\hfill\aptela{f}{apB_6_coletas.jpg}\par\vspace{2.5mm}
+\aptela{g}{apB_7_sinal.jpg}
+\fonte{elaborado pelo próprio autor.}
+\legenda{\textbf{a}, monitoramento às 13h20, dentro do trecho analisado da primeira rodada da calandra (Tabela~\ref{tab:ensaios}); a topologia liga ao \textit{gateway} S3 o transmissor 311D0470, usado na coleta, e o D6F61B44, cuja última leitura é de outubro de 2026, e o painel à direita mostra a última telemetria do 311D0470. \textbf{b}, monitoramento às 8h53, com as linhas que o \textit{gateway} envia à API: recepção de uma telemetria (RX), confirmação do envio à API (UPLOAD) e janela de sinal bruto recebida em fragmentos (WAVE), que formam o histórico de eventos do \textit{gateway} (seção~\ref{sec:dados}). \textbf{c}, motores às 8h52; nenhum motor estava cadastrado, e os dois transmissores aparecem sem motor associado. \textbf{d}, \textit{gateways} às 8h52, com o estado que o \textit{gateway} informa à API: rede, ocupação do gravador e da fila em memória, telemetrias e janelas confirmadas na sessão, pacotes rejeitados, erros de SPI e sincronização de hora. \textbf{e}, transmissores às 8h52, com a versão 8 da configuração aplicada; a configuração usada nos ensaios está na seção~\ref{sec:sistema}. \textbf{f}, coletas às 15h06, com o resumo da coleta do compressor, da primeira rodada: telemetrias recebidas, lacunas de sequência e fragmentos ausentes. \textbf{g}, sinal às 15h06, com a janela de sinal bruto recebida às 14h57, entre as rodadas; as letras de a a d dentro da tela são do próprio aplicativo e identificam os canais ax, ay, az e gx.}
+\end{figure}

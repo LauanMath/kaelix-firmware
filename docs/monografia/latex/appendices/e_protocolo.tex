@@ -1,0 +1,139 @@
+\chapter{Formato dos quadros do protocolo de rádio}\label{ap:protocolo}
+
+O transmissor e o \textit{gateway} trocam quatro tipos de quadro, identificados pelo segundo byte: telemetria (1), resposta (2), fragmento (3) e mapa da rajada (4). Todos começam pela versão do protocolo, que é 3 no código descrito aqui, e terminam por uma verificação cíclica de redundância (CRC) de 16 bits, no padrão CCITT, com polinômio \texttt{0x1021} e valor inicial \texttt{0xFFFF}, calculada sobre todos os bytes anteriores. Os inteiros de mais de um byte vêm com o byte menos significativo primeiro, e os valores reais, em ponto flutuante de 32 bits. O tamanho de cada quadro é verificado na compilação do código-fonte do protocolo, e os deslocamentos dos campos nos Quadros~\ref{tab:ap-telemetria} a~\ref{tab:ap-mapa} foram conferidos com o operador \texttt{offsetof} da linguagem C++. O uso de cada quadro no ciclo está na seção~\ref{sec:sistema}.
+
+\begin{quadro}[!htbp]
+\centering\small
+\caption{Campos da telemetria, de 71 bytes}\label{tab:ap-telemetria}
+\begin{tabular}{@{}rr>{\raggedright\arraybackslash}p{38mm}>{\raggedright\arraybackslash}p{78mm}@{}}
+\toprule
+Byte & Tam. & Campo & Conteúdo \\
+\midrule
+0 & 1 & \texttt{version} & versão do protocolo \\
+1 & 1 & \texttt{type} & tipo do quadro, 1 \\
+2 & 4 & \texttt{device\_id} & identificador do transmissor \\
+6 & 4 & \texttt{sequence} & número de sequência do ciclo \\
+10 & 4 & \texttt{boot\_count} & contagem de inicializações \\
+14 & 1 & \texttt{state} & estado da máquina; o transmissor envia 2, desconhecido, porque não classifica \\
+15 & 1 & \texttt{diag} & código de estado do primeiro erro do ciclo \\
+16 & 1 & \texttt{flags} & bit 0, hora sincronizada; 1, janela a seguir; 2, modo de reserva; 3, configuração recusada; 4, sem medição; 5, valor saturado \\
+17 & 1 & \texttt{reset\_reason} & motivo do último reinício, como informado pelo ESP32 \\
+18 & 2 & \texttt{config\_version} & versão da configuração em uso \\
+20 & 2 & \texttt{command\_seq} & sequência do último comando recebido \\
+22 & 4 & \texttt{device\_time} & hora UNIX do transmissor, 0 sem hora \\
+26 & 4 & \texttt{uptime\_s} & tempo desde a inicialização, em segundos \\
+30 & 4 & \texttt{rms\_z} & valor eficaz da aceleração no eixo Z, em $g$ \\
+34 & 4 & \texttt{rms\_x} & valor eficaz da aceleração no eixo X, em $g$ \\
+38 & 4 & \texttt{rms\_y} & valor eficaz da aceleração no eixo Y, em $g$ \\
+42 & 4 & \texttt{kurtosis} & curtose da aceleração no eixo Z \\
+46 & 4 & \texttt{crest\_factor} & fator de crista da aceleração no eixo Z \\
+50 & 4 & \texttt{dominant\_freq\_hz} & frequência dominante no eixo Z, em hertz \\
+54 & 4 & \texttt{sample\_rate\_hz} & taxa de amostragem estimada na janela, em hertz \\
+58 & 4 & \texttt{temperature\_c} & temperatura do sensor, em graus Celsius \\
+62 & 1 & \texttt{wave\_fragments} & número de fragmentos da janela que segue, 0 sem janela \\
+63 & 1 & \texttt{burst\_profile} & índice da configuração de rádio da rajada \\
+64 & 2 & \texttt{wave\_samples} & amostras por canal da janela \\
+66 & 1 & \texttt{channels} & máscara dos canais: bits 0 a 5, ax, ay, az, gx, gy e gz \\
+67 & 1 & \texttt{sensor\_config} & bits 0 e 1, faixa do acelerômetro; 2 e 3, faixa do giroscópio; 4 a 6, filtro passa-baixas \\
+68 & 1 & \texttt{tx\_power\_dbm} & potência de transmissão, em dBm, com sinal \\
+69 & 2 & \texttt{crc} & CRC dos bytes 0 a 68 \\
+\bottomrule
+\end{tabular}
+\fonte{elaborado pelo próprio autor, a partir do código-fonte do protocolo.}
+\end{quadro}
+
+\begin{quadro}[!htbp]
+\centering\small
+\caption{Campos da resposta do \textit{gateway}}\label{tab:ap-resposta}
+\begin{tabular}{@{}rr>{\raggedright\arraybackslash}p{38mm}>{\raggedright\arraybackslash}p{78mm}@{}}
+\toprule
+Byte & Tam. & Campo & Conteúdo \\
+\midrule
+0 & 1 & \texttt{version} & versão do protocolo \\
+1 & 1 & \texttt{type} & tipo do quadro, 2 \\
+2 & 4 & \texttt{device\_id} & identificador do transmissor de destino \\
+6 & 4 & \texttt{sequence} & eco do número de sequência da telemetria \\
+10 & 4 & \texttt{utc} & hora UNIX do \textit{gateway}, 0 sem hora \\
+14 & 1 & \texttt{flags} & bit 0, rajada autorizada; 1, com configuração; 2, com comando \\
+15 & 1 & \texttt{command} & 0, nenhum; 1, reiniciar; 2, restaurar a configuração de fábrica; 3, capturar agora \\
+16 & 2 & \texttt{command\_seq} & sequência do comando \\
+18 & 1 & \texttt{config\_len} & tamanho do bloco de configuração, 0 sem configuração \\
+19 & 1 & \texttt{reserved} & reservado, 0 \\
+20 & $n$ & configuração & bloco do Quadro~\ref{tab:ap-config}, com $n$ = \texttt{config\_len} \\
+$20+n$ & 2 & \texttt{crc} & CRC dos bytes anteriores \\
+\bottomrule
+\end{tabular}
+\fonte{elaborado pelo próprio autor, a partir do código-fonte do protocolo.}
+\end{quadro}
+
+\begin{quadro}[!htbp]
+\centering\small
+\caption{Bloco de configuração da resposta, de 23 bytes e mais 5 por janela de rotina}\label{tab:ap-config}
+\begin{tabular}{@{}rr>{\raggedright\arraybackslash}p{38mm}>{\raggedright\arraybackslash}p{78mm}@{}}
+\toprule
+Byte & Tam. & Campo & Conteúdo \\
+\midrule
+0 & 2 & \texttt{version} & versão da configuração, 0 para a de fábrica \\
+2 & 2 & \texttt{cycle\_interval\_s} & intervalo entre ciclos, em segundos \\
+4 & 2 & \texttt{window\_samples} & amostras por canal da janela \\
+6 & 1 & \texttt{channels} & máscara dos canais, como na telemetria \\
+7 & 1 & \texttt{accel\_range} & faixa do acelerômetro \\
+8 & 1 & \texttt{gyro\_range} & faixa do giroscópio \\
+9 & 1 & \texttt{dlpf} & configuração do filtro passa-baixas do sensor \\
+10 & 1 & \texttt{tx\_power\_dbm} & potência de transmissão, em dBm, com sinal \\
+11 & 1 & \texttt{burst\_profile} & índice da configuração de rádio da rajada \\
+12 & 1 & \texttt{wave\_every} & envio da janela a cada quantos ciclos \\
+13 & 1 & & reservado, 0 \\
+14 & 4 & \texttt{link\_loss\_s} & tempo sem resposta do \textit{gateway} até o modo de reserva, em segundos \\
+18 & 2 & \texttt{checkin\_interval\_s} & intervalo de contato, em segundos \\
+20 & 2 & \texttt{tz\_offset\_min} & fuso horário, em minutos, com sinal \\
+22 & 1 & \texttt{routine\_count} & número de janelas de rotina, até 6 \\
+\addlinespace
+\multicolumn{4}{@{}l}{Cada janela de rotina, a partir do byte $23 + 5i$:} \\
+0 & 1 & \texttt{days} & dias da semana, bit 0 para domingo \\
+1 & 2 & \texttt{start\_min} & início, em minutos do dia \\
+3 & 2 & \texttt{end\_min} & fim, em minutos do dia \\
+\bottomrule
+\end{tabular}
+\fonte{elaborado pelo próprio autor, a partir do código-fonte do protocolo.}
+\end{quadro}
+
+\begin{quadro}[!htbp]
+\centering\small
+\caption{Campos do fragmento da janela}\label{tab:ap-fragmento}
+\begin{tabular}{@{}rr>{\raggedright\arraybackslash}p{38mm}>{\raggedright\arraybackslash}p{78mm}@{}}
+\toprule
+Byte & Tam. & Campo & Conteúdo \\
+\midrule
+0 & 1 & \texttt{version} & versão do protocolo \\
+1 & 1 & \texttt{type} & tipo do quadro, 3 \\
+2 & 4 & \texttt{device\_id} & identificador do transmissor \\
+6 & 4 & \texttt{sequence} & número de sequência da telemetria do mesmo ciclo \\
+10 & 1 & \texttt{index} & posição do fragmento na janela, a partir de 0 \\
+11 & 1 & \texttt{total} & número de fragmentos da janela \\
+12 & $m$ & amostras & inteiros de 16 bits com sinal, como o sensor os entrega, intercalados na ordem dos canais da máscara; $m$ de até 240 bytes, múltiplo do tamanho de uma amostra de todos os canais \\
+$12+m$ & 2 & \texttt{crc} & CRC dos bytes anteriores \\
+\bottomrule
+\end{tabular}
+\fonte{elaborado pelo próprio autor, a partir do código-fonte do protocolo.}
+\end{quadro}
+
+Com os seis canais, uma amostra de todos os canais ocupa 12 bytes, e cada fragmento leva 240 bytes, ou 20 amostras de cada canal. Uma janela de 512 amostras por canal ocupa \num{6144} bytes, em 26 fragmentos, o último com 144 bytes.
+
+\begin{quadro}[!htbp]
+\centering\small
+\caption{Campos do mapa da rajada, de 44 bytes}\label{tab:ap-mapa}
+\begin{tabular}{@{}rr>{\raggedright\arraybackslash}p{38mm}>{\raggedright\arraybackslash}p{78mm}@{}}
+\toprule
+Byte & Tam. & Campo & Conteúdo \\
+\midrule
+0 & 1 & \texttt{version} & versão do protocolo \\
+1 & 1 & \texttt{type} & tipo do quadro, 4 \\
+2 & 4 & \texttt{device\_id} & identificador do transmissor \\
+6 & 4 & \texttt{sequence} & número de sequência da janela \\
+10 & 32 & \texttt{received} & um bit por fragmento recebido, até 256 fragmentos; o fragmento $i$ é o bit $i \bmod 8$ do byte $\lfloor i/8 \rfloor$ \\
+42 & 2 & \texttt{crc} & CRC dos bytes 0 a 41 \\
+\bottomrule
+\end{tabular}
+\fonte{elaborado pelo próprio autor, a partir do código-fonte do protocolo.}
+\end{quadro}

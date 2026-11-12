@@ -1,0 +1,133 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Trabalho de Conclusão de Curso: detecção de falhas em máquinas industriais (Kaelix)
+%% Modelo do iCEV em abnTeX2 (preambulo/estilo-icev.tex), com a organização em seis capítulos,
+%% os números gerados por script (values/) e as hipóteses registradas antes do cálculo.
+%% Compilar: make (pdflatex, bibtex, makeglossaries, makeindex, pdflatex, pdflatex), saída em build/.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[
+	12pt,
+	openright,
+	oneside,
+	a4paper,
+	chapter=TITLE,
+	english,
+	brazil
+	]{abntex2}
+
+\input{preambulo/pacotes}
+\input{preambulo/estilo-icev}
+\input{preambulo/dados}
+
+\graphicspath{{Images/}{../../../experiments/figures/output/}}
+
+%% Números do texto, gerados por script. Não digitar números da coleta no texto.
+%%   campo_values.tex       scripts/build_field_values.py (dados exportados da coleta)
+%%   hipoteses_values.tex   experiments/campo/analise_registrada.py (H1 a H3, registro_v1)
+%%   descritivos_values.tex experiments/campo/analise_descritiva.py
+%%   resultados_values.tex  scripts/build_results_values.py (detalhes lidos dos CSV)
+%%   posterior_values.tex   experiments/campo/analise_posterior.py (AP1 e AP2, registro_v2)
+%%   h4_values.tex          experiments/fraunhofer/analise_h4.py (H4, registros v2 e v3)
+%%   dados_values.tex       scripts/build_dados_values.py (versões do ambiente, citadas na seção de análise estatística)
+%%   tabelas_ensaio_values.tex scripts/build_tabelas_ensaio.py (tabelas do apêndice de dados por ensaio)
+%%   sistema_values.tex     scripts/build_sistema_values.py (capítulo do sistema: código, testes e ensaios de 2/11)
+\input{values/campo_values.tex}
+\input{values/hipoteses_values.tex}
+\input{values/descritivos_values.tex}
+\input{values/resultados_values.tex}
+\input{values/posterior_values.tex}
+\input{values/posterior_v4_values.tex}
+\input{values/posterior_v4_descricao_values.tex}
+\input{values/h4_values.tex}
+\input{values/dados_values.tex}
+\input{values/tabelas_ensaio_values.tex}
+\input{values/sistema_values.tex}
+
+%% Notas de planejamento, em cinza. Para ocultá-las no PDF: \renewcommand{\plano}[1]{}
+\newcommand{\plano}[1]{\par\noindent{\small\itshape\color{gray!60!black}#1\par}\medskip}
+%% Caixa de figura prevista, até a figura existir.
+\newcommand{\figuraprevista}[2]{%
+  \begin{figure}[htb]\centering
+  \caption{#1}\label{#2}
+  \fbox{\parbox[c][3cm][c]{0.8\linewidth}{\centering\small\color{gray!60!black}Figura prevista}}
+  \end{figure}}
+
+\makeindex
+
+\input{pre-textuais/abrev}
+\input{pre-textuais/simbolos}
+
+\begin{document}
+
+\selectlanguage{brazil}
+\frenchspacing
+\pagestyle{icevpretextual}
+\aliaspagestyle{chapter}{icevpretextual}
+
+\imprimircapa
+\imprimirfolhaderosto
+
+%% Ficha catalográfica (NBR 14724, 4.2.1.1.2): pedir à biblioteca do iCEV para a versão final.
+%\begin{fichacatalografica}
+%  \includepdf{fig_ficha_catalografica.pdf}
+%\end{fichacatalografica}
+
+\input{pre-textuais/folha-aprovacao}
+
+\input{pre-textuais/resumo}
+\input{pre-textuais/abstract}
+
+\renewcommand{\listfigurename}{Lista de figuras}
+\pdfbookmark[0]{\listfigurename}{lof}
+\listoffigures*
+\cleardoublepage
+
+\pdfbookmark[0]{\listofquadrosname}{loq}
+\listofquadros*
+\cleardoublepage
+
+\pdfbookmark[0]{\listtablename}{lot}
+\listoftables*
+\cleardoublepage
+
+\printglossary[type=\acronymtype, title={Lista de abreviaturas e siglas}, toctitle={Lista de abreviaturas e siglas}]
+\cleardoublepage
+
+\printnomenclature
+\cleardoublepage
+
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+\textual
+\pagestyle{icevheadings}
+\aliaspagestyle{chapter}{icevchapfirst}
+
+\input{chapters/01introducao}
+\input{chapters/02fundamentacao}
+\input{chapters/03sistema}
+\input{chapters/03materiais_metodos}
+\input{chapters/04resultados}
+\input{chapters/05discussao}
+\input{chapters/06conclusao}
+
+\postextual
+
+\citeoption{abnt-emphasize=bf}
+\bibliography{references}
+
+\begin{apendicesenv}
+  %% "APÊNDICE A --- TÍTULO" (NBR 14724, 4.2.3.3); o separador das legendas fica guardado.
+  \let\kxdelimlegenda\ABNTEXcaptiondelim
+  \renewcommand{\ABNTEXcaptiondelim}{\textemdash~}
+  %% As legendas de tabelas e figuras dos apêndices mantêm o separador do texto (" – ").
+  \captionsetup{labelsep=kxlegenda}
+  \setlength{\afterchapskip}{\baselineskip}
+  \input{appendices/c_tabelas}
+  \input{appendices/d_telas}
+  \input{appendices/e_protocolo}
+  \input{appendices/f_registro}
+\end{apendicesenv}
+
+\end{document}
