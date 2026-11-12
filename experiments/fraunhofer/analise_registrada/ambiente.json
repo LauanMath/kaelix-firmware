@@ -1,0 +1,52 @@
+{
+  "python": "3.12.14",
+  "numpy": "2.5.2",
+  "scipy": "1.18.0",
+  "sklearn": "1.9.0",
+  "pandas": "3.0.5",
+  "registro": "registro_v2.md e registro_v3.md",
+  "registro_v2_sha256": "3246d219c3e799d4639cea0f4f04eec12763113009e49879563753ad60482004",
+  "registro_v3_sha256": "9197884e633b87439c03ea3d56f5f129ee150db04a90db4b399e9638a8d054f8",
+  "csv_sha256": {
+    "0D.csv": "09271ca73dd5e54dd9646c604e20b6411d62a44e9a3ca758def6057bac89bcdb",
+    "0E.csv": "a19fa82bb055631df07d09709af4a6ba2e03c13c7c5f029e1873f8e2e50229cd",
+    "1E.csv": "a68aa34983d011fb259bcacb6d8e87c69849d7150026f70bbc4a6dca8224d0a9",
+    "2E.csv": "e45fe27317457fa6529dbf36cf2c49abd284a5be045f92d98ad8fd215cfed76c",
+    "3E.csv": "51eb9e1f9cf1c5c20711f759b6557046b53b4847275e4b41b74443acbbd9a52a",
+    "4E.csv": "28a0a7d930cb981c10015ec81ed90606151c499b49cd513fc11f799d16be76a3"
+  },
+  "contagem": {
+    "0D.csv": {
+      "linhas_depois_do_descarte": 26373295,
+      "janelas": 12877,
+      "janelas_aceitas": 706
+    },
+    "0E.csv": {
+      "linhas_depois_do_descarte": 6843567,
+      "janelas": 3341,
+      "janelas_aceitas": 355
+    },
+    "1E.csv": {
+      "linhas_depois_do_descarte": 6855907,
+      "janelas": 3347,
+      "janelas_aceitas": 361
+    },
+    "2E.csv": {
+      "linhas_depois_do_descarte": 6839471,
+      "janelas": 3339,
+      "janelas_aceitas": 351
+    },
+    "3E.csv": {
+      "linhas_depois_do_descarte": 6851759,
+      "janelas": 3345,
+      "janelas_aceitas": 356
+    },
+    "4E.csv": {
+      "linhas_depois_do_descarte": 6864047,
+      "janelas": 3351,
+      "janelas_aceitas": 354
+    }
+  },
+  "veredito_H4": "refutada",
+  "menor_nivel_50": 1
+}
