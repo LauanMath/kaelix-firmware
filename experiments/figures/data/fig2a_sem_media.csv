@@ -1,4 +1,0 @@
-metodo,rms_mm_s,erro_pct
-"no tempo, sem filtro, sem a média",6.753483219820512,0.01645123493126938
-"no tempo, com filtro, sem a média",6.8631762416367135,1.6409620851387172
-"no tempo, sem filtro, com viés, sem a tendência linear",6.753483219820512,0.01645123493126938

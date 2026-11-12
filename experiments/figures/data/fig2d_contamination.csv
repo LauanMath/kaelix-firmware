@@ -1,6 +1,0 @@
-contamination,falso_alarme,deteccao,is_default,auc,mesmos_escores
-0.5,0.5,1.0,False,1.0,True
-0.2,0.2,1.0,False,1.0,True
-0.1,0.1,1.0,False,1.0,True
-0.01,0.014285714285714285,1.0,False,1.0,True
-auto,0.42142857142857143,1.0,True,1.0,True
