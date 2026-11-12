@@ -5,6 +5,27 @@ Registro das mudanças do projeto Kaelix. Formato baseado em
 
 ## [Não publicado]
 
+### Adicionado
+
+- Firmwares `kaelix-gateway` (`src/gateway/`) e `kaelix-transmitter`
+  (`src/transmitter/`), com o protocolo v3 em `lib/kaelix_protocol/`: configuração
+  sem cabo, rotina semanal com sono profundo, comandos pelo rádio, sinal bruto de 6
+  canais, gravador em flash e atualização remota do gateway.
+
+### Corrigido
+
+- `WiFiClientSecure::stop()` deixava `socket` em 0, e o `stop()` seguinte fechava o
+  descritor 0. Esse descritor podia ser o do segmento em escrita, e a gravação falhava
+  com `EBADF`, perdendo o registro. Uma subclasse agora deixa `socket` em -1.
+- O gravador registra a etapa e o `errno` da falha, e o gateway tenta gravar até três
+  vezes antes de descartar o registro.
+- O `HTTPClient` local fechava a conexão ao sair de `post()`, refazendo o handshake TLS
+  a cada envio. A conexão agora persiste.
+- O mDNS podia devolver `0.0.0.0`, e o gateway insistia nesse endereço. Agora ele o
+  recusa e consulta de novo.
+- O transmissor, ao receber fora da janela uma configuração sem rotina, dormia mais um
+  intervalo antes de medir. Agora vale a rotina recém-aplicada.
+
 ## Reorganização de pastas
 
 Os arquivos mudaram de lugar, sem alteração de comportamento. As entradas abaixo
